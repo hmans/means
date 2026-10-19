@@ -1,0 +1,7 @@
+[tools]
+go = "latest"
+
+[tasks.means]
+description = "Run the means CLI from source"
+run = "go run ."
+raw_args = true
