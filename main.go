@@ -9,7 +9,7 @@ import (
 var version = "dev"
 
 func main() {
-	if err := cli.Execute(os.Args[1:], os.Stdout, os.Stderr, version); err != nil {
+	if err := cli.Execute(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, version); err != nil {
 		os.Exit(1)
 	}
 }

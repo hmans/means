@@ -19,9 +19,13 @@ func (o *options) write(w io.Writer, value any, text string) error {
 
 func (o *options) writeHelp(cmd *cobra.Command) error {
 	usage := cmd.UsageString()
+	description := cmd.Long
+	if description == "" {
+		description = cmd.Short
+	}
 	return o.write(cmd.OutOrStdout(), struct {
 		Command     string `json:"command"`
 		Description string `json:"description"`
 		Usage       string `json:"usage"`
-	}{cmd.CommandPath(), cmd.Short, usage}, cmd.Short+"\n\n"+usage)
+	}{cmd.CommandPath(), description, usage}, description+"\n\n"+usage)
 }

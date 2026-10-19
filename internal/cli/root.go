@@ -18,21 +18,22 @@ type options struct {
 
 // Execute runs one invocation, writing responses to stdout and errors to stderr.
 // The caller is responsible for translating the returned error into an exit code.
-func Execute(args []string, stdout, stderr io.Writer, version string) error {
+func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer, version string) error {
 	root, opts := newRootCommand(version)
 	if args == nil {
 		args = []string{}
 	}
 	root.SetArgs(args)
+	root.SetIn(stdin)
 	root.SetOut(stdout)
 	root.SetErr(stderr)
-	err := root.Execute()
+	command, err := root.ExecuteC()
 	err = errors.Join(err, opts.helpErr)
 	if err != nil {
-		// Flag parsing can stop before reaching --json. Re-read global flags
+		// Flag parsing can stop before reaching --json. Re-read command flags
 		// without rejecting unknown flags so error formatting is order-independent.
-		root.FParseErrWhitelist.UnknownFlags = true
-		_ = root.ParseFlags(args)
+		command.FParseErrWhitelist.UnknownFlags = true
+		_ = command.ParseFlags(args)
 		writeErr := opts.write(stderr, map[string]string{"error": err.Error()}, "Error: "+err.Error()+"\n")
 		return errors.Join(err, writeErr)
 	}
@@ -42,8 +43,27 @@ func Execute(args []string, stdout, stderr io.Writer, version string) error {
 func newRootCommand(version string) (*cobra.Command, *options) {
 	opts := &options{}
 	root := &cobra.Command{
-		Use:              "means",
-		Short:            "Agentic memory built from Markdown files",
+		Use:   "means",
+		Short: "Agentic memory built from Markdown files",
+		Long: `means provides typed Markdown collections for agents and applications.
+
+A collection is a directory containing a standalone schema.json that describes
+document frontmatter using JSON Schema. The files are authoritative and can be
+read and edited directly. YAML frontmatter and free-form Markdown bodies are the
+planned document format.
+
+Start with "means init --help" for the complete schema-authoring workflow,
+file and stdin input examples, validation rules, and response formats.
+Currently available: initialization, help, and version reporting. Document CRUD,
+search, and doctor are not implemented yet.
+
+Every command accepts --path and --json before or after the command name.
+--path defaults to the current working directory; relative paths resolve there.
+Means works with that exact directory and does not search parent directories.
+--json returns two-space-indented JSON, including help and errors.
+Successful responses go to stdout (exit 0); errors go to stderr (exit 1) as
+{"error":"..."} in JSON mode. Parse the entire JSON response, not individual lines.
+Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		Args:             cobra.NoArgs,
 		SilenceUsage:     true,
 		SilenceErrors:    true,
@@ -86,6 +106,6 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 			return opts.writeHelp(target)
 		},
 	})
-	root.AddCommand(newVersionCommand(opts, version))
+	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts))
 	return root, opts
 }

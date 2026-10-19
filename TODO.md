@@ -2,22 +2,24 @@
 
 ## Define the first version
 
-- [ ] Define collection boundaries and the schema file's name and format.
+- [x] Define collection boundaries and the schema file's name and format.
 - [ ] Choose the initial frontmatter types, constraints, and validation behavior.
 - [ ] Decide how documents are identified and how filenames relate to identity.
 - [ ] Define the basic CLI commands and structured input, output, and errors.
 - [x] Scaffold Cobra with inherited `--path` and `--json` flags.
-- [ ] Define how consumers inspect, establish, and update a collection's schema.
+- [x] Establish an example `schema.json` through `init`; consumers read and edit it directly.
+- [x] Accept agent-authored schemas from a file or stdin during initialization.
+- [x] Document the schema-authoring workflow in text and JSON CLI help.
 - [ ] Decide how schema changes and directly edited invalid documents are handled.
 
 ## Build the core
 
 - [x] Initialize the Go module and a minimal CLI entry point.
-- [ ] Load collection schemas and parse Markdown documents with frontmatter.
+- [x] Initialize collections and load and validate their JSON Schemas.
+- [ ] Parse Markdown documents with YAML frontmatter.
 - [ ] Implement document create, read, update, and delete operations.
 - [ ] Validate document writes against the collection schema.
 - [ ] Add basic text search and frontmatter filtering.
-- [ ] Add schema inspection, creation, and update operations.
 - [ ] Add `doctor` to report documents that do not satisfy the schema.
 - [ ] Document and test the initial end-to-end workflow.
 

@@ -12,6 +12,12 @@ the project direction and [TODO.md](TODO.md) for planned work.
   tools can edit them directly.
 - A collection has a schema describing its documents' frontmatter. Consumers
   can establish and evolve that schema through means.
+- Each collection contains a standalone `schema.json` using JSON Schema (Draft
+  2020-12 by default). `init` creates the directory with an example schema or a
+  consumer-authored schema from `--schema FILE` / `--schema -` (stdin). Validate
+  supplied schemas before creating files; never overwrite an existing schema.
+  Consumers edit schemas directly. Schemas are currently self-contained.
+  Documents will use YAML frontmatter and free-form Markdown bodies.
 - Support software consumers as well as humans and agents. Plan for structured
   CLI input, output, and errors; SDK and MCP interfaces may follow.
 - Use Cobra for the CLI. Every command inherits `--path` (defaulting to the
@@ -32,6 +38,9 @@ the project direction and [TODO.md](TODO.md) for planned work.
   `mise exec -- go test ./...`.
 - Update the README when implemented behavior changes and check off completed
   work in TODO.md. Clearly distinguish available features from plans.
-- Schema syntax, file naming, document identity, and command syntax are still
-  open design questions. Do not treat examples from discussion as settled APIs.
+- Keep CLI help sufficient for agents to discover workflows, input formats,
+  examples, output formats, errors, and limitations. Include long descriptions
+  and examples in both human-readable and JSON help.
+- Document file naming, identity, and document command syntax are still open
+  design questions. Do not treat examples from discussion as settled APIs.
 - Embeddings, vector search, and automatic document repair are deferred.

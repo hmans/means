@@ -33,13 +33,15 @@ func TestExecute(t *testing.T) {
 		{name: "JSON invalid flag", args: []string{"version", "--json", "--missing"}, jsonKey: "error", want: "unknown flag", wantErr: true},
 		{name: "JSON after invalid flag", args: []string{"version", "--missing", "--json"}, jsonKey: "error", want: "unknown flag", wantErr: true},
 		{name: "JSON flag as path value", args: []string{"missing", "--path", "--json"}, want: "unknown command", wantErr: true},
+		{name: "JSON flag as schema file", args: []string{"init", "--schema", "--json"}, want: "Error: read schema", wantErr: true},
+		{name: "JSON after invalid init flag", args: []string{"init", "--missing", "--json"}, jsonKey: "error", want: "unknown flag", wantErr: true},
 		{name: "JSON invalid argument", args: []string{"version", "extra", "--json"}, jsonKey: "error", want: "unknown command", wantErr: true},
 		{name: "JSON empty path", args: []string{"version", "--path=", "--json"}, jsonKey: "error", want: "--path must not be empty", wantErr: true},
 		{name: "JSON unknown help topic", args: []string{"help", "missing", "--json"}, jsonKey: "error", want: "unknown", wantErr: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
-			err := Execute(tt.args, &stdout, &stderr, "test-version")
+			err := Execute(tt.args, nil, &stdout, &stderr, "test-version")
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -110,7 +112,7 @@ func TestOutputFailure(t *testing.T) {
 	want := errors.New("output unavailable")
 	for _, args := range [][]string{{"version"}, {"version", "--json"}, {"--help", "--json"}} {
 		var stderr bytes.Buffer
-		if err := Execute(args, failingWriter{want}, &stderr, "test"); !errors.Is(err, want) {
+		if err := Execute(args, nil, failingWriter{want}, &stderr, "test"); !errors.Is(err, want) {
 			t.Errorf("Execute(%q) = %v, want %v", args, err, want)
 		}
 	}
