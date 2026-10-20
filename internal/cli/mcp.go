@@ -31,6 +31,8 @@ Multiple collections:
   This plain UTF-8 Markdown file needs no frontmatter and is reserved configuration,
   excluded from document lists and reads. It must be a regular file, not a symlink.
   Its contents are included in server instructions and info results.
+  Startup instructions give concise means usage guidance; info returns the
+  complete usage guidance with the current collection workflow.
 
 Tools (all bound to --path; no per-call path argument):
   info {}                            Title, description, schema, path, instructions.

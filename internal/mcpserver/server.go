@@ -35,6 +35,11 @@ workflow guidance. It is not a document and is excluded from listing and reading
 Call info for current guidance; restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
 
+const startupInstructions = `Call info for the current schema and detailed guidance.
+List or search to find IDs, then read before updating with its hash. Create and
+update validate frontmatter.data against the current schema. Stored IDs are not
+filenames. Creation is not idempotent; do not retry a successful create.`
+
 func collectionPurpose(info *collection.Description) string {
 	purpose := "Collection: " + info.Title + "."
 	if info.Description != "" {
@@ -45,6 +50,14 @@ func collectionPurpose(info *collection.Description) string {
 
 func collectionInstructions(info *collection.Description) string {
 	text := collectionPurpose(info) + "\n\n" + instructions
+	if info.Instructions != "" {
+		text += "\n\nCollection workflow (instructions.md):\n" + info.Instructions
+	}
+	return text
+}
+
+func collectionStartupInstructions(info *collection.Description) string {
+	text := collectionPurpose(info) + "\n\n" + startupInstructions
 	if info.Instructions != "" {
 		text += "\n\nCollection workflow (instructions.md):\n" + info.Instructions
 	}
@@ -64,11 +77,11 @@ func New(path, version string) (*mcp.Server, error) {
 		return nil, err
 	}
 	server := mcp.NewServer(&mcp.Implementation{Name: "means", Title: info.Title, Description: info.Description, Version: version},
-		&mcp.ServerOptions{Instructions: collectionInstructions(info)})
+		&mcp.ServerOptions{Instructions: collectionStartupInstructions(info)})
 	for _, tool := range []toolDefinition{
 		{
 			name:        "info",
-			description: "Return the collection title, description, path, current JSON Schema for frontmatter.data, and usage instructions including its workflow. Call before creating documents. No arguments.",
+			description: "Return current collection identity, schema, path, and full guidance. Call before creating documents.",
 			schema:      `{"type":"object","additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -83,7 +96,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "list",
-			description: "List IDs and frontmatter, without bodies or hashes, sorted by filename. Use read before update. limit defaults to 20; 0 returns all. Returns documents and has_more. Increase limit when has_more is true. Scans visible subdirectories. Malformed documents and duplicate IDs have null frontmatter, an error, and a diagnostic path; id is empty if unavailable. These count toward the limit. Duplicate detection covers the entire collection. Validates the means envelope, not the application data schema.",
+			description: "List IDs and frontmatter in filename order, without bodies or hashes. limit defaults to 20; 0 returns all. Malformed and duplicate documents appear with errors. Read an ID before updating it.",
 			schema:      `{"type":"object","properties":{"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -96,7 +109,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "search",
-			description: "Find documents by an optional case-insensitive literal query in title or body and/or a partial filter on frontmatter.data. Filter keys combine with AND; nested objects match by supplied keys, arrays match exactly, and missing keys do not match. Results are in filename order with id, frontmatter, and a field/excerpt for text matches, but no body or hash. limit defaults to 20 matching documents; 0 returns all. has_more reports additional matches. Malformed files and duplicate IDs are omitted from matches and reported in diagnostics regardless of filters or limit. Schema-invalid application data remains searchable. Search only reads files; use read for full content before update.",
+			description: "Find documents by a case-insensitive literal title/body query and/or a partial frontmatter.data filter. Returns IDs, frontmatter, excerpts, and diagnostics, without bodies or hashes. limit defaults to 20; 0 returns all.",
 			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Optional literal substring of title or body, case-insensitive."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -111,7 +124,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "read",
-			description: "Read a document by its stored frontmatter.id, independent of filename. Missing or duplicate IDs fail. Returns id, hash, frontmatter, and the exact Markdown body. hash is SHA-256 of the exact file bytes, required for update. IDs contain letters, digits, hyphens and underscores, starting with a letter or digit. Paths and symlinks are rejected. Validates the means envelope without enforcing the current data schema.",
+			description: "Read by stored ID, independent of filename. Returns frontmatter, exact body, and the content hash required for update. Missing and duplicate IDs fail.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128,"description":"Stored frontmatter.id, not a filename or path."}},"required":["id"],"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -120,7 +133,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "create",
-			description: "Create one document. Call info first for its schema. Supply required frontmatter object and optional Markdown body string (default empty). Validates against the current collection schema before writing. Returns id, hash, frontmatter, body. Supply frontmatter.title (nonempty string) and optional frontmatter.data (object, default {}). The collection schema validates only data. Generates a unique 5-character ID in frontmatter.id and writes <id>-<title-slug>.md; do not supply id. Existing files are never overwritten. Each successful call creates a new document; do not retry a success.",
+			description: "Create a document with a required title, optional application data, and optional Markdown body. Call info for the data schema. Means generates the ID. Each successful call creates another document.",
 			schema:      `{"type":"object","properties":{"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Application fields validated against the schema returned by info. Omit for {}."}},"required":["title"],"additionalProperties":false},"body":{"type":"string","description":"Markdown body, preserved exactly; defaults to empty."}},"required":["frontmatter"],"additionalProperties":false}`,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				body, _ := args["body"].(string)
@@ -129,7 +142,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "update",
-			description: "Patch an existing document. Read first and supply its id and hash (SHA-256 of exact stored bytes). Supply frontmatter and/or body. Frontmatter uses JSON Merge Patch: omitted keys stay, nested objects merge, null deletes keys, arrays replace. Cannot set literal null with this format. body is a replacement string; omit to retain, empty string to clear. Validates resulting metadata; stale hashes fail without writing. On conflict read again, review, and retry with the new hash. Patch only frontmatter.title and/or frontmatter.data. id is immutable and must be omitted from the patch. Title remains nonempty; data remains an object validated against the collection schema. Preserves ID, filename, and permission bits; metadata edits may reformat YAML. Returns id, new hash, frontmatter, body. Rechecks the hash before replacement; a simultaneous write between that check and replacement can still be overwritten.",
+			description: "Patch title/data or replace the body using the hash from read. Omit unchanged fields; null deletes nested data keys. The ID cannot change. A stale hash fails; read again before retrying.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."},"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Merge patch for application data. Null values delete nested keys; arrays replace."}},"additionalProperties":false},"body":{"type":"string","description":"Replacement Markdown body; omit to retain."}},"required":["id","hash"],"anyOf":[{"required":["frontmatter"]},{"required":["body"]}],"additionalProperties":false}`,
 			destructive: true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {

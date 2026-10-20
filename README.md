@@ -403,8 +403,10 @@ Include concrete acceptance criteria in each issue's body.
 
 This file needs no frontmatter. It supplies the workflow in MCP server instructions
 and the `info` result's `instructions` field, alongside general means
-usage guidance. It must be a regular file, not a directory or symlink. Missing or
-empty instructions are allowed; unreadable or invalid instructions fail MCP
+usage guidance. Startup guidance is concise; `info` returns the complete means
+usage guidance and the current collection workflow. It must be a regular file,
+not a directory or symlink. Missing or empty instructions are allowed;
+unreadable or invalid instructions fail MCP
 startup or `info` with an explanation. `init` still creates only
 `schema.json`. Other document operations do not depend on this optional file.
 
