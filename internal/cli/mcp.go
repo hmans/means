@@ -35,6 +35,8 @@ Multiple collections:
 Tools (all bound to --path; no per-call path argument):
   info {}                            Title, description, schema, path, instructions.
   list {"limit":20}                  IDs and metadata; 0 returns all, no bodies.
+  search {"query":"schema","filter":{"priority":"normal"},"limit":20}
+                                     Text/data matches, excerpts, and diagnostics.
   read {"id":"..."}                 ID, hash, frontmatter, and body.
   create {"frontmatter":{"title":"...","data":{}},"body":"..."}
                                      Validate and create; body defaults to empty.
@@ -48,14 +50,16 @@ IDs are stored values, not filenames; duplicate IDs fail lookup and appear as li
 errors. Read and update follow IDs after file renames or moves into subdirectories.
 Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads schema.json so
 schema edits take effect immediately. Reads and lists do not validate existing
-data against the schema; list entries may contain individual errors.
+data against the schema; list entries may contain individual errors. Search
+matches a case-insensitive literal phrase in title/body and partially matches
+frontmatter.data using JSON values. It reports malformed files separately.
 Creation is not idempotent: retrying a success creates another document.
 Read before update and pass its hash. Metadata uses JSON Merge Patch: objects merge
 recursively, null deletes keys, and arrays replace. Omitted frontmatter/body stays
 unchanged. Body must be a string when supplied; "" clears it. A stale hash fails
 without writing; read again and review the changes before retrying. The means envelope and resulting
 data are validated. Title edits preserve filenames. See "means update --help" for concurrency and storage details.
-Deletion, search, initialization, and schema editing are not MCP tools yet.
+Deletion, initialization, and schema editing are not MCP tools yet.
 info reads current title, description, and instructions.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.

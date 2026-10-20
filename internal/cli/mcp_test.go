@@ -32,10 +32,14 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(tools.Tools) != 5 {
+			if len(tools.Tools) != 6 {
 				t.Fatalf("tools = %v", tools.Tools)
 			}
+			foundSearch := false
 			for _, tool := range tools.Tools {
+				if tool.Name == "search" {
+					foundSearch = true
+				}
 				if tool.Description == "" || tool.InputSchema == nil || tool.Annotations == nil {
 					t.Fatalf("missing tool metadata: %+v", tool)
 				}
@@ -45,6 +49,9 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint != (tool.Name == "update") {
 					t.Fatalf("incorrect destructive annotation: %+v", tool)
 				}
+			}
+			if !foundSearch {
+				t.Fatal("search tool missing")
 			}
 			call := func(name, args string, wantError bool) map[string]any {
 				t.Helper()

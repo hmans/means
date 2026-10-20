@@ -17,9 +17,11 @@ const instructions = `This server works with one Markdown collection. Call info
 to learn the schema for frontmatter.data before creating documents. Means owns
 frontmatter.id (generated and immutable) and frontmatter.title (required nonempty
 string). Creation takes title and optional data (default {}); do not supply id.
-List documents to find IDs, then read by ID for full bodies. IDs are stored values,
-independent of filenames. Lookup scans visible subdirectories; renames preserve
-identity. Duplicate IDs are errors. Patches may change title and data, never id.
+List or search documents to find IDs, then read by ID for full bodies. Search
+matches literal text in titles/bodies and filters frontmatter.data by value.
+IDs are stored values, independent of filenames. Lookup scans visible
+subdirectories; renames preserve identity. Duplicate IDs are errors. Patches
+may change title and data, never id.
 Title changes preserve existing filenames.
 Creation validates the current schema and is not idempotent: do not retry a
 successful creation. Reads and lists validate the means envelope but not the data schema;
@@ -27,7 +29,7 @@ inspect per-document errors in list results. Schema and document edits take effe
 on the next tool call. Read before update: supply its hash and only the fields to
 patch. A stale hash fails; read again and review changes before retrying. Metadata
 uses JSON Merge Patch (objects merge, null deletes, arrays replace); body replaces
-the whole body when supplied. Deletion, search, and schema editing are not
+the whole body when supplied. Deletion and schema editing are not
 exposed as MCP tools yet. The optional instructions.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
 Call info for current guidance; restart the server to refresh discovery
@@ -85,18 +87,26 @@ func New(path, version string) (*mcp.Server, error) {
 			schema:      `{"type":"object","properties":{"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
-				limit := 20
-				if value, exists := args["limit"]; exists {
-					n, ok := new(big.Rat).SetString(value.(json.Number).String())
-					if !ok || !n.IsInt() || !n.Num().IsInt64() {
-						return nil, fmt.Errorf("limit is too large")
-					}
-					limit = int(n.Num().Int64())
-					if int64(limit) != n.Num().Int64() {
-						return nil, fmt.Errorf("limit is too large")
-					}
+				limit, err := limitArg(args)
+				if err != nil {
+					return nil, err
 				}
 				return c.List(limit)
+			},
+		},
+		{
+			name:        "search",
+			description: "Find documents by an optional case-insensitive literal query in title or body and/or a partial filter on frontmatter.data. Filter keys combine with AND; nested objects match by supplied keys, arrays match exactly, and missing keys do not match. Results are in filename order with id, frontmatter, and a field/excerpt for text matches, but no body or hash. limit defaults to 20 matching documents; 0 returns all. has_more reports additional matches. Malformed files and duplicate IDs are omitted from matches and reported in diagnostics regardless of filters or limit. Schema-invalid application data remains searchable. Search only reads files; use read for full content before update.",
+			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Optional literal substring of title or body, case-insensitive."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
+			readOnly:    true,
+			run: func(c *collection.Collection, args map[string]any) (any, error) {
+				limit, err := limitArg(args)
+				if err != nil {
+					return nil, err
+				}
+				query, _ := args["query"].(string)
+				filter, _ := args["filter"].(map[string]any)
+				return c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit})
 			},
 		},
 		{
@@ -139,6 +149,21 @@ func New(path, version string) (*mcp.Server, error) {
 		}
 	}
 	return server, nil
+}
+
+func limitArg(args map[string]any) (int, error) {
+	if value, exists := args["limit"]; exists {
+		n, ok := new(big.Rat).SetString(value.(json.Number).String())
+		if !ok || !n.IsInt() || !n.Num().IsInt64() {
+			return 0, fmt.Errorf("limit is too large")
+		}
+		limit := int(n.Num().Int64())
+		if int64(limit) != n.Num().Int64() {
+			return 0, fmt.Errorf("limit is too large")
+		}
+		return limit, nil
+	}
+	return 20, nil
 }
 
 type toolDefinition struct {

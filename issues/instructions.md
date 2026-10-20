@@ -4,18 +4,19 @@ This collection is the means project's own backlog. It contains actionable work,
 bugs, and design decisions for this repository. The collections under `example/`
 contain fictional application data and are separate from this backlog.
 
-Use means to create, read, list, and update issues. From the repository root:
+Use means to create, read, list, search, and update issues. From the repository root:
 
 ```sh
 mise means list --path ./issues --limit 0 --json
+mise means search --path ./issues --filter status=todo --filter priority=normal --json
 mise means read <id> --path ./issues --json
 mise means create --path ./issues --input - --json
 mise means update <id> --path ./issues --input - --json
 ```
 
 Read `schema.json` before creating issues. When accessed through MCP, use `info`
-for the current schema and these instructions; the tools are `list`, `read`,
-`create`, and `update`.
+for the current schema and these instructions; the tools are `list`, `search`,
+`read`, `create`, and `update`.
 
 ## Issue content
 
@@ -61,5 +62,7 @@ For example, after reading an issue, update it with:
 Include the issue ID as the CLI argument or MCP `id` field. Metadata objects
 merge recursively, null deletes a field, and arrays replace entirely. Omit `body`
 to preserve it; when supplied, it replaces the full body, so retain useful context.
-Updates validate the means envelope and resulting data. Search, filtering, deletion, and doctor
-are not implemented yet; filter list results yourself.
+Updates validate the means envelope and resulting data. Search can match issue
+titles/bodies and filter `frontmatter.data` fields such as `type`, `status`, and
+`priority`; inspect its diagnostics for malformed files. Doctor checks all
+documents against the current schema. Deletion is not implemented yet.

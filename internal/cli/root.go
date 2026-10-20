@@ -62,8 +62,8 @@ Then use "means create --help" to store a validated document, "means list" to
 discover IDs and metadata, and "means read <id>" to retrieve a document.
 Use "means mcp --help" to expose a collection to an MCP client over stdio.
 Use "means update --help" to patch a document using the hash from read --json.
-Deletion and search are not implemented yet. Use "means doctor" to check all
-documents against the current collection schema.
+Deletion is not implemented yet. Use "means doctor" to check all documents
+against the current schema, or "means search" to find documents by text/data.
 
 Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
@@ -117,6 +117,6 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		},
 	})
 	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts),
-		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newUpdateCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
+		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

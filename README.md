@@ -2,15 +2,20 @@
 
 An agentic memory substrate built from Markdown files.
 
-means will provide a CLI for creating, reading, updating, searching, and deleting
+means provides a CLI for creating, reading, updating, and searching
 documents in a directory. Each document has a Markdown body and typed
 frontmatter. Means owns document IDs and titles; a schema stored alongside the
 collection governs application fields under `data`. Applications
 and agents can establish and evolve that schema as their needs change.
 
 **Status:** early development. Collection initialization, document creation,
-reading, patch updates, metadata listing, document diagnostics, and a stdio MCP
-server are implemented. Deletion and search are planned.
+reading, patch updates, metadata listing, text/data search, document diagnostics,
+and a stdio MCP server are implemented. Deletion is planned.
+
+This repository uses means to track its own work. The [issues](issues/) directory
+is a means collection with its own [schema](issues/schema.json) and
+[workflow](issues/instructions.md); issue status and outcomes are updated through
+the same CLI and MCP interfaces available to other collections.
 
 ## What it's for
 
@@ -204,6 +209,32 @@ Listing returns `{ "documents": [{ "id": "...", "frontmatter": {...} }],
 limit is 20; `--limit 0` returns all documents. Increase the limit when `has_more`
 is true. Text output contains one ID and its metadata per line.
 
+Search titles and Markdown bodies with a case-insensitive literal phrase. Repeat
+`--filter KEY=VALUE` to match fields directly under `frontmatter.data`; filters
+combine with AND. For this repository's issue collection, for example:
+
+```sh
+mise means search --path ./issues --filter priority=normal --filter type=feature --json
+mise means search schema --path ./issues --limit 0 --json
+```
+
+Values that are not valid JSON, such as `normal`, are strings. JSON literals
+keep their types: use `--filter count=2`, `--filter active=true`, or
+`--filter 'tags=["search"]'`.
+Nested objects match their supplied keys recursively; arrays must match in full.
+A missing key does not match, including when the filter value is `null`. The
+optional text query matches a phrase in either the title or body, not a regular
+expression. Omit it for data-only filtering. Results are in relative filename
+order and include ID, frontmatter, and a match field/excerpt for text searches,
+without complete bodies or hashes. Use `read` for the full document.
+
+Search defaults to 20 matching documents; `--limit 0` returns all. JSON output
+contains `documents`, `has_more`, and `diagnostics`. Malformed files and duplicate
+IDs are excluded from matches and reported in diagnostics regardless of the
+query or limit. Schema-invalid application data remains searchable. Search
+reads files directly without an index or any writes. Per-document diagnostics
+retain exit code 0; invalid arguments or collection-level failures exit 1.
+
 Manually created `.md` files work too when they contain the means envelope.
 Stored IDs may contain 1–128 letters, digits, hyphens, or underscores, starting
 with a letter or digit. Existing longer IDs remain supported. Discovery scans
@@ -234,8 +265,9 @@ collections exit 0. Unhealthy collections write the complete report to stdout
 and exit 1 without a stderr error response. Collection-level errors, such as an
 invalid `schema.json`, go to stderr and exit 1.
 
-Run `mise means create --help`, `mise means read --help`, or `mise means list
---help` for full input, output, and error details. Help is also available as JSON.
+Run `mise means create --help`, `mise means read --help`, `mise means list
+--help`, or `mise means search --help` for full input, output, and error details.
+Help is also available as JSON.
 
 ### Migrating the earlier document format
 
@@ -318,6 +350,7 @@ compatibility, including the 2026-07-28 revision and older clients.
 | --- | --- | --- |
 | `info` | `{}` | Collection title, description, path, current schema, usage instructions |
 | `list` | Optional `limit` (20 by default, 0 for all) | `documents` containing IDs and metadata, plus `has_more` |
+| `search` | Optional `query`, `filter` object, `limit` (20 by default, 0 for all) | Matching documents with excerpts, diagnostics, and `has_more` |
 | `read` | `id` | ID, hash, frontmatter, body |
 | `create` | Required `frontmatter`, optional `body` | Created ID, hash, frontmatter, body |
 | `update` | `id`, `hash`, and `frontmatter` and/or `body` | Updated ID, hash, frontmatter, body |
@@ -396,7 +429,7 @@ command = "means"
 args = ["mcp", "--path", "/absolute/project/decisions"]
 ```
 
-Each registration exposes the same five tool names, bound to its own collection.
+Each registration exposes the same six tool names, bound to its own collection.
 The client registration distinguishes the servers; schema annotations distinguish
 their purpose, and each collection supplies its own workflow. No routing flag or
 additional means configuration format is needed.
@@ -433,11 +466,12 @@ See [example/README.md](example/README.md) to start one Codex agent with both th
   collection's schema. A possible `fix` command is future work.
 
 The project's own backlog lives in the [issues](issues/) collection, including
-search, deletion, and diagnostics. Its [instructions](issues/instructions.md)
-describe the workflow. List the current issues from the repository root:
+search, deletion, and diagnostics work. Its [instructions](issues/instructions.md)
+describe the workflow. List or filter the current issues from the repository root:
 
 ```sh
 mise means list --path ./issues --limit 0 --json
+mise means search --path ./issues --filter status=todo --filter priority=normal --json
 ```
 
 Use `read`, `create`, and `update` with the same `--path` to manage this backlog.
@@ -452,7 +486,7 @@ repository root and serves `./issues` using the current Go source.
 
 Start or restart Codex in this trusted checkout and use `/mcp` to check the
 connection. Call `issues.info` to confirm the collection title is "means issues",
-then use its `list`, `read`, `create`, and `update` tools. The collection supplies
+then use its `list`, `search`, `read`, `create`, and `update` tools. The collection supplies
 its schema and workflow through MCP. The first startup may compile dependencies;
 the configured timeout is 60 seconds. CLI access remains available as a fallback.
 
