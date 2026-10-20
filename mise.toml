@@ -12,6 +12,12 @@ description = "Run the Go test suite"
 run = "go test ./..."
 raw_args = true
 
+[tasks.issues-mcp]
+description = "Serve the means project's issue collection over MCP"
+dir = "{{ config_root }}"
+run = "go run . mcp --path ./issues"
+raw = true
+
 [tasks.example-mcp]
 description = "Serve the example issue collection over MCP"
 run = "go run . mcp --path ./example/issues"

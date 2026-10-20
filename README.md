@@ -432,6 +432,23 @@ Use `read`, `create`, and `update` with the same `--path` to manage this backlog
 It is separate from the fictional example collections. [TODO.md](TODO.md)
 retains completed milestones; active work is tracked only in `issues/`.
 
+### Repo-local MCP
+
+Root [.codex/config.toml](.codex/config.toml) registers this backlog as `issues`.
+It launches `mise --quiet issues-mcp`, which fixes its working directory at the
+repository root and serves `./issues` using the current Go source.
+
+Start or restart Codex in this trusted checkout and use `/mcp` to check the
+connection. Call `issues.info` to confirm the collection title is "means issues",
+then use its `list`, `read`, `create`, and `update` tools. The collection supplies
+its schema and workflow through MCP. The first startup may compile dependencies;
+the configured timeout is 60 seconds. CLI access remains available as a fallback.
+
+When starting Codex under `example/`, its nearer config overrides the `issues`
+registration to use the fictional example backlog and also registers `memory`.
+See [Codex configuration precedence](https://learn.chatgpt.com/docs/config-file/config-basic)
+and [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
 ## Development
 
 The Go toolchain is managed through [mise](https://mise.jdx.dev/) and configured in

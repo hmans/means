@@ -1,0 +1,6 @@
+# The mise task fixes the collection path independently of Codex's working directory.
+# example/.codex/config.toml overrides this registration for the fictional demo.
+[mcp_servers.issues]
+command = "mise"
+args = ["--quiet", "issues-mcp"]
+startup_timeout_sec = 60

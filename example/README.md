@@ -22,6 +22,8 @@ codex
 ```
 
 The project-local [.codex/config.toml](.codex/config.toml) registers both servers.
+Its `issues` registration overrides the repository root's real-backlog
+registration while working under `example/`, keeping this demo on fictional data.
 Codex loads project configuration for trusted projects; trust this checkout
 through Codex's normal project setup if prompted. Use `/mcp` to check that
 `issues` and `memory` connected. Then try:
