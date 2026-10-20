@@ -8,7 +8,7 @@ frontmatter, governed by a schema stored alongside the collection. Applications
 and agents can establish and evolve that schema as their needs change.
 
 **Status:** early development. Collection initialization, document creation,
-reading, metadata listing, and a stdio MCP server are implemented. Updates, deletion, search, and
+reading, patch updates, metadata listing, and a stdio MCP server are implemented. Deletion, search, and
 `doctor` are planned.
 
 ## What it's for
@@ -168,8 +168,10 @@ title: Use Go for means
 We chose Go for single-binary distribution.
 ```
 
-With `--json`, creation and reading return `{ "id": "...", "frontmatter": {...},
-"body": "..." }`. Text-mode creation prints just the ID; text-mode reading prints
+With `--json`, creation, reading, and updates return `{ "id": "...", "hash": "...",
+"frontmatter": {...}, "body": "..." }`. The hash is lowercase SHA-256 of the exact
+stored Markdown bytes, including frontmatter, whitespace, and line endings.
+Text-mode creation/update prints just the ID; text-mode reading prints
 the exact stored Markdown. Body content and trailing newlines are preserved.
 
 ```sh
@@ -179,7 +181,7 @@ mise means list --path ./memory --limit 0 --json
 ```
 
 Listing returns `{ "documents": [{ "id": "...", "frontmatter": {...} }],
-"has_more": false }`, without bodies. Results are ordered by filename. The default
+"has_more": false }`, without bodies or hashes. Results are ordered by filename. The default
 limit is 20; `--limit 0` returns all documents. Increase the limit when `has_more`
 is true. Text output contains one ID and its metadata per line.
 
@@ -204,6 +206,50 @@ are returned as strings. Both LF and CRLF delimiters are supported.
 Run `mise means create --help`, `mise means read --help`, or `mise means list
 --help` for full input, output, and error details. Help is also available as JSON.
 
+## Patch updates
+
+Read the current document, then supply its `hash` with only the fields to change:
+
+```sh
+mise means read <id> --path ./memory --json
+mise means update <id> --path ./memory --input - --json <<'JSON'
+{
+  "hash": "<hash from read>",
+  "frontmatter": { "title": "Corrected title", "tags": ["decision"] }
+}
+JSON
+```
+
+`--input FILE` also works. Input requires a 64-character lowercase hexadecimal
+`hash` and at least one of `frontmatter` or `body`; other fields are rejected.
+
+Frontmatter uses [JSON Merge Patch (RFC 7396)](https://www.rfc-editor.org/rfc/rfc7396):
+omitted keys stay unchanged, nested objects merge recursively, null removes a key,
+and arrays replace as a whole. For example, `{"frontmatter":{"tags":null}}`
+removes tags. This patch format cannot set a literal null metadata field.
+`frontmatter` itself must be an object, not null. The optional `body` is a complete
+replacement string: omit it to retain the existing body, or use `""` to clear it.
+`body:null` is rejected. An empty frontmatter patch is allowed.
+
+Updates preserve IDs and validate the resulting metadata against the collection
+schema. A missing, malformed, or stale hash prevents the update. On conflict,
+read again, review the intervening changes, and rebuild the patch using the new
+hash. There is no force option. Successful results return the new hash; replaying
+a content-changing update with its old hash fails. A no-op retains the exact
+original bytes and hash but still checks the hash and schema.
+
+Body-only edits preserve the existing frontmatter text. Metadata edits may
+reformat YAML and remove comments. Unspecified body bytes stay unchanged.
+Updates preserve file permission bits and write a same-directory temporary file
+before replacing the document by rename, which is atomic on supported filesystems.
+
+Updates check the hash when reading the document and again just before replacement.
+There are no locks: a simultaneous write between the final check and rename can
+still be overwritten. Temporary files are removed on normal completion; a crash
+can leave one behind.
+
+`means update --help` documents the full contract in text or JSON.
+
 ## MCP
 
 Launch a server bound to one existing collection:
@@ -224,14 +270,18 @@ compatibility, including the 2026-07-28 revision and older clients.
 | --- | --- | --- |
 | `info` | `{}` | Collection title, description, path, current schema, usage instructions |
 | `list` | Optional `limit` (20 by default, 0 for all) | `documents` containing IDs and metadata, plus `has_more` |
-| `read` | `id` | ID, frontmatter, body |
-| `create` | Required `frontmatter`, optional `body` | Created ID, frontmatter, body |
+| `read` | `id` | ID, hash, frontmatter, body |
+| `create` | Required `frontmatter`, optional `body` | Created ID, hash, frontmatter, body |
+| `update` | `id`, `hash`, and `frontmatter` and/or `body` | Updated ID, hash, frontmatter, body |
 
 All tools use the configured collection; they do not accept arbitrary paths.
 Call `info` before creating documents to learn the frontmatter schema.
 The server reloads the schema on every tool call, so edits take effect immediately.
 Validation, IDs, listing limits, malformed-file handling, and number preservation
 match the CLI. Successful creation is not idempotent.
+MCP updates use the same patch rules and required content hash as the CLI. Call
+`read` first, and refresh it on a conflict. Update is annotated as a write that
+can replace or remove existing content.
 
 Results contain `structuredContent` and an equivalent pretty-printed JSON text
 block. Tool failures return MCP `isError` results without ending the server.
@@ -298,7 +348,7 @@ command = "means"
 args = ["mcp", "--path", "/absolute/project/decisions"]
 ```
 
-Each registration exposes the same four tool names, bound to its own collection.
+Each registration exposes the same five tool names, bound to its own collection.
 The client registration distinguishes the servers; schema annotations distinguish
 their purpose, and each collection supplies its own workflow. No routing flag or
 additional means configuration format is needed.
@@ -334,7 +384,7 @@ See [example/README.md](example/README.md) to start one Codex agent with both th
 - **Diagnostics:** a planned `doctor` command will identify documents that do not
   satisfy their collection's schema. A possible `fix` command is future work.
 
-See [TODO.md](TODO.md) for the next steps, including updates and deletion.
+See [TODO.md](TODO.md) for the next steps, including search and deletion.
 
 ## Development
 

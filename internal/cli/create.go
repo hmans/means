@@ -38,7 +38,8 @@ Storage:
 
 Output:
   Text: the generated ID followed by a newline, suitable for passing to read.
-  --json: {"id":"...","frontmatter":{...},"body":"..."} on stdout, exit 0.
+  --json: {"id":"...","hash":"...","frontmatter":{...},"body":"..."} on stdout, exit 0.
+  hash is SHA-256 of the exact stored bytes, usable as the precondition for update.
   Errors: stderr, exit 1; with --json, {"error":"..."}. Schema errors identify the
   failing field or constraint. JSON output is formatted with two-space indentation.
   Retrying a successful create generates another document; creation is not idempotent.`,

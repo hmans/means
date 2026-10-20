@@ -19,7 +19,9 @@ The reserved instructions.md is collection configuration, not a document; read i
 directly or retrieve its contents through the MCP info tool.
 
 Text output is the exact stored Markdown, including YAML frontmatter.
---json returns {"id":"...","frontmatter":{...},"body":"..."} on stdout.
+--json returns {"id":"...","hash":"...","frontmatter":{...},"body":"..."} on stdout.
+hash is lowercase SHA-256 of the exact stored file bytes, including frontmatter,
+whitespace, and line endings. Supply it to update to prevent stale writes.
 Success exits 0; missing or malformed documents fail with exit 1 and an error on
 stderr (as {"error":"..."} with --json).
 

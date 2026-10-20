@@ -18,7 +18,8 @@
 - [x] Initialize collections and load and validate their JSON Schemas.
 - [x] Parse Markdown documents with YAML frontmatter.
 - [x] Implement document creation, reading, and limited metadata listing.
-- [ ] Implement document updates and deletion.
+- [x] Implement patch updates with required content hashes and stale-write protection.
+- [ ] Implement document deletion.
 - [x] Validate document creation against the collection schema.
 - [ ] Add basic text search and frontmatter filtering.
 - [ ] Add `doctor` to report documents that do not satisfy the schema.
@@ -28,7 +29,7 @@
 
 - [x] Add an issue-tracking example collection and AGENTS.md usage instructions.
 - [ ] Integrate means with ChattoBot through the structured CLI interface.
-- [x] Expose collection information, creation, reading, and listing through stdio MCP.
+- [x] Expose collection information, creation, reading, listing, and patch updates through stdio MCP.
 - [x] Configure the example for Codex with MCP usage instructions.
 - [x] Describe each MCP collection using schema annotations and optional instructions.md.
 - [x] Make the example's issue workflow available through MCP independently of AGENTS.md.

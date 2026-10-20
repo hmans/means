@@ -1,3 +1,6 @@
 # Local builds of the CLI.
 /means
 /means.exe
+
+# Temporary files used by hash-checked updates (including example collections).
+.means-*.tmp

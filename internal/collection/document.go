@@ -3,6 +3,7 @@ package collection
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,7 @@ var documentID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
 
 type Document struct {
 	ID          string         `json:"id"`
+	Hash        string         `json:"hash"`
 	Frontmatter map[string]any `json:"frontmatter"`
 	Body        string         `json:"body"`
 	Markdown    string         `json:"-"`
@@ -80,18 +82,15 @@ func (c *Collection) Create(frontmatter map[string]any, body string) (*Document,
 		if err := errors.Join(writeErr, file.Close()); err != nil {
 			return nil, fmt.Errorf("write document: %w", errors.Join(err, root.Remove(filename)))
 		}
-		return &Document{ID: id, Frontmatter: frontmatter, Body: body, Markdown: markdown}, nil
+		return &Document{ID: id, Hash: contentHash(markdown), Frontmatter: frontmatter, Body: body, Markdown: markdown}, nil
 	}
 }
 
 // Read parses stored content without enforcing the current frontmatter schema,
 // allowing consumers to retrieve documents that need migration or repair.
 func (c *Collection) Read(id string) (*Document, error) {
-	if id+".md" == InstructionsFilename {
-		return nil, fmt.Errorf("%s contains collection instructions, not a document; read the file directly or use MCP info", InstructionsFilename)
-	}
-	if !documentID.MatchString(id) {
-		return nil, fmt.Errorf("invalid document ID %q; use the filename stem (letters, digits, - and _, starting with a letter or digit)", id)
+	if err := validateDocumentID(id); err != nil {
+		return nil, err
 	}
 	root, err := os.OpenRoot(c.Path)
 	if err != nil {
@@ -99,6 +98,21 @@ func (c *Collection) Read(id string) (*Document, error) {
 	}
 	defer root.Close()
 	return readDocument(root, id)
+}
+
+func validateDocumentID(id string) error {
+	if id+".md" == InstructionsFilename {
+		return fmt.Errorf("%s contains collection instructions, not a document; read the file directly or use MCP info", InstructionsFilename)
+	}
+	if !documentID.MatchString(id) {
+		return fmt.Errorf("invalid document ID %q; use the filename stem (letters, digits, - and _, starting with a letter or digit)", id)
+	}
+	return nil
+}
+
+func contentHash(markdown string) string {
+	sum := sha256.Sum256([]byte(markdown))
+	return hex.EncodeToString(sum[:])
 }
 
 func readDocument(root *os.Root, id string) (*Document, error) {
@@ -118,7 +132,7 @@ func readDocument(root *os.Root, id string) (*Document, error) {
 	if err != nil {
 		return nil, fmt.Errorf("document %q: %w", id, err)
 	}
-	return &Document{ID: id, Frontmatter: frontmatter, Body: body, Markdown: string(data)}, nil
+	return &Document{ID: id, Hash: contentHash(string(data)), Frontmatter: frontmatter, Body: body, Markdown: string(data)}, nil
 }
 
 // List returns metadata in ascending filename order. Zero means no limit.

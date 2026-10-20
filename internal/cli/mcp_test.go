@@ -32,15 +32,18 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(tools.Tools) != 4 {
+			if len(tools.Tools) != 5 {
 				t.Fatalf("tools = %v", tools.Tools)
 			}
 			for _, tool := range tools.Tools {
 				if tool.Description == "" || tool.InputSchema == nil || tool.Annotations == nil {
 					t.Fatalf("missing tool metadata: %+v", tool)
 				}
-				if tool.Annotations.ReadOnlyHint != (tool.Name != "create") {
+				if tool.Annotations.ReadOnlyHint != (tool.Name != "create" && tool.Name != "update") {
 					t.Fatalf("incorrect read-only annotation: %+v", tool)
+				}
+				if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint != (tool.Name == "update") {
+					t.Fatalf("incorrect destructive annotation: %+v", tool)
 				}
 			}
 			call := func(name, args string, wantError bool) map[string]any {
@@ -92,6 +95,26 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			metadata := read["frontmatter"].(map[string]any)
 			if metadata["count"] != json.Number("9007199254740993") || metadata["ratio"] != json.Number("0.1234567890123456789") || read["body"] != "## Notes\n\nExact body.\n" {
 				t.Fatalf("round-trip lost content: %v", read)
+			}
+			hash := read["hash"].(string)
+			if hash != created["hash"] || len(hash) != 64 {
+				t.Fatal("missing or inconsistent hash")
+			}
+			call("update", `{"id":"`+id+`","frontmatter":{"title":"Changed"}}`, true)
+			call("update", `{"id":"`+id+`","hash":"`+hash+`"}`, true)
+			call("update", `{"id":"`+id+`","hash":"`+hash+`","body":null}`, true)
+			call("update", `{"id":"`+id+`","hash":"`+hash+`","frontmatter":{"title":null}}`, true)
+			updated := call("update", `{"id":"`+id+`","hash":"`+hash+`","frontmatter":{"title":"Changed","count":null}}`, false)
+			if updated["hash"] == hash || updated["body"] != read["body"] || updated["frontmatter"].(map[string]any)["ratio"] != metadata["ratio"] {
+				t.Fatalf("unexpected patch: %v", updated)
+			}
+			if _, exists := updated["frontmatter"].(map[string]any)["count"]; exists {
+				t.Fatal("null did not remove count")
+			}
+			call("update", `{"id":"`+id+`","hash":"`+hash+`","body":"stale"}`, true)
+			updated = call("update", `{"id":"`+id+`","hash":"`+updated["hash"].(string)+`","body":""}`, false)
+			if updated["body"] != "" {
+				t.Fatal("body not cleared")
 			}
 			for range 20 {
 				if _, err := c.Create(map[string]any{"title": "Another document"}, ""); err != nil {

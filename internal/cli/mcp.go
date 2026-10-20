@@ -35,15 +35,22 @@ Multiple collections:
 Tools (all bound to --path; no per-call path argument):
   info {}                            Title, description, schema, path, instructions.
   list {"limit":20}                  IDs and metadata; 0 returns all, no bodies.
-  read {"id":"..."}                 ID, frontmatter, and body.
+  read {"id":"..."}                 ID, hash, frontmatter, and body.
   create {"frontmatter":{},"body":"..."}
                                      Validate and create; body defaults to empty.
+  update {"id":"...","hash":"...","frontmatter":{...},"body":"..."}
+                                     Patch metadata and/or replace body.
 
 Call info before creating documents. Each tool reloads schema.json so
 schema edits take effect immediately. Reads and lists do not validate existing
 frontmatter against the schema; list entries may contain individual errors.
 Creation is not idempotent: retrying a success creates another document.
-Updates, deletion, search, initialization, and schema editing are not MCP tools yet.
+Read before update and pass its hash. Metadata uses JSON Merge Patch: objects merge
+recursively, null deletes keys, and arrays replace. Omitted frontmatter/body stays
+unchanged. Body must be a string when supplied; "" clears it. A stale hash fails
+without writing; read again and review the changes before retrying. Resulting
+frontmatter is validated. See "means update --help" for concurrency and storage details.
+Deletion, search, initialization, and schema editing are not MCP tools yet.
 info reads current title, description, and instructions.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.

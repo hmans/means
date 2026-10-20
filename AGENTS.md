@@ -22,9 +22,16 @@ the project direction and [TODO.md](TODO.md) for planned work.
 - Document IDs are filename stems. Creation generates a random 32-character hex
   ID and writes `<id>.md`; IDs are not injected into application frontmatter.
   Collections contain regular Markdown files directly under the selected path.
-- Validate frontmatter on creation. Reads and lists parse stored metadata without
+- Validate frontmatter on creation and after updates. Reads and lists parse stored metadata without
   enforcing the schema, allowing retrieval after schema changes. List reports
   malformed files individually and omits document bodies.
+- Read/create/update JSON returns a SHA-256 hash of the exact stored file bytes.
+  Updates require that hash, merge-patch frontmatter (null deletes, arrays replace),
+  and replace the body only when supplied. Preserve IDs, reject stale writes, and
+  use same-directory temporary replacements. Updates do not lock files; hash
+  checks reject observed changes but cannot exclude a write racing replacement.
+  Lists omit hashes so consumers retrieve full content before updating. Body-only
+  changes preserve frontmatter text; metadata changes may reformat YAML.
 - Support software consumers as well as humans and agents. Provide structured
   CLI input, output, and errors, and a stdio MCP interface; an SDK may follow.
 - Use Cobra for the CLI. Every command inherits `--path` (defaulting to the
@@ -57,6 +64,5 @@ the project direction and [TODO.md](TODO.md) for planned work.
 - Keep CLI help sufficient for agents to discover workflows, input formats,
   examples, output formats, errors, and limitations. Include long descriptions
   and examples in both human-readable and JSON help.
-- Update and delete semantics are still open design questions. Do not treat
-  examples from discussion as settled APIs.
+- Delete semantics are still an open design question.
 - Embeddings, vector search, and automatic document repair are deferred.

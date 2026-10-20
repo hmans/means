@@ -19,7 +19,10 @@ IDs, then read by ID for full bodies. IDs are filename stems, without .md.
 Creation validates the current schema and is not idempotent: do not retry a
 successful creation. Reads and lists parse metadata without schema validation;
 inspect per-document errors in list results. Schema and document edits take effect
-on the next tool call. Updates, deletion, search, and schema editing are not
+on the next tool call. Read before update: supply its hash and only the fields to
+patch. A stale hash fails; read again and review changes before retrying. Metadata
+uses JSON Merge Patch (objects merge, null deletes, arrays replace); body replaces
+the whole body when supplied. Deletion, search, and schema editing are not
 exposed as MCP tools yet. The optional instructions.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
 Call info for current guidance; restart the server to refresh discovery
@@ -73,7 +76,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "list",
-			description: "List IDs and frontmatter, without bodies, sorted by filename. limit defaults to 20; 0 returns all. Returns documents and has_more. Increase limit when has_more is true. Malformed documents have null frontmatter and an error; these still count toward the limit. Does not validate stored metadata against the schema.",
+			description: "List IDs and frontmatter, without bodies or hashes, sorted by filename. Use read before update. limit defaults to 20; 0 returns all. Returns documents and has_more. Increase limit when has_more is true. Malformed documents have null frontmatter and an error; these still count toward the limit. Does not validate stored metadata against the schema.",
 			schema:      `{"type":"object","properties":{"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -93,7 +96,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "read",
-			description: "Read a document by its filename stem (without .md). Returns id, frontmatter, and the exact Markdown body. IDs contain letters, digits, hyphens and underscores, starting with a letter or digit. Paths and symlinks are rejected. Parses metadata without validating it against the current schema.",
+			description: "Read a document by its filename stem (without .md). Returns id, hash, frontmatter, and the exact Markdown body. hash is SHA-256 of the exact file bytes, required for update. IDs contain letters, digits, hyphens and underscores, starting with a letter or digit. Paths and symlinks are rejected. Parses metadata without validating it against the current schema.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","description":"Document filename stem, without .md."}},"required":["id"],"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -102,11 +105,26 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "create",
-			description: "Create one document. Call info first for its schema. Supply required frontmatter object and optional Markdown body string (default empty). Validates against the current collection schema before writing. Returns id, frontmatter, body. Generates a random 32-character hex filename stem; does not inject metadata fields or overwrite files. Each successful call creates a new document; do not retry a success.",
+			description: "Create one document. Call info first for its schema. Supply required frontmatter object and optional Markdown body string (default empty). Validates against the current collection schema before writing. Returns id, hash, frontmatter, body. Generates a random 32-character hex filename stem; does not inject metadata fields or overwrite files. Each successful call creates a new document; do not retry a success.",
 			schema:      `{"type":"object","properties":{"frontmatter":{"type":"object","description":"Application metadata conforming to the schema returned by info."},"body":{"type":"string","description":"Markdown body, preserved exactly; defaults to empty."}},"required":["frontmatter"],"additionalProperties":false}`,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				body, _ := args["body"].(string)
 				return c.Create(args["frontmatter"].(map[string]any), body)
+			},
+		},
+		{
+			name:        "update",
+			description: "Patch an existing document. Read first and supply its id and hash (SHA-256 of exact stored bytes). Supply frontmatter and/or body. Frontmatter uses JSON Merge Patch: omitted keys stay, nested objects merge, null deletes keys, arrays replace. Cannot set literal null with this format. body is a replacement string; omit to retain, empty string to clear. Validates resulting metadata; stale hashes fail without writing. On conflict read again, review, and retry with the new hash. Preserves ID and permission bits; metadata edits may reformat YAML. Returns id, new hash, frontmatter, body. Rechecks the hash before replacement; a simultaneous write between that check and replacement can still be overwritten.",
+			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$"},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."},"frontmatter":{"type":"object","description":"JSON Merge Patch for frontmatter; null removes a field."},"body":{"type":"string","description":"Replacement Markdown body; omit to retain."}},"required":["id","hash"],"anyOf":[{"required":["frontmatter"]},{"required":["body"]}],"additionalProperties":false}`,
+			destructive: true,
+			run: func(c *collection.Collection, args map[string]any) (any, error) {
+				patch := collection.Patch{}
+				patch.Frontmatter, _ = args["frontmatter"].(map[string]any)
+				if value, exists := args["body"]; exists {
+					body := value.(string)
+					patch.Body = &body
+				}
+				return c.Update(args["id"].(string), args["hash"].(string), patch)
 			},
 		},
 	} {
@@ -121,6 +139,7 @@ func New(path, version string) (*mcp.Server, error) {
 type toolDefinition struct {
 	name, description, schema string
 	readOnly                  bool
+	destructive               bool
 	run                       func(*collection.Collection, map[string]any) (any, error)
 }
 
@@ -141,7 +160,7 @@ func addTool(server *mcp.Server, path string, tool toolDefinition) error {
 	server.AddTool(&mcp.Tool{
 		Name: tool.name, Description: tool.description, InputSchema: schema,
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: tool.readOnly,
-			DestructiveHint: &no, OpenWorldHint: &no},
+			DestructiveHint: &tool.destructive, OpenWorldHint: &no},
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Decode and validate ourselves: generic SDK handlers decode arbitrary
 		// metadata through float64, which can lose large integers and decimals.

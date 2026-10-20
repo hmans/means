@@ -23,7 +23,8 @@ The reserved instructions.md configures the collection and is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
 
 --json returns {"documents":[{"id":"...","frontmatter":{...}}],"has_more":false}.
-Bodies are omitted. An empty collection returns an empty documents array.
+Bodies and hashes are omitted; use read --json before updating a document.
+An empty collection returns an empty documents array.
 If more results exist, has_more is true; increase --limit or use 0 to retrieve all.
 Text output contains one ID and its JSON metadata per line, plus a notice when
 the limit hides results. Read a full document with "means read <id>".

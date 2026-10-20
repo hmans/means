@@ -120,6 +120,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 		"create": {"--input -", "frontmatter", "schema.json", "32-character", "exit 1", "<<'JSON'"},
 		"read":   {"filename", "--json", "schema", "exit 1"},
 		"list":   {"--limit", "has_more", "Malformed", "exit 1"},
+		"update": {"hash", "read", "--input -", "null deletes", "arrays", "stale", "final check", "exit 1", "<<'JSON'"},
 	} {
 		for _, jsonMode := range []bool{false, true} {
 			args := []string{command, "--help"}

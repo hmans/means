@@ -1,0 +1,169 @@
+package collection
+
+import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"reflect"
+	"regexp"
+	"strings"
+	"unicode/utf8"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
+)
+
+var (
+	ErrConflict = errors.New("document content has changed")
+	validHash   = regexp.MustCompile(`^[0-9a-f]{64}$`)
+)
+
+// Patch merges supplied metadata recursively (null deletes, arrays replace).
+// A nil Frontmatter or Body leaves that portion of the document unchanged.
+type Patch struct {
+	Frontmatter map[string]any
+	Body        *string
+}
+
+// Update checks the exact stored bytes against hash before applying a patch.
+// Replacement uses a temporary file in the same directory. Hash checks are
+// optimistic: a simultaneous write can still race the final replacement.
+func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
+	if err := validateDocumentID(id); err != nil {
+		return nil, err
+	}
+	if !validHash.MatchString(hash) {
+		return nil, fmt.Errorf("hash is required and must be 64 lowercase hexadecimal SHA-256 characters; read the document first")
+	}
+	if patch.Frontmatter == nil && patch.Body == nil {
+		return nil, fmt.Errorf("supply frontmatter and/or body to update")
+	}
+	// Normalize Go caller values without rounding numbers or mutating their maps.
+	if patch.Frontmatter != nil {
+		data, err := json.Marshal(patch.Frontmatter)
+		if err != nil {
+			return nil, fmt.Errorf("encode frontmatter patch: %w", err)
+		}
+		value, err := jsonschema.UnmarshalJSON(bytes.NewReader(data))
+		if err != nil {
+			return nil, err
+		}
+		patch.Frontmatter = value.(map[string]any)
+	}
+	root, err := os.OpenRoot(c.Path)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	current, err := readDocument(root, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.Hash != hash {
+		return nil, conflict(id)
+	}
+	frontmatter := current.Frontmatter
+	if patch.Frontmatter != nil {
+		frontmatter = mergeObject(frontmatter, patch.Frontmatter)
+	}
+	if err := c.Validate(frontmatter); err != nil {
+		return nil, err
+	}
+	body := current.Body
+	if patch.Body != nil {
+		body = *patch.Body
+	}
+	metadataChanged := !reflect.DeepEqual(frontmatter, current.Frontmatter)
+	if !metadataChanged && body == current.Body {
+		return current, nil
+	}
+	var markdown string
+	if metadataChanged {
+		markdown, err = encodeMarkdown(frontmatter, body)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if !utf8.ValidString(body) {
+			return nil, fmt.Errorf("body must be valid UTF-8")
+		}
+		prefix := current.Markdown[:len(current.Markdown)-len(current.Body)]
+		if body != "" && !strings.HasSuffix(prefix, "\n") {
+			prefix += "\n"
+		}
+		markdown = prefix + body
+	}
+	fileInfo, err := root.Lstat(id + ".md")
+	if err != nil {
+		return nil, err
+	}
+	// Random temporary names are hidden and cannot be document IDs.
+	var temp *os.File
+	var tempname string
+	for {
+		var random [16]byte
+		if _, err := rand.Read(random[:]); err != nil {
+			return nil, err
+		}
+		tempname = ".means-" + hex.EncodeToString(random[:]) + ".tmp"
+		temp, err = root.OpenFile(tempname, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if !errors.Is(err, os.ErrExist) {
+			break
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("create update temporary file: %w", err)
+	}
+	defer root.Remove(tempname)
+	_, writeErr := temp.WriteString(markdown)
+	if writeErr == nil {
+		writeErr = temp.Chmod(fileInfo.Mode().Perm())
+	}
+	if writeErr == nil {
+		writeErr = temp.Sync()
+	}
+	if err := errors.Join(writeErr, temp.Close()); err != nil {
+		return nil, fmt.Errorf("write update: %w", err)
+	}
+	// Also catch edits made while preparing the replacement. Another writer
+	// can still race the final rename; the hash check and rename are not atomic.
+	latest, err := readDocument(root, id)
+	if err != nil {
+		return nil, err
+	}
+	if latest.Hash != hash {
+		return nil, conflict(id)
+	}
+	if err := root.Rename(tempname, id+".md"); err != nil {
+		return nil, fmt.Errorf("replace document: %w", err)
+	}
+	return &Document{ID: id, Hash: contentHash(markdown), Frontmatter: frontmatter, Body: body, Markdown: markdown}, nil
+}
+
+func conflict(id string) error {
+	return fmt.Errorf("%w for %q; read it again, review the changes, and retry with its new hash", ErrConflict, id)
+}
+
+// mergeObject implements RFC 7396 for an object patch, without mutating target.
+func mergeObject(target, patch map[string]any) map[string]any {
+	result := make(map[string]any, len(target))
+	for key, value := range target {
+		result[key] = value
+	}
+	for key, value := range patch {
+		if value == nil {
+			delete(result, key)
+			continue
+		}
+		if object, ok := value.(map[string]any); ok {
+			previous, _ := result[key].(map[string]any)
+			result[key] = mergeObject(previous, object)
+		} else {
+			result[key] = value
+		}
+	}
+	return result
+}
