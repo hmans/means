@@ -143,7 +143,7 @@ func New(path, version string) (*mcp.Server, error) {
 		{
 			name:        "update",
 			description: "Patch title/data or replace the body using the hash from read. Omit unchanged fields; null deletes nested data keys. The ID cannot change. A stale hash fails; read again before retrying.",
-			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."},"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Merge patch for application data. Null values delete nested keys; arrays replace."}},"additionalProperties":false},"body":{"type":"string","description":"Replacement Markdown body; omit to retain."}},"required":["id","hash"],"anyOf":[{"required":["frontmatter"]},{"required":["body"]}],"additionalProperties":false}`,
+			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."},"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Merge patch for application data. Null values delete nested keys; arrays replace."}},"additionalProperties":false},"body":{"type":"string","description":"Replacement Markdown body; omit to retain."}},"required":["id","hash"],"minProperties":3,"additionalProperties":false}`,
 			destructive: true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				patch := collection.Patch{}
