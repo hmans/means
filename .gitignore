@@ -4,3 +4,5 @@
 
 # Temporary files used by ID allocation and hash-checked updates (including example collections).
 .means-*.tmp
+
+.vscode/settings.json
