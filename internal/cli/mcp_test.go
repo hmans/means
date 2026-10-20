@@ -217,7 +217,7 @@ func connectMCP(t *testing.T, ctx context.Context, path, protocol string, extraF
 	var wire, stderr bytes.Buffer
 	done := make(chan error, 1)
 	go func() {
-		args := append([]string{"mcp", "--path", path, "--json"}, extraFlags...)
+		args := append([]string{"mcp", "--path", path}, extraFlags...)
 		done <- Execute(args, serverIn,
 			io.MultiWriter(serverOut, &wire), &stderr, "test-mcp")
 	}()
@@ -270,7 +270,7 @@ func connectMCP(t *testing.T, ctx context.Context, path, protocol string, extraF
 	return session
 }
 
-func TestMCPStructuredOnly(t *testing.T) {
+func TestMCPJSONStructuredOnly(t *testing.T) {
 	for _, protocol := range []string{"2025-11-25", "2026-07-28"} {
 		t.Run(protocol, func(t *testing.T) {
 			path := t.TempDir()
@@ -279,7 +279,7 @@ func TestMCPStructuredOnly(t *testing.T) {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			session := connectMCP(t, ctx, path, protocol, "--structured-only")
+			session := connectMCP(t, ctx, path, protocol, "--json")
 			result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "create", Arguments: json.RawMessage(`{"frontmatter":{"title":"Precise numbers","data":{"count":9007199254740993,"ratio":0.1234567890123456789}}}`)})
 			if err != nil || result.IsError || result.StructuredContent == nil || len(result.Content) != 0 {
 				t.Fatalf("structured-only result = %+v, %v", result, err)
@@ -309,7 +309,8 @@ func TestMCPStartupAndHelp(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &help); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(help["description"], "info") || !strings.Contains(help["description"], "framing") {
+	if !strings.Contains(help["description"], "info") || !strings.Contains(help["description"], "--json omits") ||
+		!strings.Contains(help["description"], "framing") || strings.Contains(help["usage"], "--structured-only") {
 		t.Fatalf("incomplete MCP help: %v", help)
 	}
 	path := t.TempDir()

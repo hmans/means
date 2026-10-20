@@ -15,7 +15,7 @@ raw_args = true
 [tasks.issues-mcp]
 description = "Serve the means project's issue collection over MCP"
 dir = "{{ config_root }}"
-run = "go run . mcp --path ./issues --structured-only"
+run = "go run . mcp --path ./issues --json"
 raw = true
 
 [tasks.example-mcp]

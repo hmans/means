@@ -38,8 +38,9 @@ Every command accepts these shared flags before or after the command name:
   means does not change the process working directory.
 - `--json` returns JSON with two-space indentation, including help and error responses.
 
-The `mcp` command uses MCP message framing on stdout regardless of `--json`;
-the flag still controls its help and startup error formatting.
+The `mcp` command uses MCP message framing on stdout regardless of `--json`.
+The flag omits redundant text copies from successful MCP results for clients
+that read `structuredContent`; it also controls help and startup error formatting.
 
 Successful responses go to stdout. Errors go to stderr and cause a nonzero exit
 code; in JSON mode, errors have an `error` string. Directory existence is left to
@@ -365,9 +366,9 @@ MCP updates use the same patch rules and required content hash as the CLI. Call
 can replace or remove existing content.
 
 Results contain `structuredContent` and, by default, an equivalent compact JSON
-text block for clients that only read `content`. Use `means mcp --structured-only`
-when every client of that registration reads `structuredContent`; successful
-results then have an empty `content` array. This repository's `issues-mcp` task
+text block for clients that only read `content`. Use `means mcp --json` when every
+client of that registration reads `structuredContent`; successful results then
+have an empty `content` array. This repository's `issues-mcp` task
 uses that mode. Tool failures still contain explanatory text and return MCP
 `isError` results without ending the server.
 Stdout contains only compact, newline-delimited MCP messages. Diagnostics and

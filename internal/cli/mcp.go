@@ -9,8 +9,7 @@ import (
 )
 
 func newMCPCommand(opts *options, version string) *cobra.Command {
-	var structuredOnly bool
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "mcp",
 		Short: "Serve one collection over MCP on stdin/stdout",
 		Long: `Expose the existing collection selected by --path through MCP over stdio.
@@ -69,20 +68,20 @@ instructions after editing these files. AGENTS.md is not loaded by the server.
 
 Output is always MCP JSON-RPC, one compact message per line on stdout. Successful
 tool results include structuredContent and a compact JSON text equivalent by
-default. --structured-only omits the text copy for clients that consume
-structuredContent; use it only when every client of this registration supports
-structured results. Tool errors still include explanatory text.
+default. --json omits the text copy for clients that consume structuredContent.
+Use it when every client of this registration supports structured results.
+Tool errors still include explanatory text.
 Tool failures use MCP isError results; the server stays available for later calls.
-Startup failures and diagnostics go to stderr. --json affects CLI help and startup
-errors only; it never pretty-prints or otherwise changes MCP message framing.`,
+Startup failures and diagnostics go to stderr. --json also formats CLI help and
+startup errors; it never changes MCP message framing.`,
 		Example: `  means mcp --path ./example/issues
-  means mcp --path ./issues --structured-only
+  means mcp --path ./issues --json
   # Register separately to give the same agent another collection
   means mcp --path ./decisions
   means mcp --help --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			server, err := mcpserver.New(opts.path, version, structuredOnly)
+			server, err := mcpserver.New(opts.path, version, opts.json)
 			if err != nil {
 				return err
 			}
@@ -92,8 +91,6 @@ errors only; it never pretty-prints or otherwise changes MCP message framing.`,
 			})
 		},
 	}
-	cmd.Flags().BoolVar(&structuredOnly, "structured-only", false, "Omit JSON text copies for clients that read structuredContent")
-	return cmd
 }
 
 type nopWriteCloser struct{ io.Writer }
