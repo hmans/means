@@ -236,7 +236,7 @@ previous application field named `id` belongs under `data.id`; it does not repla
 the document ID. Bodies can remain byte-for-byte unchanged. Filenames may be
 renamed to the new convention, but lookup uses the stored ID.
 
-The example collections now use five-character IDs and
+The repository's issue and example collections now use five-character IDs and
 canonical `<id>-<title-slug>.md` filenames. Their earlier long IDs were explicitly
 regenerated during cleanup. There is no automatic migration or legacy fallback.
 
@@ -420,7 +420,17 @@ See [example/README.md](example/README.md) to start one Codex agent with both th
 - **Diagnostics:** a planned `doctor` command will identify documents that do not
   satisfy their collection's schema. A possible `fix` command is future work.
 
-See [TODO.md](TODO.md) for the next steps, including search and deletion.
+The project's own backlog lives in the [issues](issues/) collection, including
+search, deletion, and diagnostics. Its [instructions](issues/instructions.md)
+describe the workflow. List the current issues from the repository root:
+
+```sh
+mise means list --path ./issues --limit 0 --json
+```
+
+Use `read`, `create`, and `update` with the same `--path` to manage this backlog.
+It is separate from the fictional example collections. [TODO.md](TODO.md)
+retains completed milestones; active work is tracked only in `issues/`.
 
 ## Development
 

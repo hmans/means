@@ -2,7 +2,8 @@
 
 means is a Go tool for agentic memory: collections of Markdown documents with
 typed frontmatter and a collection-local schema. Read [README.md](README.md) for
-the project direction and [TODO.md](TODO.md) for planned work.
+the project direction. Track planned work in the [issues](issues/) collection,
+following its [workflow](issues/instructions.md).
 
 ## Core decisions
 
@@ -67,8 +68,12 @@ the project direction and [TODO.md](TODO.md) for planned work.
   can reuse the same behavior.
 - Once Go code exists, format it with `gofmt` and run relevant tests using
   `mise test`.
-- Update the README when implemented behavior changes and check off completed
-  work in TODO.md. Clearly distinguish available features from plans.
+- Use means to manage this repository's issues: start with
+  `mise means list --path ./issues --limit 0 --json` from the repo root.
+  Read relevant issues before work and update their status and outcome through
+  means. `example/issues` is fictional data, not this project's backlog.
+- Update the README when implemented behavior changes. Clearly distinguish
+  available features from plans. TODO.md retains historical milestones only.
 - Keep CLI help sufficient for agents to discover workflows, input formats,
   examples, output formats, errors, and limitations. Include long descriptions
   and examples in both human-readable and JSON help.
