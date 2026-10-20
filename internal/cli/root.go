@@ -30,6 +30,9 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer, version s
 	command, err := root.ExecuteC()
 	err = errors.Join(err, opts.helpErr)
 	if err != nil {
+		if errors.Is(err, ErrUnhealthy) {
+			return err
+		}
 		// Flag parsing can stop before reaching --json. Re-read command flags
 		// without rejecting unknown flags so error formatting is order-independent.
 		command.FParseErrWhitelist.UnknownFlags = true
@@ -59,7 +62,8 @@ Then use "means create --help" to store a validated document, "means list" to
 discover IDs and metadata, and "means read <id>" to retrieve a document.
 Use "means mcp --help" to expose a collection to an MCP client over stdio.
 Use "means update --help" to patch a document using the hash from read --json.
-Deletion, search, and doctor are not implemented yet.
+Deletion and search are not implemented yet. Use "means doctor" to check all
+documents against the current collection schema.
 
 Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
@@ -67,7 +71,8 @@ Means works with that exact directory and does not search parent directories.
 --json returns two-space-indented JSON, including help and errors.
 The mcp command always uses MCP message framing on stdout, regardless of --json.
 Successful responses go to stdout (exit 0); errors go to stderr (exit 1) as
-{"error":"..."} in JSON mode. Parse the entire JSON response, not individual lines.
+{"error":"..."} in JSON mode. Doctor reports invalid documents on stdout and
+exits 1. Parse the entire JSON response, not individual lines.
 Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		Args:             cobra.NoArgs,
 		SilenceUsage:     true,
@@ -112,6 +117,6 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		},
 	})
 	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts),
-		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newUpdateCommand(opts), newMCPCommand(opts, version))
+		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newUpdateCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

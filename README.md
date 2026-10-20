@@ -9,8 +9,8 @@ collection governs application fields under `data`. Applications
 and agents can establish and evolve that schema as their needs change.
 
 **Status:** early development. Collection initialization, document creation,
-reading, patch updates, metadata listing, and a stdio MCP server are implemented. Deletion, search, and
-`doctor` are planned.
+reading, patch updates, metadata listing, document diagnostics, and a stdio MCP
+server are implemented. Deletion and search are planned.
 
 ## What it's for
 
@@ -39,6 +39,7 @@ the flag still controls its help and startup error formatting.
 Successful responses go to stdout. Errors go to stderr and cause a nonzero exit
 code; in JSON mode, errors have an `error` string. Directory existence is left to
 the commands that access it; help and version do not require a collection.
+Doctor writes document diagnostics to stdout and exits 1 when it finds problems.
 
 ```sh
 means --help
@@ -126,8 +127,8 @@ references such as `#/$defs/status` work; references to other files or remote
 schemas are not supported yet.
 
 The collection loader reads and validates `schema.json` on each load, so manual
-schema edits take effect immediately. This checks the schema definition; checking
-existing Markdown documents will be the job of the planned `doctor` command.
+schema edits take effect immediately. Use `means doctor` to check existing
+Markdown documents against the current schema.
 
 ## Documents
 
@@ -221,6 +222,17 @@ ambiguous document fails rather than selecting a file arbitrarily.
 Frontmatter uses string keys and JSON-compatible values. Duplicate keys, aliases,
 merge keys, custom YAML tags, and non-finite numbers are rejected. Plain YAML dates
 are returned as strings. Both LF and CRLF delimiters are supported.
+
+Run `mise means doctor --path ./memory --json` to inspect every visible document
+against the current schema. Doctor reports malformed Markdown/frontmatter, invalid
+means envelopes, duplicate IDs, and application data that fails schema validation.
+It uses the same file discovery rules as list and never changes documents. JSON
+output is `{ "healthy": true, "checked": 0, "diagnostics": [] }` for an empty
+collection. An unhealthy result contains one or more diagnostics with `id`,
+relative `path`, and `error`; `id` is empty when it cannot be read. Healthy
+collections exit 0. Unhealthy collections write the complete report to stdout
+and exit 1 without a stderr error response. Collection-level errors, such as an
+invalid `schema.json`, go to stderr and exit 1.
 
 Run `mise means create --help`, `mise means read --help`, or `mise means list
 --help` for full input, output, and error details. Help is also available as JSON.
@@ -417,8 +429,8 @@ See [example/README.md](example/README.md) to start one Codex agent with both th
   optional MCP subprocess managed by its client.
 - **Optional indexes:** means may persist derived data locally to support efficient
   retrieval. The storage format is undecided.
-- **Diagnostics:** a planned `doctor` command will identify documents that do not
-  satisfy their collection's schema. A possible `fix` command is future work.
+- **Diagnostics:** `doctor` identifies documents that do not satisfy their
+  collection's schema. A possible `fix` command is future work.
 
 The project's own backlog lives in the [issues](issues/) collection, including
 search, deletion, and diagnostics. Its [instructions](issues/instructions.md)
