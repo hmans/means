@@ -38,14 +38,17 @@ progress notes.
 
 ## Current capabilities
 
-Means exposes creation, reading, and listing. Filtering, updates, deletion, and
+Means exposes creation, reading, listing, and patch updates. Filtering, deletion, and
 `doctor` are not implemented. Filter list results yourself and inspect any
 per-document `error` entries instead of treating them as valid issues.
 
-For a requested update, first read the issue through means. If filesystem access
-is available, edit its existing Markdown file under the collection path returned
-by `info`, preserving its filename and schema-compatible metadata.
-Read it again through means to verify parsing. Reads do not check schema compliance.
-If filesystem access is unavailable, explain that updates require it; do not
-create a replacement issue to simulate an update. Prefer `canceled` to deleting
-an abandoned issue so its context remains available.
+For a requested update, call `read` first and use its `hash` in `update`, along
+with the issue ID and only the fields that need changing. For example, set
+`frontmatter` to `{"status":"in_progress"}` to start work. Metadata objects merge
+recursively, null removes a field, and arrays replace entirely. The optional
+`body` replaces the whole body; omit it to preserve existing context.
+
+The resulting frontmatter must satisfy the schema. If the hash is stale, read
+again, review the intervening changes, and reapply the intended patch. Do not
+blindly retry or create a replacement issue. Prefer `canceled` to deleting an
+abandoned issue so its context remains available.

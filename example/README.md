@@ -32,12 +32,13 @@ through Codex's normal project setup if prompted. Use `/mcp` to check that
 
 > Remember that Meadow's example team prefers weekly written updates.
 
-Each registration exposes `info`, `list`, `read`, and `create`, bound to its own
+Each registration exposes `info`, `list`, `read`, `create`, and `update`, bound to its own
 collection. The collection's title and purpose appear in every tool description.
 [issues/instructions.md](issues/instructions.md) and
 [memory/instructions.md](memory/instructions.md) provide their workflows through
 server instructions and `info`. This example has no local `AGENTS.md`; collection
-purpose and workflow come from MCP. Updates still require filesystem access.
+purpose and workflow come from MCP. For updates, read first and pass the returned
+content hash with a patch; stale writes fail and require a fresh read.
 
 The configuration runs `mise --quiet example-mcp` for issues and
 `mise --quiet example-memory-mcp` for memory, using the current repository source.
@@ -71,6 +72,7 @@ mise means list --path ./example/issues --limit 0 --json
 mise means list --path ./example/memory --limit 0 --json
 mise means read <id> --path ./example/memory --json
 mise means create --path ./example/memory --input - --json
+mise means update <id> --path ./example/memory --input - --json
 ```
 
 Inside either collection directory, omit `--path`. The mise task preserves your

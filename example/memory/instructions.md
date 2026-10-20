@@ -27,9 +27,12 @@ Read relevant memories before answering questions about remembered context.
 Inspect the body, not just the title, and mention uncertainty or conflicting
 entries when it matters. Report memory IDs when creating or changing records.
 
-Search and update tools are not implemented yet. Filter list results yourself;
-inspect per-document errors. For a requested correction, read the memory first.
-If filesystem access is available, edit its existing file under the path returned
-by `info`, preserving its ID and schema-compatible frontmatter, then read it back.
-Reads verify parsing, not schema compliance. If filesystem access is unavailable,
-explain the limitation rather than creating a contradictory replacement memory.
+Search is not implemented yet. Filter list results yourself and inspect
+per-document errors. For a requested correction, call `read` first, then `update`
+with the memory's ID, returned `hash`, and only the fields to change. Metadata
+objects merge recursively, null removes a field, and arrays replace entirely.
+The optional `body` replaces the whole body; retain useful context from the read.
+
+Updates validate the resulting frontmatter. A stale hash means the content changed:
+read again, reconcile your correction with the new content, and retry with its
+hash. Do not create a contradictory replacement memory to bypass a conflict.
