@@ -3,7 +3,8 @@ go = "latest"
 
 [tasks.means]
 description = "Run the means CLI from source"
-run = "go run ."
+dir = "{{ cwd }}"
+run = 'go run "{{ config_root }}"'
 raw_args = true
 
 [tasks.test]

@@ -236,8 +236,14 @@ mise test
 mise exec -- go build -o means .
 ```
 
-`mise means` runs `go run .` and forwards all arguments to the CLI, including
-`--help`, `--path`, and `--json`.
+`mise means` runs the repository's Go package from your current working directory
+and forwards all arguments to the CLI, including `--help`, `--path`, and `--json`.
+You can work directly inside a collection without specifying `--path`:
+
+```sh
+cd example/issues
+mise means list --json
+```
 
 The entry point is `main.go`; command definitions and output formatting live in
 `internal/cli`. Collection initialization, document storage, and schema validation live in

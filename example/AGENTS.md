@@ -15,6 +15,10 @@ mise means read <id> --path ./example/issues --json
 mise means create --path ./example/issues --input - --json
 ```
 
+Alternatively, run `mise means` from inside `example/issues/` and omit `--path`;
+the task preserves your working directory. Relative `--path` and input file paths
+also resolve from the directory where you invoke it.
+
 Read `issues/schema.json` before creating or editing issues. Use
 `mise means <command> --help` for input and output details. This collection is
 already initialized; do not run `init` over it.
