@@ -5,3 +5,8 @@ go = "latest"
 description = "Run the means CLI from source"
 run = "go run ."
 raw_args = true
+
+[tasks.test]
+description = "Run the Go test suite"
+run = "go test ./..."
+raw_args = true

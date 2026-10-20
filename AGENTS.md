@@ -41,7 +41,7 @@ the project direction and [TODO.md](TODO.md) for planned work.
 - Keep document operations independent of CLI presentation so other interfaces
   can reuse the same behavior.
 - Once Go code exists, format it with `gofmt` and run relevant tests using
-  `mise exec -- go test ./...`.
+  `mise test`.
 - Update the README when implemented behavior changes and check off completed
   work in TODO.md. Clearly distinguish available features from plans.
 - Keep CLI help sufficient for agents to discover workflows, input formats,

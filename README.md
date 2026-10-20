@@ -222,7 +222,7 @@ The Go toolchain is managed through [mise](https://mise.jdx.dev/) and configured
 ```sh
 mise means help
 mise means version --json
-mise exec -- go test ./...
+mise test
 mise exec -- go build -o means .
 ```
 
