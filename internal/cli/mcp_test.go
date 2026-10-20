@@ -39,7 +39,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if tool.Description == "" || tool.InputSchema == nil || tool.Annotations == nil {
 					t.Fatalf("missing tool metadata: %+v", tool)
 				}
-				if tool.Annotations.ReadOnlyHint != (tool.Name != "create_document") {
+				if tool.Annotations.ReadOnlyHint != (tool.Name != "create") {
 					t.Fatalf("incorrect read-only annotation: %+v", tool)
 				}
 			}
@@ -71,7 +71,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				}
 				return value.(map[string]any)
 			}
-			info := call("collection_info", `{}`, false)
+			info := call("info", `{}`, false)
 			if info["path"] != path || info["schema"] == nil || info["instructions"] == "" {
 				t.Fatalf("collection info = %v", info)
 			}
@@ -80,15 +80,15 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				`{"frontmatter":{"title":42}}`, `{"frontmatter":{"title":"x"},"body":null}`,
 				`{"frontmatter":{"title":"x"},"path":"/tmp"}`,
 			} {
-				call("create_document", args, true)
+				call("create", args, true)
 			}
 			files, err := filepath.Glob(filepath.Join(path, "*.md"))
 			if err != nil || len(files) != 0 {
 				t.Fatalf("invalid calls created files: %v, %v", files, err)
 			}
-			created := call("create_document", `{"frontmatter":{"title":"Precise numbers","count":9007199254740993,"ratio":0.1234567890123456789},"body":"## Notes\n\nExact body.\n"}`, false)
+			created := call("create", `{"frontmatter":{"title":"Precise numbers","count":9007199254740993,"ratio":0.1234567890123456789},"body":"## Notes\n\nExact body.\n"}`, false)
 			id := created["id"].(string)
-			read := call("read_document", `{"id":"`+id+`"}`, false)
+			read := call("read", `{"id":"`+id+`"}`, false)
 			metadata := read["frontmatter"].(map[string]any)
 			if metadata["count"] != json.Number("9007199254740993") || metadata["ratio"] != json.Number("0.1234567890123456789") || read["body"] != "## Notes\n\nExact body.\n" {
 				t.Fatalf("round-trip lost content: %v", read)
@@ -98,14 +98,14 @@ func TestMCPToolsOverStdio(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			listed := call("list_documents", `{}`, false)
+			listed := call("list", `{}`, false)
 			if len(listed["documents"].([]any)) != 20 || listed["has_more"] != true {
 				t.Fatalf("default limit: %v", listed)
 			}
 			if err := os.WriteFile(filepath.Join(path, "broken.md"), []byte("no frontmatter"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			listed = call("list_documents", `{"limit":0}`, false)
+			listed = call("list", `{"limit":0}`, false)
 			if len(listed["documents"].([]any)) != 22 || listed["has_more"] != false {
 				t.Fatalf("unlimited list: %v", listed)
 			}
@@ -122,36 +122,36 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if !foundBroken {
 				t.Fatal("missing malformed-document error")
 			}
-			call("read_document", `{"id":"../outside"}`, true)
-			call("read_document", `{"id":"missing"}`, true)
-			call("list_documents", `{"limit":-1}`, true)
-			call("list_documents", `{"limit":0.5}`, true)
-			call("list_documents", `{"limit":1e100}`, true)
-			call("list_documents", `{"limit":1e0}`, false)
-			call("collection_info", `{"path":"elsewhere"}`, true)
-			call("collection_info", `null`, true)
+			call("read", `{"id":"../outside"}`, true)
+			call("read", `{"id":"missing"}`, true)
+			call("list", `{"limit":-1}`, true)
+			call("list", `{"limit":0.5}`, true)
+			call("list", `{"limit":1e100}`, true)
+			call("list", `{"limit":1e0}`, false)
+			call("info", `{"path":"elsewhere"}`, true)
+			call("info", `null`, true)
 			// Schema changes affect the next call; reads still allow old metadata.
 			if err := os.WriteFile(filepath.Join(path, "schema.json"), []byte(`{"type":"object","required":["category"]}`), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			info = call("collection_info", `{}`, false)
+			info = call("info", `{}`, false)
 			if info["schema"].(map[string]any)["required"].([]any)[0] != "category" {
 				t.Fatal("stale schema")
 			}
-			call("create_document", `{"frontmatter":{"title":"Old schema"}}`, true)
-			created = call("create_document", `{"frontmatter":{"category":"new"}}`, false)
+			call("create", `{"frontmatter":{"title":"Old schema"}}`, true)
+			created = call("create", `{"frontmatter":{"category":"new"}}`, false)
 			if created["body"] != "" {
 				t.Fatal("body did not default to empty")
 			}
-			call("read_document", `{"id":"`+id+`"}`, false)
+			call("read", `{"id":"`+id+`"}`, false)
 			if err := os.WriteFile(filepath.Join(path, "schema.json"), []byte(`{"type":42}`), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			call("collection_info", `{}`, true)
+			call("info", `{}`, true)
 			if err := os.WriteFile(filepath.Join(path, "schema.json"), []byte(`true`), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if call("collection_info", `{}`, false)["schema"] != true {
+			if call("info", `{}`, false)["schema"] != true {
 				t.Fatal("boolean schema not preserved")
 			}
 		})
@@ -235,7 +235,7 @@ func TestMCPStartupAndHelp(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &help); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(help["description"], "collection_info") || !strings.Contains(help["description"], "framing") {
+	if !strings.Contains(help["description"], "info") || !strings.Contains(help["description"], "framing") {
 		t.Fatalf("incomplete MCP help: %v", help)
 	}
 	path := t.TempDir()

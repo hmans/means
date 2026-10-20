@@ -6,7 +6,7 @@ project's backlog.
 
 ## Schema and content
 
-Read the current schema through `collection_info` before creating or editing an
+Read the current schema through `info` before creating or editing an
 issue. Required frontmatter fields:
 
 - `title`: a short, nonempty description of the work.
@@ -21,7 +21,7 @@ progress notes.
 
 ## Working with issues
 
-1. List before proposing or creating work. Use `list_documents` with `limit: 0`
+1. List before proposing or creating work. Use `list` with `limit: 0`
    to see all issues. Check for duplicates and read relevant bodies by ID.
 2. When asked to choose work, prefer `todo` issues by priority: urgent, high,
    normal, then low. Consider the user's instructions and the issue's context.
@@ -42,7 +42,7 @@ per-document `error` entries instead of treating them as valid issues.
 
 For a requested update, first read the issue through means. If filesystem access
 is available, edit its existing Markdown file under the collection path returned
-by `collection_info`, preserving its filename and schema-compatible metadata.
+by `info`, preserving its filename and schema-compatible metadata.
 Read it again through means to verify parsing. Reads do not check schema compliance.
 If filesystem access is unavailable, explain that updates require it; do not
 create a replacement issue to simulate an update. Prefer `canceled` to deleting

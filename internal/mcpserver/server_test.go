@@ -60,18 +60,18 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 				}
 			}
 			// The same client can call identical tool names on distinct sessions.
-			issue := callTool(t, ctx, sessions["Issues"], "create_document", `{"frontmatter":{"title":"A bug"}}`)
+			issue := callTool(t, ctx, sessions["Issues"], "create", `{"frontmatter":{"title":"A bug"}}`)
 			id := issue["id"].(string)
-			result, err := sessions["Decisions"].CallTool(ctx, &mcp.CallToolParams{Name: "read_document", Arguments: map[string]any{"id": id}})
+			result, err := sessions["Decisions"].CallTool(ctx, &mcp.CallToolParams{Name: "read", Arguments: map[string]any{"id": id}})
 			if err != nil || !result.IsError {
 				t.Fatalf("read crossed collection boundary: %+v %v", result, err)
 			}
 			for title, session := range sessions {
-				info := callTool(t, ctx, session, "collection_info", `{}`)
+				info := callTool(t, ctx, session, "info", `{}`)
 				if info["title"] != title || info["description"] != "Stores "+title || !strings.Contains(info["instructions"].(string), "Workflow for "+title) {
 					t.Fatalf("info = %v", info)
 				}
-				list := callTool(t, ctx, session, "list_documents", `{"limit":0}`)
+				list := callTool(t, ctx, session, "list", `{"limit":0}`)
 				want := 0
 				if title == "Issues" {
 					want = 1
@@ -80,10 +80,10 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 					t.Fatalf("collection %s leaked documents or instructions: %v", title, list)
 				}
 			}
-			// Discovery is a startup snapshot; collection_info always reads current guidance.
+			// Discovery is a startup snapshot; info always reads current guidance.
 			writeFile(t, filepath.Join(paths["Issues"], collection.SchemaFilename), `{"title":"Backlog","description":"Updated purpose","type":"object"}`)
 			writeFile(t, filepath.Join(paths["Issues"], collection.InstructionsFilename), "Updated workflow")
-			info := callTool(t, ctx, sessions["Issues"], "collection_info", `{}`)
+			info := callTool(t, ctx, sessions["Issues"], "info", `{}`)
 			if info["title"] != "Backlog" || info["description"] != "Updated purpose" || !strings.Contains(info["instructions"].(string), "Updated workflow") {
 				t.Fatalf("stale info: %v", info)
 			}
@@ -97,7 +97,7 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 			if err := os.Remove(filepath.Join(paths["Issues"], collection.InstructionsFilename)); err != nil {
 				t.Fatal(err)
 			}
-			info = callTool(t, ctx, sessions["Issues"], "collection_info", `{}`)
+			info = callTool(t, ctx, sessions["Issues"], "info", `{}`)
 			if strings.Contains(info["instructions"].(string), "Updated workflow") {
 				t.Fatal("removed workflow retained")
 			}

@@ -16,7 +16,7 @@ the .md extension. IDs may contain
 letters, digits, - and _, and must start with a letter or digit. Paths, symlinks,
 and directories are not accepted. Manually created files using these names work.
 The reserved instructions.md is collection configuration, not a document; read it
-directly or retrieve its contents through the MCP collection_info tool.
+directly or retrieve its contents through the MCP info tool.
 
 Text output is the exact stored Markdown, including YAML frontmatter.
 --json returns {"id":"...","frontmatter":{...},"body":"..."} on stdout.

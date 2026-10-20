@@ -30,21 +30,21 @@ Multiple collections:
   Add optional instructions.md beside schema.json for collection workflow guidance.
   This plain UTF-8 Markdown file needs no frontmatter and is reserved configuration,
   excluded from document lists and reads. It must be a regular file, not a symlink.
-  Its contents are included in server instructions and collection_info results.
+  Its contents are included in server instructions and info results.
 
 Tools (all bound to --path; no per-call path argument):
-  collection_info {}                 Title, description, schema, path, instructions.
-  list_documents {"limit":20}         IDs and metadata; 0 returns all, no bodies.
-  read_document {"id":"..."}          ID, frontmatter, and body.
-  create_document {"frontmatter":{},"body":"..."}
+  info {}                            Title, description, schema, path, instructions.
+  list {"limit":20}                  IDs and metadata; 0 returns all, no bodies.
+  read {"id":"..."}                 ID, frontmatter, and body.
+  create {"frontmatter":{},"body":"..."}
                                      Validate and create; body defaults to empty.
 
-Call collection_info before creating documents. Each tool reloads schema.json so
+Call info before creating documents. Each tool reloads schema.json so
 schema edits take effect immediately. Reads and lists do not validate existing
 frontmatter against the schema; list entries may contain individual errors.
 Creation is not idempotent: retrying a success creates another document.
 Updates, deletion, search, initialization, and schema editing are not MCP tools yet.
-collection_info reads current title, description, and instructions.md on each call.
+info reads current title, description, and instructions.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.
 

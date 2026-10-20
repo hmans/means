@@ -13,7 +13,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-const instructions = `This server works with one Markdown collection. Call collection_info
+const instructions = `This server works with one Markdown collection. Call info
 to learn its frontmatter schema before creating documents. List documents to find
 IDs, then read by ID for full bodies. IDs are filename stems, without .md.
 Creation validates the current schema and is not idempotent: do not retry a
@@ -22,7 +22,7 @@ inspect per-document errors in list results. Schema and document edits take effe
 on the next tool call. Updates, deletion, search, and schema editing are not
 exposed as MCP tools yet. The optional instructions.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
-Call collection_info for current guidance; restart the server to refresh discovery
+Call info for current guidance; restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
 
 func collectionPurpose(info *collection.Description) string {
@@ -57,7 +57,7 @@ func New(path, version string) (*mcp.Server, error) {
 		&mcp.ServerOptions{Instructions: collectionInstructions(info)})
 	for _, tool := range []toolDefinition{
 		{
-			name:        "collection_info",
+			name:        "info",
 			description: "Return the collection title, description, path, current JSON Schema for frontmatter, and usage instructions including its workflow. Call before creating documents. No arguments.",
 			schema:      `{"type":"object","additionalProperties":false}`,
 			readOnly:    true,
@@ -72,7 +72,7 @@ func New(path, version string) (*mcp.Server, error) {
 			},
 		},
 		{
-			name:        "list_documents",
+			name:        "list",
 			description: "List IDs and frontmatter, without bodies, sorted by filename. limit defaults to 20; 0 returns all. Returns documents and has_more. Increase limit when has_more is true. Malformed documents have null frontmatter and an error; these still count toward the limit. Does not validate stored metadata against the schema.",
 			schema:      `{"type":"object","properties":{"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
@@ -92,7 +92,7 @@ func New(path, version string) (*mcp.Server, error) {
 			},
 		},
 		{
-			name:        "read_document",
+			name:        "read",
 			description: "Read a document by its filename stem (without .md). Returns id, frontmatter, and the exact Markdown body. IDs contain letters, digits, hyphens and underscores, starting with a letter or digit. Paths and symlinks are rejected. Parses metadata without validating it against the current schema.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","description":"Document filename stem, without .md."}},"required":["id"],"additionalProperties":false}`,
 			readOnly:    true,
@@ -101,9 +101,9 @@ func New(path, version string) (*mcp.Server, error) {
 			},
 		},
 		{
-			name:        "create_document",
-			description: "Create one document. Call collection_info first for its schema. Supply required frontmatter object and optional Markdown body string (default empty). Validates against the current collection schema before writing. Returns id, frontmatter, body. Generates a random 32-character hex filename stem; does not inject metadata fields or overwrite files. Each successful call creates a new document; do not retry a success.",
-			schema:      `{"type":"object","properties":{"frontmatter":{"type":"object","description":"Application metadata conforming to the schema returned by collection_info."},"body":{"type":"string","description":"Markdown body, preserved exactly; defaults to empty."}},"required":["frontmatter"],"additionalProperties":false}`,
+			name:        "create",
+			description: "Create one document. Call info first for its schema. Supply required frontmatter object and optional Markdown body string (default empty). Validates against the current collection schema before writing. Returns id, frontmatter, body. Generates a random 32-character hex filename stem; does not inject metadata fields or overwrite files. Each successful call creates a new document; do not retry a success.",
+			schema:      `{"type":"object","properties":{"frontmatter":{"type":"object","description":"Application metadata conforming to the schema returned by info."},"body":{"type":"string","description":"Markdown body, preserved exactly; defaults to empty."}},"required":["frontmatter"],"additionalProperties":false}`,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				body, _ := args["body"].(string)
 				return c.Create(args["frontmatter"].(map[string]any), body)

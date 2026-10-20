@@ -222,13 +222,13 @@ compatibility, including the 2026-07-28 revision and older clients.
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `collection_info` | `{}` | Collection title, description, path, current schema, usage instructions |
-| `list_documents` | Optional `limit` (20 by default, 0 for all) | `documents` containing IDs and metadata, plus `has_more` |
-| `read_document` | `id` | ID, frontmatter, body |
-| `create_document` | Required `frontmatter`, optional `body` | Created ID, frontmatter, body |
+| `info` | `{}` | Collection title, description, path, current schema, usage instructions |
+| `list` | Optional `limit` (20 by default, 0 for all) | `documents` containing IDs and metadata, plus `has_more` |
+| `read` | `id` | ID, frontmatter, body |
+| `create` | Required `frontmatter`, optional `body` | Created ID, frontmatter, body |
 
 All tools use the configured collection; they do not accept arbitrary paths.
-Call `collection_info` before creating documents to learn the frontmatter schema.
+Call `info` before creating documents to learn the frontmatter schema.
 The server reloads the schema on every tool call, so edits take effect immediately.
 Validation, IDs, listing limits, malformed-file handling, and number preservation
 match the CLI. Successful creation is not idempotent.
@@ -271,15 +271,15 @@ Include concrete acceptance criteria in each issue's body.
 ```
 
 This file needs no frontmatter. It supplies the workflow in MCP server instructions
-and the `collection_info` result's `instructions` field, alongside general means
+and the `info` result's `instructions` field, alongside general means
 usage guidance. It must be a regular file, not a directory or symlink. Missing or
 empty instructions are allowed; unreadable or invalid instructions fail MCP
-startup or `collection_info` with an explanation. `init` still creates only
+startup or `info` with an explanation. `init` still creates only
 `schema.json`. Other document operations do not depend on this optional file.
 
 Discovery metadata and connection instructions reflect startup state. Restart
 the server/client after editing title, description, or instructions to refresh
-those advertised values. `collection_info` always reads current guidance;
+those advertised values. `info` always reads current guidance;
 schema validation and document reads also use current files without a restart.
 
 ### Multiple brains for one agent

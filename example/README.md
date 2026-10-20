@@ -22,7 +22,7 @@ that the server connected, then ask, for example:
 [issues/schema.json](issues/schema.json) names this brain **Example issues** and
 describes its purpose. That identity appears in every MCP tool description.
 [issues/instructions.md](issues/instructions.md) supplies the issue workflow through
-MCP server instructions and `collection_info`, so other clients receive it too.
+MCP server instructions and `info`, so other clients receive it too.
 This example has no local `AGENTS.md`; collection purpose and workflow come from MCP.
 The server exposes collection information, listing,
 reading, and creation. Updates still require editing the Markdown file directly.
@@ -34,7 +34,7 @@ directory within this checkout. The first launch may compile Go dependencies; al
 It is scoped to this example and does not change your global Codex configuration.
 Restart the client/server after changing Go code or to refresh its advertised
 title, tool descriptions, and connection instructions. Document/schema edits take
-effect on the next tool call; `collection_info` also reads current instructions.
+effect on the next tool call; `info` also reads current instructions.
 
 To give an agent another means brain, register another `means mcp --path ...`
 command under a distinct client name, such as `decisions`. Each registration has

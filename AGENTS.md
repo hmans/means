@@ -36,7 +36,7 @@ the project direction and [TODO.md](TODO.md) for planned work.
   help and startup errors, not protocol framing. Use schema title/description for
   collection identity and optional instructions.md for collection workflows.
   instructions.md is reserved configuration, excluded from document lists/reads.
-  MCP advertises identity and workflow at startup; collection_info reads current
+  MCP advertises identity and workflow at startup; info reads current
   guidance. The server does not load AGENTS.md. Multiple registrations may bind
   one agent to multiple collections, with names chosen by the consumer.
 - Keep domain-specific concepts and workflows in schemas and skills. Issue

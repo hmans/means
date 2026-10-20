@@ -88,7 +88,7 @@ func (c *Collection) Create(frontmatter map[string]any, body string) (*Document,
 // allowing consumers to retrieve documents that need migration or repair.
 func (c *Collection) Read(id string) (*Document, error) {
 	if id+".md" == InstructionsFilename {
-		return nil, fmt.Errorf("%s contains collection instructions, not a document; read the file directly or use MCP collection_info", InstructionsFilename)
+		return nil, fmt.Errorf("%s contains collection instructions, not a document; read the file directly or use MCP info", InstructionsFilename)
 	}
 	if !documentID.MatchString(id) {
 		return nil, fmt.Errorf("invalid document ID %q; use the filename stem (letters, digits, - and _, starting with a letter or digit)", id)
