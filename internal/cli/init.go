@@ -51,8 +51,9 @@ Responses:
   JSON responses use two-space indentation and end with a newline.
 
 After initialization, read or edit schema.json directly. Initialization is not
-a schema update command. Document commands and doctor are not implemented yet.
-Schemas describe YAML frontmatter; the Markdown body will remain free-form.`,
+a schema update command. Use create to store documents, list to discover IDs,
+and read to retrieve them; see each command's --help. Doctor is not implemented yet.
+Schemas describe YAML frontmatter; the Markdown body remains free-form.`,
 		Example: `  # Start with the example schema
   means init --path ./memory
 

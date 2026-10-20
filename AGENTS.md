@@ -17,7 +17,13 @@ the project direction and [TODO.md](TODO.md) for planned work.
   consumer-authored schema from `--schema FILE` / `--schema -` (stdin). Validate
   supplied schemas before creating files; never overwrite an existing schema.
   Consumers edit schemas directly. Schemas are currently self-contained.
-  Documents will use YAML frontmatter and free-form Markdown bodies.
+  Documents use YAML frontmatter and free-form Markdown bodies.
+- Document IDs are filename stems. Creation generates a random 32-character hex
+  ID and writes `<id>.md`; IDs are not injected into application frontmatter.
+  Collections contain regular Markdown files directly under the selected path.
+- Validate frontmatter on creation. Reads and lists parse stored metadata without
+  enforcing the schema, allowing retrieval after schema changes. List reports
+  malformed files individually and omits document bodies.
 - Support software consumers as well as humans and agents. Plan for structured
   CLI input, output, and errors; SDK and MCP interfaces may follow.
 - Use Cobra for the CLI. Every command inherits `--path` (defaulting to the
@@ -41,6 +47,6 @@ the project direction and [TODO.md](TODO.md) for planned work.
 - Keep CLI help sufficient for agents to discover workflows, input formats,
   examples, output formats, errors, and limitations. Include long descriptions
   and examples in both human-readable and JSON help.
-- Document file naming, identity, and document command syntax are still open
-  design questions. Do not treat examples from discussion as settled APIs.
+- Update and delete semantics are still open design questions. Do not treat
+  examples from discussion as settled APIs.
 - Embeddings, vector search, and automatic document repair are deferred.

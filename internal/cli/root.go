@@ -49,13 +49,14 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 
 A collection is a directory containing a standalone schema.json that describes
 document frontmatter using JSON Schema. The files are authoritative and can be
-read and edited directly. YAML frontmatter and free-form Markdown bodies are the
-planned document format.
+read and edited directly. Documents use YAML frontmatter and free-form Markdown
+bodies. Each document's ID is its filename stem.
 
 Start with "means init --help" for the complete schema-authoring workflow,
 file and stdin input examples, validation rules, and response formats.
-Currently available: initialization, help, and version reporting. Document CRUD,
-search, and doctor are not implemented yet.
+Then use "means create --help" to store a validated document, "means list" to
+discover IDs and metadata, and "means read <id>" to retrieve a document.
+Updates, deletion, search, and doctor are not implemented yet.
 
 Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
@@ -106,6 +107,7 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			return opts.writeHelp(target)
 		},
 	})
-	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts))
+	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts),
+		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts))
 	return root, opts
 }

@@ -7,8 +7,9 @@ documents in a directory. Each document has a Markdown body and typed
 frontmatter, governed by a schema stored alongside the collection. Applications
 and agents can establish and evolve that schema as their needs change.
 
-**Status:** early development. Collection initialization, schema loading, help,
-and version reporting are implemented. Document operations are next.
+**Status:** early development. Collection initialization, document creation,
+reading, and metadata listing are implemented. Updates, deletion, search, and
+`doctor` are planned.
 
 ## What it's for
 
@@ -80,8 +81,8 @@ a standalone JSON Schema:
 
 The starter schema requires a string `title`, accepts an optional list of string
 `tags`, and rejects undeclared fields. These are starter conventions; collections
-can define their own fields. Markdown bodies are free-form, and documents will use
-YAML frontmatter when document operations are implemented.
+can define their own fields. Documents use YAML frontmatter and free-form
+Markdown bodies.
 
 Agents can author the schema first and pass it to `init` in one operation:
 
@@ -125,6 +126,79 @@ The collection loader reads and validates `schema.json` on each load, so manual
 schema edits take effect immediately. This checks the schema definition; checking
 existing Markdown documents will be the job of the planned `doctor` command.
 
+## Documents
+
+Create a document from a JSON envelope containing application metadata and a
+Markdown body. `--input` accepts a file path or `-` for stdin:
+
+```sh
+mise means create --path ./memory --input - --json <<'JSON'
+{
+  "frontmatter": {
+    "title": "Use Go for means",
+    "tags": ["decision"]
+  },
+  "body": "We chose Go for single-binary distribution.\n"
+}
+JSON
+```
+
+This example uses the default schema. Adapt the frontmatter to your collection's
+`schema.json`. The `frontmatter` object is required; `body` is an optional string
+that defaults to empty. Additional envelope fields are rejected. Input file paths
+resolve against the current working directory, independently of `--path`.
+
+Creation validates metadata before writing, generates a random 32-character
+hexadecimal ID, and stores `<id>.md`. The ID is only the filename stem; means does
+not impose an `id` or `title` field on application metadata. Renaming the file
+changes the document's ID. A successful create is not idempotent: repeating it
+creates another document.
+
+The stored file is ordinary Markdown:
+
+```markdown
+---
+tags:
+  - decision
+title: Use Go for means
+---
+We chose Go for single-binary distribution.
+```
+
+With `--json`, creation and reading return `{ "id": "...", "frontmatter": {...},
+"body": "..." }`. Text-mode creation prints just the ID; text-mode reading prints
+the exact stored Markdown. Body content and trailing newlines are preserved.
+
+```sh
+mise means read <id> --path ./memory --json
+mise means list --path ./memory --json
+mise means list --path ./memory --limit 0 --json
+```
+
+Listing returns `{ "documents": [{ "id": "...", "frontmatter": {...} }],
+"has_more": false }`, without bodies. Results are ordered by filename. The default
+limit is 20; `--limit 0` returns all documents. Increase the limit when `has_more`
+is true. Text output contains one ID and its metadata per line.
+
+Manually created `.md` files work too. Filenames must have a stem beginning with
+a letter or digit, followed by letters, digits, hyphens, or underscores. Listing
+only includes regular files directly in the collection; it skips symlinks,
+subdirectories, and other filenames. Reads reject paths and symlinks.
+
+Reads and lists parse metadata without enforcing the current schema, so documents
+remain retrievable after schema changes. A valid collection schema is still
+required. Malformed documents appear in list results with an `error` and null
+`frontmatter` rather than blocking the entire list; those entries count toward
+the limit and do not change the successful list exit code. Direct reads of
+malformed documents fail.
+
+Frontmatter uses string keys and JSON-compatible values. Duplicate keys, aliases,
+merge keys, custom YAML tags, and non-finite numbers are rejected. Plain YAML dates
+are returned as strings. Both LF and CRLF delimiters are supported.
+
+Run `mise means create --help`, `mise means read --help`, or `mise means list
+--help` for full input, output, and error details. Help is also available as JSON.
+
 ## Design direction
 
 - **Plain files:** Markdown documents and collection schemas remain authoritative,
@@ -138,8 +212,7 @@ existing Markdown documents will be the job of the planned `doctor` command.
 - **Diagnostics:** a planned `doctor` command will identify documents that do not
   satisfy their collection's schema. A possible `fix` command is future work.
 
-Document identity and the document command interface are still being designed.
-See [TODO.md](TODO.md) for the next steps.
+See [TODO.md](TODO.md) for the next steps, including updates and deletion.
 
 ## Development
 
@@ -157,7 +230,7 @@ mise exec -- go build -o means .
 `--help`, `--path`, and `--json`.
 
 The entry point is `main.go`; command definitions and output formatting live in
-`internal/cli`. Collection initialization and schema validation live in
+`internal/cli`. Collection initialization, document storage, and schema validation live in
 `internal/collection`, independently of the CLI. Development builds report `dev`
 as their version. Release builds
 can set it with `go build -ldflags "-X main.version=<version>"`.
