@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Issue",
-  "description": "An issue in the example tracker. The Markdown body contains context, acceptance criteria, and progress notes.",
+  "title": "Example issues",
+  "description": "Bugs, features, and planned work for a fictional example application. Use this collection to track work, priorities, and outcomes. This is not the means project's backlog.",
   "type": "object",
   "properties": {
     "title": {

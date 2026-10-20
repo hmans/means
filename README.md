@@ -8,7 +8,7 @@ frontmatter, governed by a schema stored alongside the collection. Applications
 and agents can establish and evolve that schema as their needs change.
 
 **Status:** early development. Collection initialization, document creation,
-reading, and metadata listing are implemented. Updates, deletion, search, and
+reading, metadata listing, and a stdio MCP server are implemented. Updates, deletion, search, and
 `doctor` are planned.
 
 ## What it's for
@@ -21,7 +21,7 @@ give those primitives domain-specific meaning and workflows. For example:
 - A bot such as ChattoBot could use means to retain knowledge across conversations.
 
 Software integration is a priority. The CLI supports JSON responses for
-applications in any language, with SDK and MCP interfaces under consideration.
+applications in any language, plus a stdio MCP interface. An SDK is under consideration.
 
 ## CLI
 
@@ -31,6 +31,9 @@ Every command accepts these shared flags before or after the command name:
   current working directory. Relative paths are resolved against that directory;
   means does not change the process working directory.
 - `--json` returns JSON with two-space indentation, including help and error responses.
+
+The `mcp` command uses MCP message framing on stdout regardless of `--json`;
+the flag still controls its help and startup error formatting.
 
 Successful responses go to stdout. Errors go to stderr and cause a nonzero exit
 code; in JSON mode, errors have an `error` string. Directory existence is left to
@@ -183,7 +186,9 @@ is true. Text output contains one ID and its metadata per line.
 Manually created `.md` files work too. Filenames must have a stem beginning with
 a letter or digit, followed by letters, digits, hyphens, or underscores. Listing
 only includes regular files directly in the collection; it skips symlinks,
-subdirectories, and other filenames. Reads reject paths and symlinks.
+subdirectories, and other filenames. Reads reject paths and symlinks. The reserved
+`instructions.md` contains collection guidance and is excluded from document
+lists and reads, even if it has frontmatter.
 
 Reads and lists parse metadata without enforcing the current schema, so documents
 remain retrievable after schema changes. A valid collection schema is still
@@ -199,15 +204,119 @@ are returned as strings. Both LF and CRLF delimiters are supported.
 Run `mise means create --help`, `mise means read --help`, or `mise means list
 --help` for full input, output, and error details. Help is also available as JSON.
 
+## MCP
+
+Launch a server bound to one existing collection:
+
+```sh
+means mcp --path /absolute/path/to/collection
+# From this checkout:
+mise means mcp --path ./example/issues
+```
+
+An MCP client launches this command as a subprocess and communicates over
+stdin/stdout. The process exits when stdin closes. No network listener or
+separately managed daemon is needed. The official
+[Go MCP SDK](https://github.com/modelcontextprotocol/go-sdk) handles protocol
+compatibility, including the 2026-07-28 revision and older clients.
+
+| Tool | Arguments | Result |
+| --- | --- | --- |
+| `collection_info` | `{}` | Collection title, description, path, current schema, usage instructions |
+| `list_documents` | Optional `limit` (20 by default, 0 for all) | `documents` containing IDs and metadata, plus `has_more` |
+| `read_document` | `id` | ID, frontmatter, body |
+| `create_document` | Required `frontmatter`, optional `body` | Created ID, frontmatter, body |
+
+All tools use the configured collection; they do not accept arbitrary paths.
+Call `collection_info` before creating documents to learn the frontmatter schema.
+The server reloads the schema on every tool call, so edits take effect immediately.
+Validation, IDs, listing limits, malformed-file handling, and number preservation
+match the CLI. Successful creation is not idempotent.
+
+Results contain `structuredContent` and an equivalent pretty-printed JSON text
+block. Tool failures return MCP `isError` results without ending the server.
+Stdout contains only compact, newline-delimited MCP messages. Diagnostics and
+startup failures go to stderr. `--json` never changes protocol framing.
+
+Initialize collections and edit schemas/instructions through the CLI/filesystem;
+these are not MCP tools yet. The server does not load `AGENTS.md` itself.
+Run `means mcp --help` for the full contract.
+
+### Collection identity and instructions
+
+Give the schema a top-level `title` and `description` to tell agents what belongs
+in this collection. These annotations describe the collection, separately from
+document fields inside `properties`:
+
+```json
+{
+  "title": "Project issues",
+  "description": "Bugs, features, and planned work for this project.",
+  "type": "object",
+  "properties": { "title": { "type": "string" } },
+  "required": ["title"]
+}
+```
+
+The title and purpose appear in the MCP server metadata, server instructions, and
+every tool description. Agents can choose the right collection before calling a
+tool. An omitted or blank title falls back to the directory name; description
+is optional. Boolean schemas also work with these fallbacks.
+
+Optionally add a plain UTF-8 `instructions.md` beside `schema.json`:
+
+```markdown
+Check existing issues for duplicates before creating one.
+Include concrete acceptance criteria in each issue's body.
+```
+
+This file needs no frontmatter. It supplies the workflow in MCP server instructions
+and the `collection_info` result's `instructions` field, alongside general means
+usage guidance. It must be a regular file, not a directory or symlink. Missing or
+empty instructions are allowed; unreadable or invalid instructions fail MCP
+startup or `collection_info` with an explanation. `init` still creates only
+`schema.json`. Other document operations do not depend on this optional file.
+
+Discovery metadata and connection instructions reflect startup state. Restart
+the server/client after editing title, description, or instructions to refresh
+those advertised values. `collection_info` always reads current guidance;
+schema validation and document reads also use current files without a restart.
+
+### Multiple brains for one agent
+
+Register `means mcp` once per collection, using names you choose in the client.
+For example, with an installed `means` binary on PATH, a Codex configuration could
+contain the following (replace paths with your actual collection directories):
+
+```toml
+[mcp_servers.issues]
+command = "means"
+args = ["mcp", "--path", "/absolute/project/issues"]
+
+[mcp_servers.decisions]
+command = "means"
+args = ["mcp", "--path", "/absolute/project/decisions"]
+```
+
+Each registration exposes the same four tool names, bound to its own collection.
+The client registration distinguishes the servers; schema annotations distinguish
+their purpose, and each collection supplies its own workflow. No routing flag or
+additional means configuration format is needed.
+
 ## Example issue tracker
 
 An issue-tracking example lives in [example/issues](example/issues), with a schema
-and fictional sample issues. [example/AGENTS.md](example/AGENTS.md) teaches agents
-how to use means with that collection:
+and fictional sample issues. Its [instructions.md](example/issues/instructions.md)
+supplies an issue workflow through MCP, without an example-local `AGENTS.md`.
+For CLI access:
 
 ```sh
 mise means list --path ./example/issues --limit 0 --json
 ```
+
+The example includes a [project-local Codex MCP configuration](example/.codex/config.toml).
+See [example/README.md](example/README.md) to start Codex with the issue collection
+connected and its agent instructions loaded.
 
 ## Design direction
 
@@ -215,8 +324,8 @@ mise means list --path ./example/issues --limit 0 --json
   editable, and suitable for version control.
 - **Typed frontmatter:** schemas describe document metadata and can evolve through
   explicit consumer operations.
-- **Single binary:** implemented in Go, with short-lived commands and no required
-  resident process.
+- **Single binary:** implemented in Go, with short-lived CLI commands and an
+  optional MCP subprocess managed by its client.
 - **Optional indexes:** means may persist derived data locally to support efficient
   retrieval. The storage format is undecided.
 - **Diagnostics:** a planned `doctor` command will identify documents that do not

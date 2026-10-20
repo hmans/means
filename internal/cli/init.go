@@ -24,6 +24,8 @@ examples, not requirements for custom schemas.
 For an agent-created collection:
   1. Choose frontmatter fields and constraints for the user's intended memory.
   2. Author a standalone JSON Schema and include descriptions explaining fields.
+     Set its top-level title and description to identify the collection's purpose
+     to MCP clients (separate from fields inside properties).
   3. Supply it using --schema FILE or --schema - to read stdin until EOF.
   4. Inspect the response; correct invalid schemas and retry if needed.
 
@@ -53,7 +55,9 @@ Responses:
 After initialization, read or edit schema.json directly. Initialization is not
 a schema update command. Use create to store documents, list to discover IDs,
 and read to retrieve them; see each command's --help. Doctor is not implemented yet.
-Schemas describe YAML frontmatter; the Markdown body remains free-form.`,
+Schemas describe YAML frontmatter; the Markdown body remains free-form.
+Optionally author instructions.md beside schema.json for MCP workflow guidance;
+init does not create it. See "means mcp --help" for collection identity and instructions.`,
 		Example: `  # Start with the example schema
   means init --path ./memory
 

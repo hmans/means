@@ -28,12 +28,16 @@
 
 - [x] Add an issue-tracking example collection and AGENTS.md usage instructions.
 - [ ] Integrate means with ChattoBot through the structured CLI interface.
-- [ ] Use those integrations to decide what SDK or MCP support is needed.
+- [x] Expose collection information, creation, reading, and listing through stdio MCP.
+- [x] Configure the example for Codex with MCP usage instructions.
+- [x] Describe each MCP collection using schema annotations and optional instructions.md.
+- [x] Make the example's issue workflow available through MCP independently of AGENTS.md.
+- [ ] Use integrations to decide what SDK support is needed.
 
 ## Later / under consideration
 
 - A `fix` command for document repair.
 - Persistent derived indexes, if needed.
-- SDK and MCP interfaces that preserve the short-lived process model.
+- SDK integration; ordinary CLI operations remain short-lived.
 
 Embeddings and vector search are outside the initial scope.

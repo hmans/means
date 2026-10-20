@@ -11,3 +11,8 @@ raw_args = true
 description = "Run the Go test suite"
 run = "go test ./..."
 raw_args = true
+
+[tasks.example-mcp]
+description = "Serve the example issue collection over MCP"
+run = "go run . mcp --path ./example/issues"
+raw = true

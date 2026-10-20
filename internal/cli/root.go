@@ -56,12 +56,14 @@ Start with "means init --help" for the complete schema-authoring workflow,
 file and stdin input examples, validation rules, and response formats.
 Then use "means create --help" to store a validated document, "means list" to
 discover IDs and metadata, and "means read <id>" to retrieve a document.
+Use "means mcp --help" to expose a collection to an MCP client over stdio.
 Updates, deletion, search, and doctor are not implemented yet.
 
 Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
 Means works with that exact directory and does not search parent directories.
 --json returns two-space-indented JSON, including help and errors.
+The mcp command always uses MCP message framing on stdout, regardless of --json.
 Successful responses go to stdout (exit 0); errors go to stderr (exit 1) as
 {"error":"..."} in JSON mode. Parse the entire JSON response, not individual lines.
 Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
@@ -108,6 +110,6 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		},
 	})
 	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts),
-		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts))
+		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

@@ -6,8 +6,9 @@ the project direction and [TODO.md](TODO.md) for planned work.
 
 ## Core decisions
 
-- Ship a single Go binary. Commands run to completion; no daemon or other
-  long-running process is required.
+- Ship a single Go binary. Ordinary commands run to completion. The optional
+  stdio MCP command lives for the client's connection; no managed daemon or
+  network listener is required.
 - Markdown files and their schemas are the source of truth. Humans and other
   tools can edit them directly.
 - A collection has a schema describing its documents' frontmatter. Consumers
@@ -24,11 +25,20 @@ the project direction and [TODO.md](TODO.md) for planned work.
 - Validate frontmatter on creation. Reads and lists parse stored metadata without
   enforcing the schema, allowing retrieval after schema changes. List reports
   malformed files individually and omits document bodies.
-- Support software consumers as well as humans and agents. Plan for structured
-  CLI input, output, and errors; SDK and MCP interfaces may follow.
+- Support software consumers as well as humans and agents. Provide structured
+  CLI input, output, and errors, and a stdio MCP interface; an SDK may follow.
 - Use Cobra for the CLI. Every command inherits `--path` (defaulting to the
   current working directory) and `--json`. Use the shared output helpers for
   responses; write errors to stderr and successful results to stdout.
+- MCP uses the official Go SDK and calls the collection package directly. Bind
+  each server to one collection, reload its schema per call, and preserve JSON
+  number precision. Keep stdout exclusively for MCP messages; --json affects
+  help and startup errors, not protocol framing. Use schema title/description for
+  collection identity and optional instructions.md for collection workflows.
+  instructions.md is reserved configuration, excluded from document lists/reads.
+  MCP advertises identity and workflow at startup; collection_info reads current
+  guidance. The server does not load AGENTS.md. Multiple registrations may bind
+  one agent to multiple collections, with names chosen by the consumer.
 - Keep domain-specific concepts and workflows in schemas and skills. Issue
   tracking and bot memory are applications built on means.
 - Internal storage is optional and derived. Its format is undecided.

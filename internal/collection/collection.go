@@ -4,6 +4,7 @@ package collection
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,7 @@ var defaultSchema []byte
 // Collection is a loaded collection with a compiled frontmatter schema.
 type Collection struct {
 	Path      string
+	Schema    json.RawMessage // The exact schema used to compile this collection.
 	validator *jsonschema.Schema
 }
 
@@ -100,7 +102,7 @@ func compile(path string, schema []byte) (*Collection, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid JSON Schema: %w", err)
 	}
-	return &Collection{Path: path, validator: validator}, nil
+	return &Collection{Path: path, Schema: append(json.RawMessage(nil), schema...), validator: validator}, nil
 }
 
 // Schemas are self-contained for now. The compiler still resolves internal

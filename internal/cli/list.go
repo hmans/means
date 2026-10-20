@@ -19,6 +19,7 @@ func newListCommand(opts *options) *cobra.Command {
 Scan regular .md files directly inside the directory; do not recurse. Ignore
 symlinks and filenames whose stem is not a valid ID (letters, digits, - and _,
 starting with a letter or digit). Results are sorted by filename, not creation time.
+The reserved instructions.md configures the collection and is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
 
 --json returns {"documents":[{"id":"...","frontmatter":{...}}],"has_more":false}.
