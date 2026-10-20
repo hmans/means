@@ -303,20 +303,23 @@ The client registration distinguishes the servers; schema annotations distinguis
 their purpose, and each collection supplies its own workflow. No routing flag or
 additional means configuration format is needed.
 
-## Example issue tracker
+## Example collections
 
 An issue-tracking example lives in [example/issues](example/issues), with a schema
 and fictional sample issues. Its [instructions.md](example/issues/instructions.md)
 supplies an issue workflow through MCP, without an example-local `AGENTS.md`.
-For CLI access:
+Alongside it, [example/memory](example/memory) stores plain memories with a title,
+optional tags, and a Markdown body. Its own schema and instructions explain when
+to store or recall facts, preferences, and context. For CLI access:
 
 ```sh
 mise means list --path ./example/issues --limit 0 --json
+mise means list --path ./example/memory --limit 0 --json
 ```
 
 The example includes a [project-local Codex MCP configuration](example/.codex/config.toml).
-See [example/README.md](example/README.md) to start Codex with the issue collection
-connected and its agent instructions loaded.
+See [example/README.md](example/README.md) to start one Codex agent with both the
+`issues` and `memory` registrations connected and their workflows available.
 
 ## Design direction
 

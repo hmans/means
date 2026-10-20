@@ -16,3 +16,8 @@ raw_args = true
 description = "Serve the example issue collection over MCP"
 run = "go run . mcp --path ./example/issues"
 raw = true
+
+[tasks.example-memory-mcp]
+description = "Serve the example memory collection over MCP"
+run = "go run . mcp --path ./example/memory"
+raw = true

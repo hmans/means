@@ -3,6 +3,8 @@
 This collection contains issues for a fictional example application. Work on them
 when the user's request concerns this example. Do not treat them as the means
 project's backlog.
+Use the separate `memory` collection for durable facts, preferences, and context
+that do not represent actionable work.
 
 ## Schema and content
 

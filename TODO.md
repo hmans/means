@@ -32,6 +32,7 @@
 - [x] Configure the example for Codex with MCP usage instructions.
 - [x] Describe each MCP collection using schema annotations and optional instructions.md.
 - [x] Make the example's issue workflow available through MCP independently of AGENTS.md.
+- [x] Add a plain-memory example collection alongside issues, with a separate MCP registration.
 - [ ] Use integrations to decide what SDK support is needed.
 
 ## Later / under consideration

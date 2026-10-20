@@ -1,7 +1,16 @@
-# Issue tracker example
+# Two brains for one agent
 
-This collection demonstrates how a schema and collection instructions turn means
-into an issue tracker. The sample issues describe a fictional application.
+This example connects one agent to two means collections. Their schemas describe
+what belongs in each, and their instructions supply the workflow through MCP.
+The sample documents concern a fictional application called Meadow.
+
+| MCP registration | Collection | Purpose |
+| --- | --- | --- |
+| `issues` | [issues/](issues/) | Bugs, features, planned work, and progress |
+| `memory` | [memory/](memory/) | Durable facts, preferences, context, and notes |
+
+Memory is deliberately simple: a required `title`, optional `tags`, and a free-form
+Markdown body. It has no required categories or task-management fields.
 
 ## Use with Codex
 
@@ -12,60 +21,62 @@ cd example
 codex
 ```
 
-The project-local [.codex/config.toml](.codex/config.toml) configures an `issues`
-MCP server. Codex loads project configuration for trusted projects; trust this
-checkout through Codex's normal project setup if prompted. Use `/mcp` to check
-that the server connected, then ask, for example:
+The project-local [.codex/config.toml](.codex/config.toml) registers both servers.
+Codex loads project configuration for trusted projects; trust this checkout
+through Codex's normal project setup if prompted. Use `/mcp` to check that
+`issues` and `memory` connected. Then try:
+
+> What is the example application called, and what tone should its interface use?
 
 > List the example issues and suggest which one to work on next.
 
-[issues/schema.json](issues/schema.json) names this brain **Example issues** and
-describes its purpose. That identity appears in every MCP tool description.
-[issues/instructions.md](issues/instructions.md) supplies the issue workflow through
-MCP server instructions and `info`, so other clients receive it too.
-This example has no local `AGENTS.md`; collection purpose and workflow come from MCP.
-The server exposes collection information, listing,
-reading, and creation. Updates still require editing the Markdown file directly.
+> Remember that Meadow's example team prefers weekly written updates.
 
-The configuration runs `mise --quiet example-mcp`, using the current repository
-source. That task fixes the collection path regardless of the client's working
-directory within this checkout. The first launch may compile Go dependencies; allow up to
-60 seconds for startup. It also works when starting Codex inside `issues/`.
-It is scoped to this example and does not change your global Codex configuration.
+Each registration exposes `info`, `list`, `read`, and `create`, bound to its own
+collection. The collection's title and purpose appear in every tool description.
+[issues/instructions.md](issues/instructions.md) and
+[memory/instructions.md](memory/instructions.md) provide their workflows through
+server instructions and `info`. This example has no local `AGENTS.md`; collection
+purpose and workflow come from MCP. Updates still require filesystem access.
+
+The configuration runs `mise --quiet example-mcp` for issues and
+`mise --quiet example-memory-mcp` for memory, using the current repository source.
+These tasks fix their collection paths regardless of the client's working
+directory within this checkout. The first launch may compile Go dependencies;
+allow up to 60 seconds for startup. Starting Codex inside `issues/` or `memory/`
+also loads both registrations. Your global Codex configuration is unchanged.
+
 Restart the client/server after changing Go code or to refresh its advertised
 title, tool descriptions, and connection instructions. Document/schema edits take
 effect on the next tool call; `info` also reads current instructions.
 
-To give an agent another means brain, register another `means mcp --path ...`
-command under a distinct client name, such as `decisions`. Each registration has
-the same operations but its own collection, purpose, and workflow. See the root
-README for a multi-collection configuration example.
-
-To check the configured command manually, run this from `example/issues/`:
+To check either configured command manually, run it from anywhere in this checkout:
 
 ```sh
 mise --quiet example-mcp
+# Or, separately:
+mise --quiet example-memory-mcp
 ```
 
-It waits for MCP messages on stdin. A blank terminal is expected; use Ctrl-C to
+Each waits for MCP messages on stdin. A blank terminal is expected; use Ctrl-C to
 stop.
 
 ## CLI fallback
 
-If MCP is unavailable, use the CLI and read [issues/schema.json](issues/schema.json)
-and [issues/instructions.md](issues/instructions.md) directly for guidance.
-From `example/issues/`:
+If MCP is unavailable, read the selected collection's `schema.json` and
+`instructions.md` directly for guidance. From the repository root:
 
 ```sh
-mise means list --limit 0 --json
-mise means read <id> --json
-mise means create --input - --json
+mise means list --path ./example/issues --limit 0 --json
+mise means list --path ./example/memory --limit 0 --json
+mise means read <id> --path ./example/memory --json
+mise means create --path ./example/memory --input - --json
 ```
 
-From the repository root, add `--path ./example/issues`. The mise task preserves
-your working directory, and relative input paths resolve there too. Use
+Inside either collection directory, omit `--path`. The mise task preserves your
+working directory, and relative input paths resolve there too. Use
 `mise means <command> --help` for input and output details. Parse the whole
 pretty-printed JSON response; failures exit 1 and return a JSON `error` on stderr.
-The example is already initialized; do not run `init` over it.
+Both collections are already initialized; do not run `init` over them.
 
 Configuration follows the [Codex MCP documentation](https://developers.openai.com/codex/mcp).

@@ -3,3 +3,8 @@
 command = "mise"
 args = ["--quiet", "example-mcp"]
 startup_timeout_sec = 60
+
+[mcp_servers.memory]
+command = "mise"
+args = ["--quiet", "example-memory-mcp"]
+startup_timeout_sec = 60
