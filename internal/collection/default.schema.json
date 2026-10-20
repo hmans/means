@@ -2,16 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "title": {
-      "type": "string",
-      "description": "A short title for the document."
-    },
     "tags": {
       "type": "array",
       "description": "Labels used to organize and find the document.",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     }
   },
-  "required": ["title"],
   "additionalProperties": false
 }

@@ -22,19 +22,25 @@ Initialize the collection first with "means init" and read its schema.json.
 Input:
   --input FILE reads a JSON file relative to the current working directory,
   independently of --path. --input - reads stdin until EOF. Input is required.
-  Supply one object: {"frontmatter":{...},"body":"Markdown text"}.
-  frontmatter is required and must be an object; {} is allowed if the schema permits.
-  body is an optional string, defaulting to "". Other envelope fields are rejected.
-  Application fields, including title or id, belong inside frontmatter and are
-  governed entirely by schema.json. No application fields are added automatically.
+  Supply {"frontmatter":{"title":"A document","data":{...}},"body":"Markdown"}.
+  frontmatter is required. title must be a nonempty string. data must be an object;
+  omit it to use {} if the collection schema permits. body defaults to "".
+  Means owns the top-level frontmatter fields. id is generated; do not supply it.
+  Application fields belong under data, which alone is validated by schema.json.
+  Unknown envelope and top-level frontmatter fields are rejected.
 
 Storage:
-  Validate frontmatter before writing. Invalid input or metadata creates no file.
-  Assign a random 32-character hexadecimal ID and write <id>.md in the collection.
-  The ID is the filename stem; renaming the file changes its ID.
-  Store metadata as YAML between --- lines, followed immediately by the body.
-  The body's content and trailing newline are preserved. Existing files are never
-  overwritten. JSON strings and numbers retain their types through YAML storage.
+  Validate before writing. Generate a collection-scoped 5-character random ID
+  using lowercase letters and digits, and store it in frontmatter.id.
+  Write <id>-<slug-generated-from-title>.md. Slugs are lowercase letters/digits
+  separated by hyphens, bounded to 80 bytes, with "document" as the fallback.
+  IDs remain valid after filename changes or moves into visible subdirectories.
+  Existing files are never overwritten. Generated collisions retry, using a
+  temporary exclusive allocation file to coordinate concurrent means creators.
+  Direct edits or Git merges can introduce duplicates; read/update reject them
+  and list reports them. Hidden paths and symlinks are excluded from discovery.
+  Store frontmatter as YAML between --- lines, followed immediately by the body.
+  Body bytes and trailing newlines are preserved. JSON number precision is retained.
 
 Output:
   Text: the generated ID followed by a newline, suitable for passing to read.
@@ -43,10 +49,10 @@ Output:
   Errors: stderr, exit 1; with --json, {"error":"..."}. Schema errors identify the
   failing field or constraint. JSON output is formatted with two-space indentation.
   Retrying a successful create generates another document; creation is not idempotent.`,
-		Example: `  # Use the default collection schema (title and optional tags)
+		Example: `  # Use the default data schema (optional tags)
   means create --path ./memory --input - --json <<'JSON'
   {
-    "frontmatter": {"title": "Use Go for means", "tags": ["decision"]},
+    "frontmatter": {"title": "Use Go for means", "data": {"tags": ["decision"]}},
     "body": "We chose Go for single-binary distribution.\n"
   }
 JSON
@@ -98,7 +104,7 @@ func parseDocumentInput(data []byte) (map[string]any, string, error) {
 	}
 	for key := range envelope {
 		if key != "frontmatter" && key != "body" {
-			return nil, "", fmt.Errorf("unknown input field %q; application fields belong inside frontmatter", key)
+			return nil, "", fmt.Errorf("unknown input field %q; application fields belong inside frontmatter.data", key)
 		}
 	}
 	frontmatter, ok := envelope["frontmatter"].(map[string]any)

@@ -26,11 +26,11 @@ func TestDocumentRoundTrip(t *testing.T) {
 	}
 	for _, body := range []string{"", "No trailing newline", "# Notes\n\nText\n", "---\nbody divider\n", "Line one\r\nLine two\r\n", "こんにちは 🌱\n"} {
 		t.Run(body, func(t *testing.T) {
-			doc, err := c.Create(frontmatter, body)
+			doc, err := c.Create(map[string]any{"title": "Round trip", "data": frontmatter}, body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(doc.ID) != 32 || !documentID.MatchString(doc.ID) {
+			if len(doc.ID) != 5 || !documentID.MatchString(doc.ID) {
 				t.Fatalf("unexpected ID %q", doc.ID)
 			}
 			read, err := c.Read(doc.ID)
@@ -38,7 +38,7 @@ func TestDocumentRoundTrip(t *testing.T) {
 				t.Fatalf("Read() = %v\n%s", err, doc.Markdown)
 			}
 			want, _ := json.Marshal(frontmatter)
-			got, _ := json.Marshal(read.Frontmatter)
+			got, _ := json.Marshal(read.Frontmatter["data"])
 			if !bytes.Equal(got, want) {
 				t.Errorf("frontmatter changed\ngot: %s\nwant: %s\n%s", got, want, doc.Markdown)
 			}
@@ -70,7 +70,7 @@ func TestReadManualDocumentAndSchemaViolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	markdown := "---\r\nsummary: retained after a schema change\r\ndate: 2026-10-20\r\ncount: 0x10\r\n---\r\n# Body\r\n"
+	markdown := "---\r\nid: manual-note\r\ntitle: Manual\r\ndata:\r\n  summary: retained after a schema change\r\n  date: 2026-10-20\r\n  count: 0x10\r\n---\r\n# Body\r\n"
 	if err := os.WriteFile(filepath.Join(c.Path, "manual-note.md"), []byte(markdown), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestReadManualDocumentAndSchemaViolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if doc.Markdown != markdown || doc.Body != "# Body\r\n" || doc.Frontmatter["date"] != "2026-10-20" || doc.Frontmatter["count"] != json.Number("16") {
+	if doc.Markdown != markdown || doc.Body != "# Body\r\n" || doc.Frontmatter["data"].(map[string]any)["date"] != "2026-10-20" || doc.Frontmatter["data"].(map[string]any)["count"] != json.Number("16") {
 		t.Fatalf("unexpected document: %#v", doc)
 	}
 	if err := c.Validate(doc.Frontmatter); err == nil {
@@ -115,8 +115,8 @@ func TestListLimitsAndMalformedFiles(t *testing.T) {
 		t.Fatalf("unexpected empty listing: %#v, %v", empty, err)
 	}
 	for name, content := range map[string]string{
-		"b.md": "malformed", "a.md": "---\n{}\n---\nbody", "c.md": "---\ntitle: c\n---\nbody",
-		"other.txt": "ignored", ".hidden.md": "ignored", "spaces in name.md": "ignored",
+		"b.md": "malformed", "a.md": "---\nid: alpha\ntitle: A\ndata: {}\n---\nbody", "c.md": "---\nid: charlie\ntitle: C\ndata: {}\n---\nbody",
+		"other.txt": "ignored", ".hidden.md": "ignored",
 		"instructions.md": "# Collection workflow\nThis is configuration, not a document.",
 	} {
 		if err := os.WriteFile(filepath.Join(c.Path, name), []byte(content), 0o644); err != nil {
@@ -138,14 +138,14 @@ func TestListLimitsAndMalformedFiles(t *testing.T) {
 		for _, doc := range result.Documents {
 			ids = append(ids, doc.ID)
 		}
-		if !reflect.DeepEqual(ids, []string{"a", "b", "c"}[:tt.count]) {
+		if !reflect.DeepEqual(ids, []string{"alpha", "", "charlie"}[:tt.count]) {
 			t.Fatalf("unexpected order: %v", ids)
 		}
 		if tt.count >= 2 && result.Documents[1].Error == "" {
 			t.Fatal("malformed document was not reported")
 		}
 		data, _ := json.Marshal(result.Documents[0])
-		if !strings.Contains(string(data), `"frontmatter":{}`) || strings.Contains(string(data), "body") {
+		if !strings.Contains(string(data), `"data":{}`) || strings.Contains(string(data), "body") {
 			t.Fatalf("unexpected summary: %s", data)
 		}
 	}

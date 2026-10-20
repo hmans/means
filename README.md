@@ -4,7 +4,8 @@ An agentic memory substrate built from Markdown files.
 
 means will provide a CLI for creating, reading, updating, searching, and deleting
 documents in a directory. Each document has a Markdown body and typed
-frontmatter, governed by a schema stored alongside the collection. Applications
+frontmatter. Means owns document IDs and titles; a schema stored alongside the
+collection governs application fields under `data`. Applications
 and agents can establish and evolve that schema as their needs change.
 
 **Status:** early development. Collection initialization, document creation,
@@ -55,7 +56,7 @@ The last command currently returns:
 
 ## Collections and schemas
 
-Initialize a collection with an example frontmatter schema:
+Initialize a collection with an example application data schema:
 
 ```sh
 mise means init --path ./memory
@@ -66,26 +67,25 @@ refuses to overwrite an existing schema and leaves other files alone. Without
 `--path`, it initializes the current directory. Collection loading uses exactly
 the selected directory; it does not search parent directories.
 
-Edit `schema.json` directly to define the collection's frontmatter. The file is
-a standalone JSON Schema:
+Edit `schema.json` directly to define the fields inside `frontmatter.data`. The
+file is a standalone JSON Schema; do not wrap its rules in a `data` property:
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "title": { "type": "string" },
     "tags": { "type": "array", "items": { "type": "string" } }
   },
-  "required": ["title"],
   "additionalProperties": false
 }
 ```
 
-The starter schema requires a string `title`, accepts an optional list of string
-`tags`, and rejects undeclared fields. These are starter conventions; collections
-can define their own fields. Documents use YAML frontmatter and free-form
-Markdown bodies.
+The starter schema accepts optional `tags` and rejects other data fields. An empty
+`data` object is valid. Means separately requires a generated `id`, a nonempty
+string `title`, and an object `data` in stored frontmatter. The top level is
+reserved for means; application fields belong inside `data`. This also allows
+application fields named `id`, `title`, or future means fields without collisions.
 
 Agents can author the schema first and pass it to `init` in one operation:
 
@@ -139,34 +139,52 @@ mise means create --path ./memory --input - --json <<'JSON'
 {
   "frontmatter": {
     "title": "Use Go for means",
-    "tags": ["decision"]
+    "data": {"tags": ["decision"]}
   },
   "body": "We chose Go for single-binary distribution.\n"
 }
 JSON
 ```
 
-This example uses the default schema. Adapt the frontmatter to your collection's
-`schema.json`. The `frontmatter` object is required; `body` is an optional string
-that defaults to empty. Additional envelope fields are rejected. Input file paths
-resolve against the current working directory, independently of `--path`.
+This example uses the default data schema. Adapt `frontmatter.data` to your
+collection's `schema.json`. `frontmatter` and its nonempty `title` are required;
+`data` defaults to `{}` and `body` to `""` when omitted. Explicit null is rejected
+for either. Other envelope and means-owned frontmatter fields are rejected. Do not
+supply `id` on creation. Input file paths resolve against the current working
+directory, independently of `--path`.
 
-Creation validates metadata before writing, generates a random 32-character
-hexadecimal ID, and stores `<id>.md`. The ID is only the filename stem; means does
-not impose an `id` or `title` field on application metadata. Renaming the file
-changes the document's ID. A successful create is not idempotent: repeating it
-creates another document.
+Creation generates a collection-scoped 5-character random ID using lowercase
+letters and digits (32 symbols, giving 33,554,432 candidates). Collisions retry;
+existing IDs retain their original length. It writes `<id>-<slug-generated-from-title>.md`, for example
+`k7m4p-use-go-for-means.md`. The slug retains lowercase Unicode letters and
+digits, separates words with hyphens, and is bounded to 80 bytes; a title without
+letters or digits uses `document`. Filenames are storage details. Consumers use
+the stored `id`, which survives filename changes and moves into subdirectories.
+Title updates leave the filename unchanged.
+
+Generated IDs are checked across all visible document paths. Creation briefly
+reserves a candidate with an exclusive `.means-create-<id>.tmp` file, preventing
+concurrent means creators from allocating the same ID with different filenames.
+Collisions generate another candidate. Allocation files are removed on completion;
+a crash can leave one behind, but a future collision skips it without requiring
+manual recovery. Existing files are never overwritten. Direct edits and Git merges
+can still introduce duplicates: read/update refuse ambiguous IDs, and list reports
+them even when a result limit hides the other matching document.
 
 The stored file is ordinary Markdown:
 
 ```markdown
 ---
-tags:
-  - decision
+id: k7m4p
 title: Use Go for means
+data:
+  tags:
+    - decision
 ---
 We chose Go for single-binary distribution.
 ```
+
+A successful create is not idempotent: repeating it creates another document.
 
 With `--json`, creation, reading, and updates return `{ "id": "...", "hash": "...",
 "frontmatter": {...}, "body": "..." }`. The hash is lowercase SHA-256 of the exact
@@ -185,19 +203,20 @@ Listing returns `{ "documents": [{ "id": "...", "frontmatter": {...} }],
 limit is 20; `--limit 0` returns all documents. Increase the limit when `has_more`
 is true. Text output contains one ID and its metadata per line.
 
-Manually created `.md` files work too. Filenames must have a stem beginning with
-a letter or digit, followed by letters, digits, hyphens, or underscores. Listing
-only includes regular files directly in the collection; it skips symlinks,
-subdirectories, and other filenames. Reads reject paths and symlinks. The reserved
-`instructions.md` contains collection guidance and is excluded from document
-lists and reads, even if it has frontmatter.
+Manually created `.md` files work too when they contain the means envelope.
+Stored IDs may contain 1–128 letters, digits, hyphens, or underscores, starting
+with a letter or digit. Existing longer IDs remain supported. Discovery scans
+visible subdirectories recursively and skips symlinks and hidden files/directories.
+The root `instructions.md` contains collection guidance and is excluded even if
+it has frontmatter. Reads accept IDs, not paths or filename stems.
 
-Reads and lists parse metadata without enforcing the current schema, so documents
-remain retrievable after schema changes. A valid collection schema is still
-required. Malformed documents appear in list results with an `error` and null
-`frontmatter` rather than blocking the entire list; those entries count toward
-the limit and do not change the successful list exit code. Direct reads of
-malformed documents fail.
+Reads and lists check the means envelope without enforcing the current data
+schema, so application data remains retrievable after schema changes. A valid
+collection schema is still required. Malformed documents and duplicate IDs appear
+in list results with an `error`, a relative diagnostic `path`, and null
+`frontmatter`. Their `id` is empty if it cannot be extracted. These entries count
+toward the limit and retain the successful list exit code. Reading an invalid or
+ambiguous document fails rather than selecting a file arbitrarily.
 
 Frontmatter uses string keys and JSON-compatible values. Duplicate keys, aliases,
 merge keys, custom YAML tags, and non-finite numbers are rejected. Plain YAML dates
@@ -205,6 +224,21 @@ are returned as strings. Both LF and CRLF delimiters are supported.
 
 Run `mise means create --help`, `mise means read --help`, or `mise means list
 --help` for full input, output, and error details. Help is also available as JSON.
+
+### Migrating the earlier document format
+
+Earlier versions used filename stems as IDs and flat application frontmatter.
+Those files need explicit migration: preserve the previous filename stem as
+frontmatter `id`, retain the document `title`, move all remaining application
+fields under `data`, and remove `title` from the application schema's properties
+and required list. Add a title if the previous schema did not provide one. A
+previous application field named `id` belongs under `data.id`; it does not replace
+the document ID. Bodies can remain byte-for-byte unchanged. Filenames may be
+renamed to the new convention, but lookup uses the stored ID.
+
+The example collections now use five-character IDs and
+canonical `<id>-<title-slug>.md` filenames. Their earlier long IDs were explicitly
+regenerated during cleanup. There is no automatic migration or legacy fallback.
 
 ## Patch updates
 
@@ -215,7 +249,7 @@ mise means read <id> --path ./memory --json
 mise means update <id> --path ./memory --input - --json <<'JSON'
 {
   "hash": "<hash from read>",
-  "frontmatter": { "title": "Corrected title", "tags": ["decision"] }
+  "frontmatter": { "title": "Corrected title", "data": {"tags": ["decision"]} }
 }
 JSON
 ```
@@ -225,14 +259,16 @@ JSON
 
 Frontmatter uses [JSON Merge Patch (RFC 7396)](https://www.rfc-editor.org/rfc/rfc7396):
 omitted keys stay unchanged, nested objects merge recursively, null removes a key,
-and arrays replace as a whole. For example, `{"frontmatter":{"tags":null}}`
+and arrays replace as a whole. For example, `{"frontmatter":{"data":{"tags":null}}}`
 removes tags. This patch format cannot set a literal null metadata field.
 `frontmatter` itself must be an object, not null. The optional `body` is a complete
 replacement string: omit it to retain the existing body, or use `""` to clear it.
 `body:null` is rejected. An empty frontmatter patch is allowed.
 
-Updates preserve IDs and validate the resulting metadata against the collection
-schema. A missing, malformed, or stale hash prevents the update. On conflict,
+Only `title` and `data` may be patched in frontmatter. Any supplied `id`, including
+null or its current value, is rejected. The resulting title must remain nonempty
+and data must remain an object. Updates preserve IDs and filenames and validate
+the means envelope plus resulting data against the collection schema. A missing, malformed, or stale hash prevents the update. On conflict,
 read again, review the intervening changes, and rebuild the patch using the new
 hash. There is no force option. Successful results return the new hash; replaying
 a content-changing update with its old hash fails. A no-op retains the exact
@@ -244,7 +280,7 @@ Updates preserve file permission bits and write a same-directory temporary file
 before replacing the document by rename, which is atomic on supported filesystems.
 
 Updates check the hash when reading the document and again just before replacement.
-There are no locks: a simultaneous write between the final check and rename can
+Updates do not lock documents: a simultaneous write between the final check and rename can
 still be overwritten. Temporary files are removed on normal completion; a crash
 can leave one behind.
 
@@ -275,7 +311,7 @@ compatibility, including the 2026-07-28 revision and older clients.
 | `update` | `id`, `hash`, and `frontmatter` and/or `body` | Updated ID, hash, frontmatter, body |
 
 All tools use the configured collection; they do not accept arbitrary paths.
-Call `info` before creating documents to learn the frontmatter schema.
+Call `info` before creating documents to learn the schema for `frontmatter.data`.
 The server reloads the schema on every tool call, so edits take effect immediately.
 Validation, IDs, listing limits, malformed-file handling, and number preservation
 match the CLI. Successful creation is not idempotent.
@@ -296,15 +332,15 @@ Run `means mcp --help` for the full contract.
 
 Give the schema a top-level `title` and `description` to tell agents what belongs
 in this collection. These annotations describe the collection, separately from
-document fields inside `properties`:
+application data fields inside `properties`:
 
 ```json
 {
   "title": "Project issues",
   "description": "Bugs, features, and planned work for this project.",
   "type": "object",
-  "properties": { "title": { "type": "string" } },
-  "required": ["title"]
+  "properties": { "status": { "enum": ["todo", "done"] } },
+  "required": ["status"]
 }
 ```
 
@@ -359,7 +395,7 @@ An issue-tracking example lives in [example/issues](example/issues), with a sche
 and fictional sample issues. Its [instructions.md](example/issues/instructions.md)
 supplies an issue workflow through MCP, without an example-local `AGENTS.md`.
 Alongside it, [example/memory](example/memory) stores plain memories with a title,
-optional tags, and a Markdown body. Its own schema and instructions explain when
+optional `data.tags`, and a Markdown body. Its own schema and instructions explain when
 to store or recall facts, preferences, and context. For CLI access:
 
 ```sh
@@ -375,7 +411,7 @@ See [example/README.md](example/README.md) to start one Codex agent with both th
 
 - **Plain files:** Markdown documents and collection schemas remain authoritative,
   editable, and suitable for version control.
-- **Typed frontmatter:** schemas describe document metadata and can evolve through
+- **Typed application data:** schemas describe `frontmatter.data` and can evolve through
   explicit consumer operations.
 - **Single binary:** implemented in Go, with short-lived CLI commands and an
   optional MCP subprocess managed by its client.

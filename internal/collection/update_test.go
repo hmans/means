@@ -13,26 +13,26 @@ import (
 )
 
 func TestUpdateMergePatch(t *testing.T) {
-	c, err := Init(t.TempDir(), []byte(`{"type":"object","required":["title"],"properties":{"title":{"type":"string"}}}`))
+	c, err := Init(t.TempDir(), []byte(`{"type":"object","required":["required"],"properties":{"required":{"type":"string"}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	original, err := c.Create(map[string]any{
-		"title": "Before", "remove": "old", "keep": true, "tags": []any{"old", "other"},
+	original, err := c.Create(map[string]any{"title": "Before", "data": map[string]any{
+		"required": "Keep", "remove": "old", "keep": true, "tags": []any{"old", "other"},
 		"nested": map[string]any{"keep": "yes", "remove": "old", "change": "before"},
 		"scalar": "replace with object", "count": json.Number("9007199254740993"),
-	}, "# Original\r\n\r\nKeep body bytes.\r\n")
+	}}, "# Original\r\n\r\nKeep body bytes.\r\n")
 	if err != nil {
 		t.Fatal(err)
 	}
 	patch := map[string]any{
-		"title": "After", "remove": nil, "tags": []any{"new"},
+		"required": "Keep", "remove": nil, "tags": []any{"new"},
 		"nested": map[string]any{"remove": nil, "change": "after"},
 		"scalar": map[string]any{"new": "value", "absent": nil},
 		"ratio":  json.Number("0.1234567890123456789"),
 	}
 	before, _ := json.Marshal(patch)
-	updated, err := c.Update(original.ID, original.Hash, Patch{Frontmatter: patch})
+	updated, err := c.Update(original.ID, original.Hash, Patch{Frontmatter: map[string]any{"title": "After", "data": patch}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,11 +40,11 @@ func TestUpdateMergePatch(t *testing.T) {
 		t.Fatalf("unexpected update: %+v", updated)
 	}
 	want := map[string]any{
-		"title": "After", "keep": true, "tags": []any{"new"}, "count": json.Number("9007199254740993"),
+		"required": "Keep", "keep": true, "tags": []any{"new"}, "count": json.Number("9007199254740993"),
 		"nested": map[string]any{"keep": "yes", "change": "after"},
 		"scalar": map[string]any{"new": "value"}, "ratio": json.Number("0.1234567890123456789"),
 	}
-	if !reflect.DeepEqual(updated.Frontmatter, want) {
+	if !reflect.DeepEqual(updated.Frontmatter["data"], want) {
 		t.Fatalf("metadata: %#v", updated.Frontmatter)
 	}
 	after, _ := json.Marshal(patch)
@@ -65,8 +65,8 @@ func TestUpdateExactHashBodyAndNoop(t *testing.T) {
 	}
 	filename := filepath.Join(c.Path, "manual.md")
 	for _, original := range []string{
-		"---\r\n# keep this comment\r\ntitle: 'Manual'\r\n---\r\nOld body\r\n",
-		"---\ntitle: Manual\n---",
+		"---\r\n# keep this comment\r\nid: manual\r\ndata: {}\r\ntitle: 'Manual'\r\n---\r\nOld body\r\n",
+		"---\nid: manual\ndata: {}\ntitle: Manual\n---",
 	} {
 		if err := os.WriteFile(filename, []byte(original), 0o640); err != nil {
 			t.Fatal(err)
@@ -141,7 +141,7 @@ func TestUpdateFailuresPreserveOriginal(t *testing.T) {
 			if _, err := c.Update(tt.id, tt.hash, tt.patch); err == nil {
 				t.Fatal("invalid update succeeded")
 			}
-			data, err := os.ReadFile(filepath.Join(c.Path, doc.ID+".md"))
+			data, err := os.ReadFile(filepath.Join(c.Path, doc.filename))
 			if err != nil || string(data) != doc.Markdown {
 				t.Fatalf("original changed: %q %v", data, err)
 			}
@@ -150,13 +150,13 @@ func TestUpdateFailuresPreserveOriginal(t *testing.T) {
 	}
 	// A formatting-only edit also invalidates the hash.
 	changed := strings.Replace(doc.Markdown, "title:", "# added comment\ntitle:", 1)
-	if err := os.WriteFile(filepath.Join(c.Path, doc.ID+".md"), []byte(changed), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path, doc.filename), []byte(changed), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.Update(doc.ID, doc.Hash, Patch{Body: &body}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
-	if err := os.Symlink(doc.ID+".md", filepath.Join(c.Path, "link.md")); err != nil {
+	if err := os.Symlink(doc.filename, filepath.Join(c.Path, "link.md")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.Update("link", doc.Hash, Patch{Body: &body}); err == nil {

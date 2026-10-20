@@ -8,15 +8,15 @@ import (
 func newReadCommand(opts *options) *cobra.Command {
 	return &cobra.Command{
 		Use:   "read <id>",
-		Short: "Read a stored document by its filename ID",
-		Long: `Read <id>.md from the collection selected by --path (default: current directory).
+		Short: "Read a stored document by its frontmatter ID",
+		Long: `Read a document by its stored frontmatter.id from --path (default: current directory).
 
-The ID is the filename stem. Pass the ID returned by create or list, without
-the .md extension. IDs may contain
-letters, digits, - and _, and must start with a letter or digit. Paths, symlinks,
-and directories are not accepted. Manually created files using these names work.
-The reserved instructions.md is collection configuration, not a document; read it
-directly or retrieve its contents through the MCP info tool.
+Pass the ID returned by create or list, not a filename or path. Lookup scans
+visible .md files recursively; renaming or moving a file preserves its identity.
+IDs contain 1–128 letters, digits, - and _, starting with a letter or digit.
+Missing and duplicate IDs fail instead of choosing an arbitrary document.
+Symlinks and hidden paths are ignored. The root instructions.md is collection
+configuration, not a document; read it directly or use MCP info.
 
 Text output is the exact stored Markdown, including YAML frontmatter.
 --json returns {"id":"...","hash":"...","frontmatter":{...},"body":"..."} on stdout.
@@ -25,8 +25,8 @@ whitespace, and line endings. Supply it to update to prevent stale writes.
 Success exits 0; missing or malformed documents fail with exit 1 and an error on
 stderr (as {"error":"..."} with --json).
 
-Read does not enforce the current frontmatter schema, so documents remain
-retrievable after a schema change. The collection still needs a valid schema.json.
+Read checks the means envelope (id, nonempty title, object data), but does not
+enforce the current data schema, so documents remain readable after schema changes. The collection still needs a valid schema.json.
 Frontmatter must be a mapping between --- delimiter lines. LF and CRLF work.
 Use JSON-compatible YAML values; duplicate keys, aliases, merge keys, custom tags,
 and non-finite numbers are rejected. Plain YAML dates are returned as strings.`,

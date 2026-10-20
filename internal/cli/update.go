@@ -27,8 +27,11 @@ Input:
   --input FILE reads a JSON file relative to the current working directory;
   --input - reads stdin until EOF. Supply one object with required hash and
   at least one of frontmatter or body. Unknown fields are rejected.
-  {"hash":"<64 lowercase hex characters>","frontmatter":{"status":"done"}}
-  frontmatter must be an object and uses JSON Merge Patch (RFC 7396): omitted
+  {"hash":"<64 lowercase hex characters>","frontmatter":{"data":{"status":"done"}}}
+  frontmatter may patch title and/or data. id is immutable: any supplied id,
+  including null or the current value, is rejected. Other top-level fields are
+  reserved. title must remain a nonempty string and data must remain an object.
+  frontmatter uses JSON Merge Patch (RFC 7396): omitted
   keys stay unchanged, objects merge recursively, null deletes a key, and arrays
   replace as a whole. Null cannot set a literal null field using this patch format.
   body is an optional replacement string: omit to retain it, use "" to clear it.
@@ -36,7 +39,8 @@ Input:
   allowed as a no-op patch; the hash and resulting schema are still checked.
 
 Effects:
-  Preserve the ID. Check the supplied hash and validate the resulting frontmatter
+  Preserve the ID and filename, even when the title changes. Check the hash
+  and validate the means envelope and resulting data against schema.json
   before replacing the file. Conflicts and validation errors leave it unchanged.
   On conflict, read again, review the new content, and recompute your patch.
   Body-only changes preserve the original frontmatter text. Metadata changes
@@ -57,7 +61,7 @@ Output:
   means update <id> --path ./memory --input - --json <<'JSON'
   {
     "hash": "<hash from read>",
-    "frontmatter": {"title": "Corrected title", "tags": ["decision"]},
+    "frontmatter": {"title": "Corrected title", "data": {"tags": ["decision"]}},
     "body": "Updated Markdown body.\n"
   }
 JSON`,

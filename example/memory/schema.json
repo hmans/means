@@ -4,18 +4,15 @@
   "description": "Durable facts, preferences, context, and notes about the fictional example application. Use this collection to remember and recall knowledge across conversations. Track actionable work in the separate issues collection.",
   "type": "object",
   "properties": {
-    "title": {
-      "type": "string",
-      "minLength": 1,
-      "description": "A short, descriptive title for the memory."
-    },
     "tags": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true,
       "description": "Optional labels to help find related memories."
     }
   },
-  "required": ["title"],
   "additionalProperties": false
 }

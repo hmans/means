@@ -53,10 +53,10 @@ func TestInitSuppliedSchema(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := c.Validate(map[string]any{"summary": "Remember this", "kind": "fact"}); err != nil {
+			if err := c.ValidateData(map[string]any{"summary": "Remember this", "kind": "fact"}); err != nil {
 				t.Fatal(err)
 			}
-			if err := c.Validate(map[string]any{"summary": "Remember this", "kind": "invalid"}); err == nil {
+			if err := c.ValidateData(map[string]any{"summary": "Remember this", "kind": "invalid"}); err == nil {
 				t.Fatal("custom schema constraints were not applied")
 			}
 			stdout.Reset()

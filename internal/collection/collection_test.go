@@ -42,16 +42,14 @@ func TestInitAndLoad(t *testing.T) {
 		value map[string]any
 		valid bool
 	}{
-		{"title only", map[string]any{"title": "A memory"}, true},
-		{"tags", map[string]any{"title": "A memory", "tags": []any{"project", "decision"}}, true},
-		{"missing title", map[string]any{}, false},
-		{"wrong title type", map[string]any{"title": true}, false},
-		{"wrong tags type", map[string]any{"title": "A memory", "tags": "project"}, false},
-		{"wrong tag item", map[string]any{"title": "A memory", "tags": []any{true}}, false},
-		{"unknown field", map[string]any{"title": "A memory", "typo": true}, false},
+		{"empty data", map[string]any{}, true},
+		{"tags", map[string]any{"tags": []any{"project", "decision"}}, true},
+		{"wrong tags type", map[string]any{"tags": "project"}, false},
+		{"wrong tag item", map[string]any{"tags": []any{true}}, false},
+		{"unknown field", map[string]any{"typo": true}, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := loaded.Validate(tt.value); (err == nil) != tt.valid {
+			if err := loaded.ValidateData(tt.value); (err == nil) != tt.valid {
 				t.Fatalf("Validate() = %v, want valid=%v", err, tt.valid)
 			}
 		})
@@ -89,10 +87,10 @@ func TestCustomSchemaAndReload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Validate(map[string]any{"status": "open"}); err != nil {
+	if err := c.ValidateData(map[string]any{"status": "open"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Validate(map[string]any{"status": "unknown"}); err == nil {
+	if err := c.ValidateData(map[string]any{"status": "unknown"}); err == nil {
 		t.Fatal("invalid enum value was accepted")
 	}
 	if err := os.WriteFile(filepath.Join(dir, SchemaFilename), []byte(`{"type":"object","required":["summary"]}`), 0o644); err != nil {
@@ -102,10 +100,10 @@ func TestCustomSchemaAndReload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Validate(map[string]any{"status": "open"}); err == nil {
+	if err := c.ValidateData(map[string]any{"status": "open"}); err == nil {
 		t.Fatal("Load did not pick up the edited schema")
 	}
-	if err := c.Validate(map[string]any{"summary": "Updated"}); err != nil {
+	if err := c.ValidateData(map[string]any{"summary": "Updated"}); err != nil {
 		t.Fatal(err)
 	}
 }

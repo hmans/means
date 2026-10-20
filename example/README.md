@@ -9,7 +9,7 @@ The sample documents concern a fictional application called Meadow.
 | `issues` | [issues/](issues/) | Bugs, features, planned work, and progress |
 | `memory` | [memory/](memory/) | Durable facts, preferences, context, and notes |
 
-Memory is deliberately simple: a required `title`, optional `tags`, and a free-form
+Memory is deliberately simple: a generated `id`, required `title`, optional `data.tags`, and a free-form
 Markdown body. It has no required categories or task-management fields.
 
 ## Use with Codex
@@ -38,7 +38,10 @@ collection. The collection's title and purpose appear in every tool description.
 [memory/instructions.md](memory/instructions.md) provide their workflows through
 server instructions and `info`. This example has no local `AGENTS.md`; collection
 purpose and workflow come from MCP. For updates, read first and pass the returned
-content hash with a patch; stale writes fail and require a fresh read.
+content hash with a patch; stale writes fail and require a fresh read. Means owns
+`id` and `title`; each collection's schema validates the object under `data`.
+Put issue fields such as status and priority under `data`. IDs are stored in
+frontmatter and remain valid when filenames change.
 
 The configuration runs `mise --quiet example-mcp` for issues and
 `mise --quiet example-memory-mcp` for memory, using the current repository source.

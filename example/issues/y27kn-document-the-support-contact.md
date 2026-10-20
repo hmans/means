@@ -1,10 +1,12 @@
 ---
-priority: low
-status: done
-tags:
-  - documentation
+data:
+  priority: low
+  status: done
+  tags:
+    - documentation
+  type: task
+id: y27kn
 title: Document the support contact
-type: task
 ---
 ## Context
 Users of this fictional app need to know where to ask for help.

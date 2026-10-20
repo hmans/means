@@ -7,8 +7,10 @@ Use the separate `issues` collection for actionable work and its progress.
 
 ## Remembering
 
-Call `info` for the current schema. Supply a descriptive `title` and optional
-`tags`; write the memory itself in the Markdown body. No status, priority, or
+Call `info` for the current data schema. Supply a descriptive `frontmatter.title`
+and optional `frontmatter.data.tags`; write the memory itself in the Markdown
+body. Means generates `frontmatter.id`; never supply it on creation or in a patch.
+For example: `{"frontmatter":{"title":"Team preferences","data":{"tags":["team"]}},"body":"..."}`. No status, priority, or
 fixed memory categories are required.
 
 Before creating a memory, use `list` with `limit: 0` and `read` to check related
@@ -33,6 +35,6 @@ with the memory's ID, returned `hash`, and only the fields to change. Metadata
 objects merge recursively, null removes a field, and arrays replace entirely.
 The optional `body` replaces the whole body; retain useful context from the read.
 
-Updates validate the resulting frontmatter. A stale hash means the content changed:
+Updates validate the means envelope and data against the collection schema. A stale hash means the content changed:
 read again, reconcile your correction with the new content, and retry with its
 hash. Do not create a contradictory replacement memory to bypass a conflict.

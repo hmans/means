@@ -19,7 +19,7 @@ func TestDocumentWorkflow(t *testing.T) {
 	if err := Execute([]string{"init", "--path", dir, "--schema", "-", "--json"}, strings.NewReader(schema), &stdout, &stderr, "test"); err != nil {
 		t.Fatal(err)
 	}
-	envelope := `{"frontmatter":{"summary":"Use Go for means"},"body":"# Decision\n\nSingle-binary distribution.\n"}`
+	envelope := `{"frontmatter":{"title":"Use Go for means","data":{"summary":"Use Go for means"}},"body":"# Decision\n\nSingle-binary distribution.\n"}`
 	if err := os.WriteFile("input.json", []byte(envelope), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestDocumentWorkflow(t *testing.T) {
 		if err := json.Unmarshal(stdout.Bytes(), &created); err != nil {
 			t.Fatal(err)
 		}
-		if len(created.ID) != 32 || created.Frontmatter["summary"] != "Use Go for means" {
+		if len(created.ID) != 5 || created.Frontmatter["data"].(map[string]any)["summary"] != "Use Go for means" {
 			t.Fatalf("unexpected creation: %s", stdout.String())
 		}
 		stdout.Reset()
@@ -43,14 +43,14 @@ func TestDocumentWorkflow(t *testing.T) {
 		if err := json.Unmarshal(stdout.Bytes(), &read); err != nil {
 			t.Fatal(err)
 		}
-		if read.ID != created.ID || read.Body != created.Body || read.Frontmatter["summary"] != created.Frontmatter["summary"] {
+		if read.ID != created.ID || read.Body != created.Body || read.Frontmatter["data"].(map[string]any)["summary"] != created.Frontmatter["data"].(map[string]any)["summary"] {
 			t.Fatalf("read changed document: %#v", read)
 		}
 		stdout.Reset()
 		if err := Execute([]string{"read", created.ID, "--path", dir}, unreadableInput{t}, &stdout, &stderr, "test"); err != nil {
 			t.Fatal(err)
 		}
-		stored, err := os.ReadFile(filepath.Join(dir, created.ID+".md"))
+		stored, err := os.ReadFile(filepath.Join(dir, created.ID+"-use-go-for-means.md"))
 		if err != nil || !bytes.Equal(stdout.Bytes(), stored) {
 			t.Fatalf("text read differs from file: %v", err)
 		}
@@ -86,6 +86,12 @@ func TestCreateInvalidInputDoesNotWrite(t *testing.T) {
 		`{"frontmatter":{"title":"ok"},"id":"not-allowed"}`, `{"frontmatter":{}}`,
 		`{"frontmatter":{"title":false}}`, `{"frontmatter":{"title":"ok","unknown":1}}`,
 		`{"frontmatter":{"title":"ok"}} {}`,
+		`{"frontmatter":{"id":"supplied","title":"x"}}`,
+		`{"frontmatter":{"id":null,"title":"x"}}`,
+		`{"frontmatter":{"title":" "}}`,
+		`{"frontmatter":{"title":"x","data":null}}`,
+		`{"frontmatter":{"title":"x","data":[]}}`,
+		`{"frontmatter":{"title":"x","data":{"tags":42}}}`,
 	} {
 		t.Run(input, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
@@ -117,7 +123,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 		}
 	}
 	for command, topics := range map[string][]string{
-		"create": {"--input -", "frontmatter", "schema.json", "32-character", "exit 1", "<<'JSON'"},
+		"create": {"--input -", "frontmatter", "schema.json", "5-character", "data", "generated", "exit 1", "<<'JSON'"},
 		"read":   {"filename", "--json", "schema", "exit 1"},
 		"list":   {"--limit", "has_more", "Malformed", "exit 1"},
 		"update": {"hash", "read", "--input -", "null deletes", "arrays", "stale", "final check", "exit 1", "<<'JSON'"},

@@ -4,33 +4,49 @@
   "description": "Bugs, features, and planned work for a fictional example application. Use this collection to track work, priorities, and outcomes. This is not the means project's backlog.",
   "type": "object",
   "properties": {
-    "title": {
-      "type": "string",
-      "minLength": 1,
-      "description": "A short description of the work or problem."
-    },
     "type": {
       "type": "string",
-      "enum": ["task", "bug", "feature"],
+      "enum": [
+        "task",
+        "bug",
+        "feature"
+      ],
       "description": "Task for general work, bug for incorrect behavior, or feature for new functionality."
     },
     "status": {
       "type": "string",
-      "enum": ["todo", "in_progress", "done", "canceled"],
+      "enum": [
+        "todo",
+        "in_progress",
+        "done",
+        "canceled"
+      ],
       "description": "Todo before work starts, in_progress while working, done after acceptance criteria are met, or canceled when intentionally abandoned."
     },
     "priority": {
       "type": "string",
-      "enum": ["low", "normal", "high", "urgent"],
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ],
       "description": "Relative importance, ordered urgent, high, normal, then low."
     },
     "tags": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true,
       "description": "Optional labels for grouping related issues."
     }
   },
-  "required": ["title", "type", "status", "priority"],
+  "required": [
+    "type",
+    "status",
+    "priority"
+  ],
   "additionalProperties": false
 }

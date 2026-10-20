@@ -42,7 +42,7 @@ func TestCollectionDescription(t *testing.T) {
 		if err != nil || len(list.Documents) != 0 || list.HasMore {
 			t.Fatalf("instructions listed: %+v %v", list, err)
 		}
-		if _, err := c.Read("instructions"); err == nil || !strings.Contains(err.Error(), "not a document") {
+		if _, err := c.Read("instructions"); err == nil || !strings.Contains(err.Error(), "does not exist") {
 			t.Fatalf("read instructions: %v", err)
 		}
 	}

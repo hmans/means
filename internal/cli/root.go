@@ -48,9 +48,10 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		Long: `means provides typed Markdown collections for agents and applications.
 
 A collection is a directory containing a standalone schema.json that describes
-document frontmatter using JSON Schema. The files are authoritative and can be
-read and edited directly. Documents use YAML frontmatter and free-form Markdown
-bodies. Each document's ID is its filename stem.
+application data using JSON Schema. The files are authoritative and can be edited
+directly. Means owns frontmatter.id (generated and immutable) and frontmatter.title
+(required); application fields live under frontmatter.data. Filenames are storage
+details. Read and update use the stored ID, even after file renames or moves.
 
 Start with "means init --help" for the complete schema-authoring workflow,
 file and stdin input examples, validation rules, and response formats.

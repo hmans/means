@@ -19,6 +19,7 @@
 - [x] Parse Markdown documents with YAML frontmatter.
 - [x] Implement document creation, reading, and limited metadata listing.
 - [x] Implement patch updates with required content hashes and stale-write protection.
+- [x] Establish means-owned IDs/titles, nested application data, and readable filenames.
 - [ ] Implement document deletion.
 - [x] Validate document creation against the collection schema.
 - [ ] Add basic text search and frontmatter filtering.

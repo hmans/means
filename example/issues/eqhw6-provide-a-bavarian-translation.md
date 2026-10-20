@@ -1,8 +1,10 @@
 ---
-priority: low
-status: todo
+data:
+  priority: low
+  status: todo
+  type: feature
+id: eqhw6
 title: Provide a Bavarian translation
-type: feature
 ---
 ## Context
 Provide a Bavarian translation of the issue tracker interface.

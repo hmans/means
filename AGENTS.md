@@ -11,22 +11,30 @@ the project direction and [TODO.md](TODO.md) for planned work.
   network listener is required.
 - Markdown files and their schemas are the source of truth. Humans and other
   tools can edit them directly.
-- A collection has a schema describing its documents' frontmatter. Consumers
+- A collection has a schema describing its documents' application data. Consumers
   can establish and evolve that schema through means.
 - Each collection contains a standalone `schema.json` using JSON Schema (Draft
   2020-12 by default). `init` creates the directory with an example schema or a
   consumer-authored schema from `--schema FILE` / `--schema -` (stdin). Validate
   supplied schemas before creating files; never overwrite an existing schema.
   Consumers edit schemas directly. Schemas are currently self-contained.
-  Documents use YAML frontmatter and free-form Markdown bodies.
-- Document IDs are filename stems. Creation generates a random 32-character hex
-  ID and writes `<id>.md`; IDs are not injected into application frontmatter.
-  Collections contain regular Markdown files directly under the selected path.
-- Validate frontmatter on creation and after updates. Reads and lists parse stored metadata without
-  enforcing the schema, allowing retrieval after schema changes. List reports
-  malformed files individually and omits document bodies.
+  Documents use YAML frontmatter and free-form Markdown bodies. The schema
+  validates only frontmatter.data; schema title/description still describe the collection.
+- Means owns the top-level frontmatter fields: id (generated, immutable), title
+  (required nonempty string), and data (application object). Custom fields belong
+  under data. Creation defaults omitted data to {}; explicit null is invalid.
+- Creation generates a random 5-character lowercase ID and writes
+  <id>-<title-slug>.md. Clients reference stored IDs, never filenames. Lookup scans
+  visible subdirectories, ignores hidden paths and symlinks, and rejects duplicate
+  IDs. Renames/moves preserve identity; title edits preserve the existing filename.
+  Creation reserves candidate IDs temporarily to prevent concurrent allocation;
+  collisions retry. Direct edits can introduce duplicates, which list reports.
+- Validate the means envelope and application data on creation and after updates.
+  Reads and lists check the envelope but do not enforce the current data schema,
+  allowing retrieval after schema changes. List reports malformed files and
+  duplicate IDs individually, with diagnostic paths, and omits document bodies.
 - Read/create/update JSON returns a SHA-256 hash of the exact stored file bytes.
-  Updates require that hash, merge-patch frontmatter (null deletes, arrays replace),
+  Updates require that hash, merge-patch title/data (null deletes nested keys, arrays replace),
   and replace the body only when supplied. Preserve IDs, reject stale writes, and
   use same-directory temporary replacements. Updates do not lock files; hash
   checks reject observed changes but cannot exclude a write racing replacement.
@@ -42,7 +50,7 @@ the project direction and [TODO.md](TODO.md) for planned work.
   number precision. Keep stdout exclusively for MCP messages; --json affects
   help and startup errors, not protocol framing. Use schema title/description for
   collection identity and optional instructions.md for collection workflows.
-  instructions.md is reserved configuration, excluded from document lists/reads.
+  Root instructions.md is reserved configuration, excluded from document lists/reads.
   MCP advertises identity and workflow at startup; info reads current
   guidance. The server does not load AGENTS.md. Multiple registrations may bind
   one agent to multiple collections, with names chosen by the consumer.

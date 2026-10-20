@@ -1,8 +1,10 @@
 ---
-priority: normal
-status: todo
+data:
+  priority: normal
+  status: todo
+  type: feature
+id: e6pat
 title: Provide a Slovenian translation
-type: feature
 ---
 ## Context
 Provide a Slovenian translation of the issue tracker interface.

@@ -2,5 +2,5 @@
 /means
 /means.exe
 
-# Temporary files used by hash-checked updates (including example collections).
+# Temporary files used by ID allocation and hash-checked updates (including example collections).
 .means-*.tmp

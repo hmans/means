@@ -1,4 +1,4 @@
-// Package collection manages Markdown collections and their frontmatter schemas.
+// Package collection manages Markdown collections and their application data schemas.
 package collection
 
 import (
@@ -18,17 +18,25 @@ const SchemaFilename = "schema.json"
 //go:embed default.schema.json
 var defaultSchema []byte
 
-// Collection is a loaded collection with a compiled frontmatter schema.
+// Collection is a loaded collection with a compiled application data schema.
 type Collection struct {
 	Path      string
 	Schema    json.RawMessage // The exact schema used to compile this collection.
 	validator *jsonschema.Schema
 }
 
-// Validate checks JSON-compatible frontmatter against the collection's schema.
+// Validate checks the means envelope and validates only data against schema.json.
 func (c *Collection) Validate(frontmatter map[string]any) error {
-	if err := c.validator.Validate(frontmatter); err != nil {
-		return fmt.Errorf("frontmatter does not satisfy the schema: %w", err)
+	if err := validateEnvelope(frontmatter); err != nil {
+		return err
+	}
+	return c.ValidateData(frontmatter["data"].(map[string]any))
+}
+
+// ValidateData checks application data independently of the means-owned fields.
+func (c *Collection) ValidateData(data map[string]any) error {
+	if err := c.validator.Validate(data); err != nil {
+		return fmt.Errorf("frontmatter.data does not satisfy the schema: %w", err)
 	}
 	return nil
 }

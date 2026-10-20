@@ -17,7 +17,7 @@ func TestUpdateCLIWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	created, err := c.Create(map[string]any{"title": "Before", "tags": []string{"keep"}}, "Body\n")
+	created, err := c.Create(map[string]any{"title": "Before", "data": map[string]any{"tags": []string{"keep"}}}, "Body\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestUpdateCLIWorkflow(t *testing.T) {
 		if err := json.Unmarshal(stdout.Bytes(), &doc); err != nil {
 			t.Fatal(err)
 		}
-		if doc.ID != created.ID || doc.Hash == previousHash || doc.Frontmatter["title"] != source || doc.Body != "Body\n" || doc.Frontmatter["tags"].([]any)[0] != "keep" {
+		if doc.ID != created.ID || doc.Hash == previousHash || doc.Frontmatter["title"] != source || doc.Body != "Body\n" || doc.Frontmatter["data"].(map[string]any)["tags"].([]any)[0] != "keep" {
 			t.Fatalf("update result: %s", stdout.String())
 		}
 	}
@@ -81,6 +81,10 @@ func TestUpdateCLIInvalidInput(t *testing.T) {
 		`{"hash":"HASH","body":null}`, `{"hash":"HASH","body":42}`,
 		`{"hash":"HASH","frontmatter":{"title":null}}`, `{"hash":"HASH","body":"x","force":true}`,
 		`{"hash":"HASH","body":"x"} {}`,
+		`{"hash":"HASH","frontmatter":{"id":"changed"}}`,
+		`{"hash":"HASH","frontmatter":{"id":null}}`,
+		`{"hash":"HASH","frontmatter":{"data":null}}`,
+		`{"hash":"HASH","frontmatter":{"data":{"tags":42}}}`,
 	} {
 		t.Run(input, func(t *testing.T) {
 			input = strings.ReplaceAll(input, "HASH", doc.Hash)
@@ -88,7 +92,7 @@ func TestUpdateCLIInvalidInput(t *testing.T) {
 			if err := Execute([]string{"update", doc.ID, "--path", c.Path, "--input", "-", "--json"}, strings.NewReader(input), &stdout, &stderr, "test"); err == nil || stdout.Len() != 0 || !json.Valid(stderr.Bytes()) {
 				t.Fatalf("invalid input response: %v %s %s", err, stdout.String(), stderr.String())
 			}
-			data, err := os.ReadFile(filepath.Join(c.Path, doc.ID+".md"))
+			data, err := os.ReadFile(filepath.Join(c.Path, doc.ID+"-keep.md"))
 			if err != nil || string(data) != doc.Markdown {
 				t.Fatalf("failed patch changed file: %q %v", data, err)
 			}

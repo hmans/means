@@ -21,7 +21,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 	for _, protocol := range []string{"2025-11-25", "2026-07-28"} {
 		t.Run(protocol, func(t *testing.T) {
 			path := t.TempDir()
-			c, err := collection.Init(path, []byte(`{"type":"object","properties":{"title":{"type":"string"},"count":{"type":"integer"},"ratio":{"type":"number"}},"required":["title"],"additionalProperties":false}`))
+			c, err := collection.Init(path, []byte(`{"type":"object","properties":{"title":{"type":"string"},"count":{"type":"integer"},"ratio":{"type":"number"}},"additionalProperties":false}`))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,6 +82,10 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				`{}`, `{"frontmatter":null}`, `{"frontmatter":[]}`,
 				`{"frontmatter":{"title":42}}`, `{"frontmatter":{"title":"x"},"body":null}`,
 				`{"frontmatter":{"title":"x"},"path":"/tmp"}`,
+				`{"frontmatter":{"id":"supplied","title":"x"}}`,
+				`{"frontmatter":{"title":"x","data":null}}`,
+				`{"frontmatter":{"title":"x","data":{"count":"wrong"}}}`,
+				`{"frontmatter":{"title":"x","count":1}}`,
 			} {
 				call("create", args, true)
 			}
@@ -89,10 +93,20 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if err != nil || len(files) != 0 {
 				t.Fatalf("invalid calls created files: %v, %v", files, err)
 			}
-			created := call("create", `{"frontmatter":{"title":"Precise numbers","count":9007199254740993,"ratio":0.1234567890123456789},"body":"## Notes\n\nExact body.\n"}`, false)
+			created := call("create", `{"frontmatter":{"title":"Precise numbers","data":{"count":9007199254740993,"ratio":0.1234567890123456789}},"body":"## Notes\n\nExact body.\n"}`, false)
 			id := created["id"].(string)
+			if created["frontmatter"].(map[string]any)["id"] != id {
+				t.Fatal("missing stored ID")
+			}
+			// MCP resolves stored IDs after moving the actual file, too.
+			if err := os.Mkdir(filepath.Join(path, "nested"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Rename(filepath.Join(path, id+"-precise-numbers.md"), filepath.Join(path, "nested", "renamed.md")); err != nil {
+				t.Fatal(err)
+			}
 			read := call("read", `{"id":"`+id+`"}`, false)
-			metadata := read["frontmatter"].(map[string]any)
+			metadata := read["frontmatter"].(map[string]any)["data"].(map[string]any)
 			if metadata["count"] != json.Number("9007199254740993") || metadata["ratio"] != json.Number("0.1234567890123456789") || read["body"] != "## Notes\n\nExact body.\n" {
 				t.Fatalf("round-trip lost content: %v", read)
 			}
@@ -104,11 +118,14 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			call("update", `{"id":"`+id+`","hash":"`+hash+`"}`, true)
 			call("update", `{"id":"`+id+`","hash":"`+hash+`","body":null}`, true)
 			call("update", `{"id":"`+id+`","hash":"`+hash+`","frontmatter":{"title":null}}`, true)
-			updated := call("update", `{"id":"`+id+`","hash":"`+hash+`","frontmatter":{"title":"Changed","count":null}}`, false)
-			if updated["hash"] == hash || updated["body"] != read["body"] || updated["frontmatter"].(map[string]any)["ratio"] != metadata["ratio"] {
+			for _, fm := range []string{`{"id":"` + id + `"}`, `{"id":null}`, `{"data":null}`, `{"data":{"ratio":"wrong"}}`, `{"status":"done"}`} {
+				call("update", `{"id":"`+id+`","hash":"`+hash+`","frontmatter":`+fm+`}`, true)
+			}
+			updated := call("update", `{"id":"`+id+`","hash":"`+hash+`","frontmatter":{"title":"Changed","data":{"count":null}}}`, false)
+			if updated["hash"] == hash || updated["body"] != read["body"] || updated["frontmatter"].(map[string]any)["data"].(map[string]any)["ratio"] != metadata["ratio"] {
 				t.Fatalf("unexpected patch: %v", updated)
 			}
-			if _, exists := updated["frontmatter"].(map[string]any)["count"]; exists {
+			if _, exists := updated["frontmatter"].(map[string]any)["data"].(map[string]any)["count"]; exists {
 				t.Fatal("null did not remove count")
 			}
 			call("update", `{"id":"`+id+`","hash":"`+hash+`","body":"stale"}`, true)
@@ -138,7 +155,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if _, exists := doc["body"]; exists {
 					t.Fatal("list includes body")
 				}
-				if doc["id"] == "broken" {
+				if doc["path"] == "broken.md" {
 					foundBroken = doc["error"] != nil && doc["frontmatter"] == nil
 				}
 			}
@@ -162,7 +179,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				t.Fatal("stale schema")
 			}
 			call("create", `{"frontmatter":{"title":"Old schema"}}`, true)
-			created = call("create", `{"frontmatter":{"category":"new"}}`, false)
+			created = call("create", `{"frontmatter":{"title":"New schema","data":{"category":"new"}}}`, false)
 			if created["body"] != "" {
 				t.Fatal("body did not default to empty")
 			}

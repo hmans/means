@@ -17,12 +17,15 @@ func newInitCommand(opts *options) *cobra.Command {
 		Short: "Create a collection with an example or supplied schema.json",
 		Long: `Initialize a collection in --path (default: the current working directory).
 
-Without --schema, write an example schema requiring a string title and allowing
-optional tags (an array of strings), with no additional fields. These fields are
-examples, not requirements for custom schemas.
+Without --schema, write an example data schema allowing optional tags (an array
+of strings), rejecting other data fields. An empty data object is valid.
+The schema validates only frontmatter.data. Means separately owns id (generated,
+immutable) and title (required, nonempty string). Do not wrap the schema in data;
+its properties describe fields inside data. Schema title/description annotations
+still identify the collection for MCP discovery.
 
 For an agent-created collection:
-  1. Choose frontmatter fields and constraints for the user's intended memory.
+  1. Choose application data fields and constraints for the user's intended memory.
   2. Author a standalone JSON Schema and include descriptions explaining fields.
      Set its top-level title and description to identify the collection's purpose
      to MCP clients (separate from fields inside properties).
@@ -55,7 +58,7 @@ Responses:
 After initialization, read or edit schema.json directly. Initialization is not
 a schema update command. Use create to store documents, list to discover IDs,
 and read to retrieve them; see each command's --help. Doctor is not implemented yet.
-Schemas describe YAML frontmatter; the Markdown body remains free-form.
+Schemas describe application data nested in YAML frontmatter; the body is free-form.
 Optionally author instructions.md beside schema.json for MCP workflow guidance;
 init does not create it. See "means mcp --help" for collection identity and instructions.`,
 		Example: `  # Start with the example schema

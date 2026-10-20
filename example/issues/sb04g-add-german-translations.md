@@ -1,8 +1,10 @@
 ---
-priority: urgent
-status: todo
+data:
+  priority: urgent
+  status: todo
+  type: feature
+id: sb04g
 title: Add German translations
-type: feature
 ---
 ## Context
 Provide German translations of the issue tracker interface.

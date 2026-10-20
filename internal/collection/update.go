@@ -1,19 +1,16 @@
 package collection
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"reflect"
 	"regexp"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 var (
@@ -41,17 +38,20 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 	if patch.Frontmatter == nil && patch.Body == nil {
 		return nil, fmt.Errorf("supply frontmatter and/or body to update")
 	}
-	// Normalize Go caller values without rounding numbers or mutating their maps.
-	if patch.Frontmatter != nil {
-		data, err := json.Marshal(patch.Frontmatter)
-		if err != nil {
-			return nil, fmt.Errorf("encode frontmatter patch: %w", err)
+	if _, supplied := patch.Frontmatter["id"]; supplied {
+		return nil, fmt.Errorf("id is immutable; omit it from the frontmatter patch")
+	}
+	for key := range patch.Frontmatter {
+		if key != "title" && key != "data" {
+			return nil, fmt.Errorf("unknown means frontmatter field %q; application fields belong under data", key)
 		}
-		value, err := jsonschema.UnmarshalJSON(bytes.NewReader(data))
+	}
+	if patch.Frontmatter != nil {
+		var err error
+		patch.Frontmatter, err = normalizeObject(patch.Frontmatter)
 		if err != nil {
 			return nil, err
 		}
-		patch.Frontmatter = value.(map[string]any)
 	}
 	root, err := os.OpenRoot(c.Path)
 	if err != nil {
@@ -96,7 +96,7 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 		}
 		markdown = prefix + body
 	}
-	fileInfo, err := root.Lstat(id + ".md")
+	fileInfo, err := root.Lstat(current.filename)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 		if _, err := rand.Read(random[:]); err != nil {
 			return nil, err
 		}
-		tempname = ".means-" + hex.EncodeToString(random[:]) + ".tmp"
+		tempname = path.Join(path.Dir(current.filename), ".means-"+hex.EncodeToString(random[:])+".tmp")
 		temp, err = root.OpenFile(tempname, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if !errors.Is(err, os.ErrExist) {
 			break
@@ -134,13 +134,13 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	if latest.Hash != hash {
+	if latest.Hash != hash || latest.filename != current.filename {
 		return nil, conflict(id)
 	}
-	if err := root.Rename(tempname, id+".md"); err != nil {
+	if err := root.Rename(tempname, current.filename); err != nil {
 		return nil, fmt.Errorf("replace document: %w", err)
 	}
-	return &Document{ID: id, Hash: contentHash(markdown), Frontmatter: frontmatter, Body: body, Markdown: markdown}, nil
+	return &Document{ID: id, Hash: contentHash(markdown), Frontmatter: frontmatter, Body: body, Markdown: markdown, filename: current.filename}, nil
 }
 
 func conflict(id string) error {
