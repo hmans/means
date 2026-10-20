@@ -66,7 +66,7 @@ func collectionStartupInstructions(info *collection.Description) string {
 
 // New validates the selected collection and builds a server bound to its path.
 // Each call reloads the collection so external schema edits take effect immediately.
-func New(path, version string) (*mcp.Server, error) {
+func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
 	c, err := collection.Load(path)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 	} {
 		tool.description = collectionPurpose(info) + "\n\n" + tool.description
-		if err := addTool(server, path, tool); err != nil {
+		if err := addTool(server, path, tool, structuredOnly); err != nil {
 			return nil, err
 		}
 	}
@@ -186,7 +186,7 @@ type toolDefinition struct {
 	run                       func(*collection.Collection, map[string]any) (any, error)
 }
 
-func addTool(server *mcp.Server, path string, tool toolDefinition) error {
+func addTool(server *mcp.Server, path string, tool toolDefinition, structuredOnly bool) error {
 	schema, err := jsonschema.UnmarshalJSON(bytes.NewBufferString(tool.schema))
 	if err != nil {
 		return err
@@ -229,14 +229,17 @@ func addTool(server *mcp.Server, path string, tool toolDefinition) error {
 		if err != nil {
 			return toolError(err), nil
 		}
-		encoded, err := json.MarshalIndent(output, "", "  ")
+		// Keep JSON text for clients that do not consume structuredContent.
+		// Encode it compactly once to avoid duplicating pretty-print whitespace.
+		encoded, err := json.Marshal(output)
 		if err != nil {
 			return toolError(err), nil
 		}
-		return &mcp.CallToolResult{
-			StructuredContent: json.RawMessage(encoded),
-			Content:           []mcp.Content{&mcp.TextContent{Text: string(encoded)}},
-		}, nil
+		result := &mcp.CallToolResult{StructuredContent: json.RawMessage(encoded), Content: []mcp.Content{}}
+		if !structuredOnly {
+			result.Content = []mcp.Content{&mcp.TextContent{Text: string(encoded)}}
+		}
+		return result, nil
 	})
 	return nil
 }

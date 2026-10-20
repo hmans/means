@@ -21,7 +21,7 @@ func TestSearchTool(t *testing.T) {
 	writeFile(t, filepath.Join(path, "a.md"), "---\nid: alpha\ntitle: Schema work\ndata:\n  type: feature\n  priority: normal\n  count: 9007199254740993\n---\nbody")
 	writeFile(t, filepath.Join(path, "b.md"), "---\nid: beta\ntitle: Other\ndata:\n  type: task\n  priority: high\n---\nbody")
 	writeFile(t, filepath.Join(path, "bad.md"), "broken")
-	server, err := New(path, "test")
+	server, err := New(path, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}

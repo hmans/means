@@ -364,8 +364,12 @@ MCP updates use the same patch rules and required content hash as the CLI. Call
 `read` first, and refresh it on a conflict. Update is annotated as a write that
 can replace or remove existing content.
 
-Results contain `structuredContent` and an equivalent pretty-printed JSON text
-block. Tool failures return MCP `isError` results without ending the server.
+Results contain `structuredContent` and, by default, an equivalent compact JSON
+text block for clients that only read `content`. Use `means mcp --structured-only`
+when every client of that registration reads `structuredContent`; successful
+results then have an empty `content` array. This repository's `issues-mcp` task
+uses that mode. Tool failures still contain explanatory text and return MCP
+`isError` results without ending the server.
 Stdout contains only compact, newline-delimited MCP messages. Diagnostics and
 startup failures go to stderr. `--json` never changes protocol framing.
 

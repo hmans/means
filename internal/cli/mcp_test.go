@@ -75,6 +75,10 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if !ok {
 					t.Fatalf("unexpected content: %T", result.Content[0])
 				}
+				var compact bytes.Buffer
+				if err := json.Compact(&compact, []byte(text.Text)); err != nil || compact.String() != text.Text {
+					t.Fatalf("text is not compact JSON: %+v", result)
+				}
 				value, err := jsonschema.UnmarshalJSON(strings.NewReader(text.Text))
 				if err != nil {
 					t.Fatal(err)
@@ -206,14 +210,15 @@ func TestMCPToolsOverStdio(t *testing.T) {
 }
 
 // Exercise Cobra and actual newline-delimited IO, including --json and EOF.
-func connectMCP(t *testing.T, ctx context.Context, path, protocol string) *mcp.ClientSession {
+func connectMCP(t *testing.T, ctx context.Context, path, protocol string, extraFlags ...string) *mcp.ClientSession {
 	t.Helper()
 	serverIn, clientOut := io.Pipe()
 	clientIn, serverOut := io.Pipe()
 	var wire, stderr bytes.Buffer
 	done := make(chan error, 1)
 	go func() {
-		done <- Execute([]string{"mcp", "--path", path, "--json"}, serverIn,
+		args := append([]string{"mcp", "--path", path, "--json"}, extraFlags...)
+		done <- Execute(args, serverIn,
 			io.MultiWriter(serverOut, &wire), &stderr, "test-mcp")
 	}()
 	t.Cleanup(func() {
@@ -263,6 +268,28 @@ func connectMCP(t *testing.T, ctx context.Context, path, protocol string) *mcp.C
 	}
 	t.Cleanup(func() { session.Close() })
 	return session
+}
+
+func TestMCPStructuredOnly(t *testing.T) {
+	for _, protocol := range []string{"2025-11-25", "2026-07-28"} {
+		t.Run(protocol, func(t *testing.T) {
+			path := t.TempDir()
+			if _, err := collection.Init(path, []byte(`{"type":"object","properties":{"count":{"type":"integer"},"ratio":{"type":"number"}}}`)); err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			session := connectMCP(t, ctx, path, protocol, "--structured-only")
+			result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "create", Arguments: json.RawMessage(`{"frontmatter":{"title":"Precise numbers","data":{"count":9007199254740993,"ratio":0.1234567890123456789}}}`)})
+			if err != nil || result.IsError || result.StructuredContent == nil || len(result.Content) != 0 {
+				t.Fatalf("structured-only result = %+v, %v", result, err)
+			}
+			failure, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "read", Arguments: json.RawMessage(`{"id":"missing"}`)})
+			if err != nil || !failure.IsError || len(failure.Content) == 0 {
+				t.Fatalf("error lost text = %+v, %v", failure, err)
+			}
+		})
+	}
 }
 
 func TestMCPStartupAndHelp(t *testing.T) {

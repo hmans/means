@@ -27,7 +27,7 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 					t.Fatal(err)
 				}
 				writeFile(t, filepath.Join(path, collection.InstructionsFilename), "Workflow for "+title)
-				server, err := New(path, "test")
+				server, err := New(path, "test", false)
 				if err != nil {
 					t.Fatal(err)
 				}
