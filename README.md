@@ -199,6 +199,16 @@ are returned as strings. Both LF and CRLF delimiters are supported.
 Run `mise means create --help`, `mise means read --help`, or `mise means list
 --help` for full input, output, and error details. Help is also available as JSON.
 
+## Example issue tracker
+
+An issue-tracking example lives in [example/issues](example/issues), with a schema
+and fictional sample issues. [example/AGENTS.md](example/AGENTS.md) teaches agents
+how to use means with that collection:
+
+```sh
+mise means list --path ./example/issues --limit 0 --json
+```
+
 ## Design direction
 
 - **Plain files:** Markdown documents and collection schemas remain authoritative,

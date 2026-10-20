@@ -26,7 +26,7 @@
 
 ## Exercise real use cases
 
-- [ ] Build a small issue-tracking schema and skill as an example.
+- [x] Add an issue-tracking example collection and AGENTS.md usage instructions.
 - [ ] Integrate means with ChattoBot through the structured CLI interface.
 - [ ] Use those integrations to decide what SDK or MCP support is needed.
 
