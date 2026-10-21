@@ -72,8 +72,6 @@ following its [workflow](issues/instructions.md).
   configured in root `.codex/config.toml`; call `info` to confirm its identity is
   "means issues", then list/read relevant issues and update status and outcomes.
   CLI fallback from the repo root: `mise means list --path ./issues --limit 0 --json`.
-  Under `example/`, its local config overrides `issues` to use fictional data.
-  Use the CLI against the real collection when working on means from that directory.
 - Update the README when implemented behavior changes. Clearly distinguish
   available features from plans. TODO.md retains historical milestones only.
 - Keep CLI help sufficient for agents to discover workflows, input formats,

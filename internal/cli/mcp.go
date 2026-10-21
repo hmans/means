@@ -74,7 +74,7 @@ Tool errors still include explanatory text.
 Tool failures use MCP isError results; the server stays available for later calls.
 Startup failures and diagnostics go to stderr. --json also formats CLI help and
 startup errors; it never changes MCP message framing.`,
-		Example: `  means mcp --path ./example/issues
+		Example: `  means mcp --path ./issues
   means mcp --path ./issues --json
   # Register separately to give the same agent another collection
   means mcp --path ./decisions

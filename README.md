@@ -281,9 +281,9 @@ previous application field named `id` belongs under `data.id`; it does not repla
 the document ID. Bodies can remain byte-for-byte unchanged. Filenames may be
 renamed to the new convention, but lookup uses the stored ID.
 
-The repository's issue and example collections now use five-character IDs and
-canonical `<id>-<title-slug>.md` filenames. Their earlier long IDs were explicitly
-regenerated during cleanup. There is no automatic migration or legacy fallback.
+The repository's issue collection uses five-character IDs and canonical
+`<id>-<title-slug>.md` filenames. Its earlier long IDs were explicitly regenerated
+during cleanup. There is no automatic migration or legacy fallback.
 
 ## Patch updates
 
@@ -338,7 +338,7 @@ Launch a server bound to one existing collection:
 ```sh
 means mcp --path /absolute/path/to/collection
 # From this checkout:
-mise means mcp --path ./example/issues
+mise means mcp --path ./issues
 ```
 
 An MCP client launches this command as a subprocess and communicates over
@@ -441,24 +441,6 @@ The client registration distinguishes the servers; schema annotations distinguis
 their purpose, and each collection supplies its own workflow. No routing flag or
 additional means configuration format is needed.
 
-## Example collections
-
-An issue-tracking example lives in [example/issues](example/issues), with a schema
-and fictional sample issues. Its [instructions.md](example/issues/instructions.md)
-supplies an issue workflow through MCP, without an example-local `AGENTS.md`.
-Alongside it, [example/memory](example/memory) stores plain memories with a title,
-optional `data.tags`, and a Markdown body. Its own schema and instructions explain when
-to store or recall facts, preferences, and context. For CLI access:
-
-```sh
-mise means list --path ./example/issues --limit 0 --json
-mise means list --path ./example/memory --limit 0 --json
-```
-
-The example includes a [project-local Codex MCP configuration](example/.codex/config.toml).
-See [example/README.md](example/README.md) to start one Codex agent with both the
-`issues` and `memory` registrations connected and their workflows available.
-
 ## Design direction
 
 - **Plain files:** Markdown documents and collection schemas remain authoritative,
@@ -482,8 +464,8 @@ mise means search --path ./issues --filter status=todo --filter priority=normal 
 ```
 
 Use `read`, `create`, and `update` with the same `--path` to manage this backlog.
-It is separate from the fictional example collections. [TODO.md](TODO.md)
-retains completed milestones; active work is tracked only in `issues/`.
+[TODO.md](TODO.md) retains completed milestones; active work is tracked only in
+`issues/`.
 
 ### Repo-local MCP
 
@@ -497,10 +479,8 @@ then use its `list`, `search`, `read`, `create`, and `update` tools. The collect
 its schema and workflow through MCP. The first startup may compile dependencies;
 the configured timeout is 60 seconds. CLI access remains available as a fallback.
 
-When starting Codex under `example/`, its nearer config overrides the `issues`
-registration to use the fictional example backlog and also registers `memory`.
-See [Codex configuration precedence](https://learn.chatgpt.com/docs/config-file/config-basic)
-and [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+See [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+for client setup details.
 
 ## Development
 
@@ -519,7 +499,7 @@ and forwards all arguments to the CLI, including `--help`, `--path`, and `--json
 You can work directly inside a collection without specifying `--path`:
 
 ```sh
-cd example/issues
+cd issues
 mise means list --json
 ```
 

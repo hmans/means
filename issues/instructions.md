@@ -1,8 +1,7 @@
 # Working with means issues
 
 This collection is the means project's own backlog. It contains actionable work,
-bugs, and design decisions for this repository. The collections under `example/`
-contain fictional application data and are separate from this backlog.
+bugs, and design decisions for this repository.
 
 Use means to create, read, list, search, and update issues. From the repository root:
 
