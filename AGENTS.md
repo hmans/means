@@ -72,8 +72,11 @@ following its [workflow](issues/instructions.md).
   configured in root `.codex/config.toml`; call `info` to confirm its identity is
   "means issues", then list/read relevant issues and update status and outcomes.
   CLI fallback from the repo root: `mise means list --path ./issues --limit 0 --json`.
-- Update the README when implemented behavior changes. Clearly distinguish
-  available features from plans. TODO.md retains historical milestones only.
+- Keep root README.md concise: explain what means is, its current capabilities,
+  and where to start. Put detailed workflows, command contracts, and migration
+  guidance in docs/ or CLI help instead of expanding the README. Update the
+  relevant documentation when behavior changes, and distinguish available
+  features from plans. TODO.md retains historical milestones only.
 - Keep CLI help sufficient for agents to discover workflows, input formats,
   examples, output formats, errors, and limitations. Include long descriptions
   and examples in both human-readable and JSON help.
