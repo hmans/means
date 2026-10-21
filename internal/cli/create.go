@@ -17,7 +17,7 @@ func newCreateCommand(opts *options) *cobra.Command {
 		Use:   "create",
 		Short: "Validate and store a new Markdown document",
 		Long: `Create one document in the collection selected by --path (default: current directory).
-Initialize the collection first with "means init" and read its schema.json.
+Initialize the collection first with "means init" and read its means.schema.json.
 
 Input:
   --input FILE reads a JSON file relative to the current working directory,
@@ -26,7 +26,7 @@ Input:
   frontmatter is required. title must be a nonempty string. data must be an object;
   omit it to use {} if the collection schema permits. body defaults to "".
   Means owns the top-level frontmatter fields. id is generated; do not supply it.
-  Application fields belong under data, which alone is validated by schema.json.
+  Application fields belong under data, which alone is validated by means.schema.json.
   Unknown envelope and top-level frontmatter fields are rejected.
 
 Storage:

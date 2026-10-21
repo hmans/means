@@ -236,7 +236,7 @@ type storedDocument struct {
 	err      error
 }
 
-// Walk visible Markdown files, excluding instructions and symlinks. Scan the
+// Walk visible Markdown files, excluding nested collections, instructions, and symlinks. Scan the
 // whole collection even for limited lists so duplicates outside the limit count.
 func scanDocuments(root *os.Root) ([]storedDocument, error) {
 	var entries []storedDocument
@@ -249,6 +249,17 @@ func scanDocuments(root *os.Root) ([]storedDocument, error) {
 				return fs.SkipDir
 			}
 			return nil
+		}
+		if filename != "." && entry.IsDir() {
+			// Presence alone defines the boundary, even for an invalid schema or
+			// a dangling symlink. Never adopt a broken child collection's files.
+			_, err := root.Lstat(path.Join(filename, SchemaFilename))
+			if err == nil {
+				return fs.SkipDir
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("inspect collection boundary %q: %w", filename, err)
+			}
 		}
 		if !entry.Type().IsRegular() || !strings.HasSuffix(filename, ".md") || filename == InstructionsFilename {
 			return nil

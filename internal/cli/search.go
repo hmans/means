@@ -38,6 +38,8 @@ omitted from matches and reported separately in diagnostics, regardless of
 query or result limit. Each diagnostic has an ID when readable, relative path,
 and error. Application data that fails the current schema remains searchable.
 Hidden paths, symlinks, and root MEANS.md are skipped.
+Subdirectories containing means.schema.json are separate collections and are skipped,
+even if their schema is invalid.
 
 --json returns {"documents":[...],"diagnostics":[],"has_more":false}.
 Text output shows IDs, metadata, and excerpts, followed by diagnostics.

@@ -35,7 +35,7 @@ func TestInitAndLoad(t *testing.T) {
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil || len(entries) != 1 || entries[0].Name() != SchemaFilename {
-		t.Fatalf("expected only schema.json, got %v, %v", entries, err)
+		t.Fatalf("expected only means.schema.json, got %v, %v", entries, err)
 	}
 	for _, tt := range []struct {
 		name  string
@@ -122,7 +122,7 @@ func TestLoadInvalidSchema(t *testing.T) {
 				t.Fatal(err)
 			}
 			if _, err := Load(dir); err == nil || !strings.Contains(err.Error(), SchemaFilename) {
-				t.Fatalf("Load() = %v, want an error identifying schema.json", err)
+				t.Fatalf("Load() = %v, want an error identifying means.schema.json", err)
 			}
 			after, err := os.ReadFile(filename)
 			if err != nil || string(after) != schema {

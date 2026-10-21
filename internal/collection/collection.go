@@ -13,7 +13,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-const SchemaFilename = "schema.json"
+const SchemaFilename = "means.schema.json"
 
 //go:embed default.schema.json
 var defaultSchema []byte
@@ -25,7 +25,7 @@ type Collection struct {
 	validator *jsonschema.Schema
 }
 
-// Validate checks the means envelope and validates only data against schema.json.
+// Validate checks the means envelope and validates only data against means.schema.json.
 func (c *Collection) Validate(frontmatter map[string]any) error {
 	if err := validateEnvelope(frontmatter); err != nil {
 		return err
@@ -41,7 +41,7 @@ func (c *Collection) ValidateData(data map[string]any) error {
 	return nil
 }
 
-// Init validates a schema, then creates the directory and writes schema.json
+// Init validates a schema, then creates the directory and writes means.schema.json
 // without overwriting an existing file. A nil schema selects the example schema.
 func Init(path string, schema []byte) (*Collection, error) {
 	if schema == nil {

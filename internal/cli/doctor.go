@@ -20,9 +20,11 @@ func newDoctorCommand(opts *options) *cobra.Command {
 		Long: `Inspect every visible Markdown document in the collection selected by --path.
 
 Doctor checks Markdown and YAML frontmatter, the means-owned id/title/data
-envelope, duplicate IDs, and frontmatter.data against the current schema.json.
+envelope, duplicate IDs, and frontmatter.data against the current means.schema.json.
 It scans visible subdirectories, ignoring hidden paths, symlinks, and the root
 MEANS.md. It only reads files; it never repairs or rewrites them.
+Subdirectories containing means.schema.json are separate collections and are skipped,
+even if their schema is invalid. Run doctor with their --path to inspect them.
 
 --json writes {"healthy":true,"checked":0,"diagnostics":[]} on an empty or
 healthy collection. Each diagnostic has id, relative path, and an actionable
@@ -31,7 +33,7 @@ diagnostics. Text output shows the checked count and each affected path.
 
 Healthy collections exit 0. Invalid documents produce the complete report on
 stdout and exit 1, with no stderr error response. Collection-level failures
-(such as an invalid schema.json or unreadable directory) exit 1 and write an
+(such as an invalid means.schema.json or unreadable directory) exit 1 and write an
 error to stderr, formatted as {"error":"..."} with --json. Reads and lists
 continue to allow schema-invalid application data for retrieval.`,
 		Example: `  means doctor --path ./memory

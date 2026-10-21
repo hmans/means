@@ -14,7 +14,7 @@ func newInitCommand(opts *options) *cobra.Command {
 	var schemaSource string
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create a collection with an example or supplied schema.json",
+		Short: "Create a collection with an example or supplied means.schema.json",
 		Long: `Initialize a collection in --path (default: the current working directory).
 
 Without --schema, write an example data schema allowing optional tags (an array
@@ -44,22 +44,22 @@ Schema input:
 
 Effects:
   Validate the entire schema before creating the target directory or any files.
-  Create missing directories and write only schema.json, preserving supplied bytes.
-  Refuse to overwrite an existing schema.json, even if it is invalid.
+  Create missing directories and write only means.schema.json, preserving supplied bytes.
+  Refuse to overwrite an existing means.schema.json, even if it is invalid.
   Existing unrelated files are left alone. No documents are created or checked.
 
 Responses:
   Success: exit 0; stdout describes the initialized collection.
-  With --json: {"path":"/absolute/collection","schema":"/absolute/collection/schema.json"}.
+  With --json: {"path":"/absolute/collection","schema":"/absolute/collection/means.schema.json"}.
   Failure: exit 1; stderr explains the error and stdout is empty.
   With --json: {"error":"..."}; schema errors identify the invalid constraint.
   JSON responses use two-space indentation and end with a newline.
 
-After initialization, read or edit schema.json directly. Initialization is not
+After initialization, read or edit means.schema.json directly. Initialization is not
 a schema update command. Use create to store documents, list to discover IDs,
 and read to retrieve them; see each command's --help. Doctor is not implemented yet.
 Schemas describe application data nested in YAML frontmatter; the body is free-form.
-Optionally author MEANS.md beside schema.json for MCP workflow guidance;
+Optionally author MEANS.md beside means.schema.json for MCP workflow guidance;
 init does not create it. See "means mcp --help" for collection identity and instructions.`,
 		Example: `  # Start with the example schema
   means init --path ./memory

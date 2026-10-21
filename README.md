@@ -1,7 +1,7 @@
 # means
 
 means is a small Go tool for agentic memory built from Markdown files. A collection
-is a directory of documents and a `schema.json` that defines their application
+is a directory of documents and a `means.schema.json` that defines their application
 data. The files are the source of truth: people and other tools can edit them
 directly.
 
@@ -32,7 +32,7 @@ Run `mise deploy` to build this checkout and install `means` into `~/.local/bin`
 Add that directory to your `PATH` to run `means` from any directory. Run
 `mise deploy` again to replace the installed binary with the current checkout.
 
-`init` writes a starter schema that accepts optional `tags`. Edit `schema.json`
+`init` writes a starter schema that accepts optional `tags`. Edit `means.schema.json`
 to fit your application, or supply your own schema during initialization. Use
 the ID returned by `create` to read and update a document; filenames can change
 without changing identity.
@@ -45,5 +45,5 @@ JSON help.
 ## This repository
 
 means tracks its own work in the [issues collection](issues/), using its
-[schema](issues/schema.json) and [workflow](issues/MEANS.md). Contributors
+[schema](issues/means.schema.json) and [workflow](issues/MEANS.md). Contributors
 should read [AGENTS.md](AGENTS.md). Run `mise test` for the Go test suite.

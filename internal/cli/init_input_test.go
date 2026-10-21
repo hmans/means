@@ -45,7 +45,7 @@ func TestInitSuppliedSchema(t *testing.T) {
 			if stderr.Len() != 0 || !json.Valid(stdout.Bytes()) {
 				t.Fatalf("unexpected response: stdout=%s stderr=%s", stdout.String(), stderr.String())
 			}
-			stored, err := os.ReadFile(filepath.Join(dir, "schema.json"))
+			stored, err := os.ReadFile(filepath.Join(dir, "means.schema.json"))
 			if err != nil || string(stored) != schema {
 				t.Fatalf("schema was not preserved: %s, %v", stored, err)
 			}
@@ -63,7 +63,7 @@ func TestInitSuppliedSchema(t *testing.T) {
 			if err := Execute(args, strings.NewReader(`{"type":"object"}`), &stdout, &stderr, "test"); err == nil {
 				t.Fatal("reinitialization overwrote the schema")
 			}
-			after, err := os.ReadFile(filepath.Join(dir, "schema.json"))
+			after, err := os.ReadFile(filepath.Join(dir, "means.schema.json"))
 			if err != nil || !bytes.Equal(after, stored) {
 				t.Fatalf("reinitialization changed the schema: %s, %v", after, err)
 			}

@@ -123,7 +123,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 		}
 	}
 	for command, topics := range map[string][]string{
-		"create": {"--input -", "frontmatter", "schema.json", "5-character", "data", "generated", "exit 1", "<<'JSON'"},
+		"create": {"--input -", "frontmatter", "means.schema.json", "5-character", "data", "generated", "exit 1", "<<'JSON'"},
 		"read":   {"filename", "--json", "schema", "exit 1"},
 		"list":   {"--limit", "has_more", "Malformed", "exit 1"},
 		"update": {"hash", "read", "--input -", "null deletes", "arrays", "stale", "final check", "exit 1", "<<'JSON'"},

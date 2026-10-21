@@ -6,7 +6,7 @@ shapes, responses, errors, and limitations, run `means <command> --help` (or add
 
 ## Collections
 
-A collection is one directory with a standalone `schema.json`. The schema
+A collection is one directory with a standalone `means.schema.json`. The schema
 describes only `frontmatter.data`; means owns the document's top-level `id` and
 `title`. Schemas use JSON Schema Draft 2020-12 by default. Internal references
 work; references to other files or remote schemas are not supported.
@@ -21,7 +21,7 @@ mise means init --path ./memory --schema - --json < ./memory.schema.json
 
 The starter schema accepts optional `tags` and rejects other application fields.
 `init` validates a supplied schema before creating files and never overwrites an
-existing `schema.json`. Edit the file directly to evolve a collection. Means
+existing `means.schema.json`. Edit the file directly to evolve a collection. Means
 loads the selected directory exactly; it does not search parent directories.
 Schema edits take effect on the next command or MCP call. Run `doctor` after a
 schema change to find existing documents that need attention.
@@ -29,6 +29,29 @@ schema change to find existing documents that need attention.
 An optional root `MEANS.md` provides collection workflow guidance to MCP
 clients. It is configuration, not a document, and is excluded from lists and
 reads. The server does not load `AGENTS.md`.
+
+### Subdirectories and collection boundaries
+
+Use the filenames `means.schema.json` and `MEANS.md` as written. Means uses
+ordinary filesystem lookup; case sensitivity depends on the filesystem. It does
+not search for other case variants. A `MEANS.md` file alone does not start a
+collection, and an unrelated `schema.json` does not establish a boundary.
+
+Ordinary subdirectories belong to the selected collection. A subdirectory with
+its own `means.schema.json` starts a separate collection: all document operations stop
+at that directory, including list, search, doctor, ID lookup, updates, and ID
+allocation. The presence of the schema path establishes the boundary, even if
+the schema is invalid, a directory, or a broken symlink.
+
+For example, with `foo/means.schema.json` and `foo/bar/means.schema.json`, `--path foo`
+excludes everything under `foo/bar`. Use `--path foo/bar` to work with that
+collection. IDs are unique within each collection; parent and child collections
+can reuse an ID. Schemas and `MEANS.md` guidance do not inherit from parents.
+
+Adding or removing a nested `means.schema.json` changes which collection owns that
+subtree on the next operation. Moving a document across a collection boundary
+changes the schema that applies to it and can introduce an ID collision in the
+destination. Moving it within one collection preserves its identity.
 
 ## Documents
 
@@ -147,6 +170,11 @@ text. The flag also formats CLI help and startup errors. This repository's
 [issues collection](../issues/) through the `issues-mcp` mise task.
 
 ## Migrating earlier collections
+
+Rename each collection's `schema.json` to `means.schema.json`, including nested
+collections, before using this version. There is no fallback to the old schema
+filename. A nested collection with only the old filename is now an ordinary
+subdirectory of its parent collection.
 
 Rename the collection's root `instructions.md` to `MEANS.md` to keep its workflow
 guidance available. Only `MEANS.md` is reserved for this purpose; the old name is

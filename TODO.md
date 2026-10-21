@@ -16,7 +16,7 @@ were migrated to the collection; add new work there.
 - [x] Choose the initial frontmatter types, constraints, and validation behavior.
 - [x] Decide how documents are identified and how filenames relate to identity.
 - [x] Scaffold Cobra with inherited `--path` and `--json` flags.
-- [x] Establish an example `schema.json` through `init`; consumers read and edit it directly.
+- [x] Establish an example `means.schema.json` through `init`; consumers read and edit it directly.
 - [x] Accept agent-authored schemas from a file or stdin during initialization.
 - [x] Document the schema-authoring workflow in text and JSON CLI help.
 

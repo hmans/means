@@ -13,7 +13,7 @@ mise means create --path ./issues --input - --json
 mise means update <id> --path ./issues --input - --json
 ```
 
-Read `schema.json` before creating issues. When accessed through MCP, use `info`
+Read `means.schema.json` before creating issues. When accessed through MCP, use `info`
 for the current schema and these instructions; the tools are `list`, `search`,
 `read`, `create`, and `update`.
 

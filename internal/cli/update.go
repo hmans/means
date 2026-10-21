@@ -19,6 +19,8 @@ func newUpdateCommand(opts *options) *cobra.Command {
 		Long: `Patch an existing document in --path (default: current directory).
 
 Read first:
+  IDs are local to the selected collection. Lookup stops at subdirectories
+  containing means.schema.json; select a nested collection with its own --path.
   Run "means read <id> --json" and keep its hash. This is SHA-256 of the exact
   stored Markdown bytes, including frontmatter, whitespace, and line endings.
   list omits hashes. A missing or stale hash cannot update a document.
@@ -40,7 +42,7 @@ Input:
 
 Effects:
   Preserve the ID and filename, even when the title changes. Check the hash
-  and validate the means envelope and resulting data against schema.json
+  and validate the means envelope and resulting data against means.schema.json
   before replacing the file. Conflicts and validation errors leave it unchanged.
   On conflict, read again, review the new content, and recompute your patch.
   Body-only changes preserve the original frontmatter text. Metadata changes

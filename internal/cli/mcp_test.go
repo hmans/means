@@ -182,7 +182,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			call("info", `{"path":"elsewhere"}`, true)
 			call("info", `null`, true)
 			// Schema changes affect the next call; reads still allow old metadata.
-			if err := os.WriteFile(filepath.Join(path, "schema.json"), []byte(`{"type":"object","required":["category"]}`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`{"type":"object","required":["category"]}`), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			info = call("info", `{}`, false)
@@ -195,11 +195,11 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				t.Fatal("body did not default to empty")
 			}
 			call("read", `{"id":"`+id+`"}`, false)
-			if err := os.WriteFile(filepath.Join(path, "schema.json"), []byte(`{"type":42}`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`{"type":42}`), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			call("info", `{}`, true)
-			if err := os.WriteFile(filepath.Join(path, "schema.json"), []byte(`true`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`true`), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			if call("info", `{}`, false)["schema"] != true {

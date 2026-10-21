@@ -14,7 +14,7 @@ following its [workflow](issues/MEANS.md).
   tools can edit them directly.
 - A collection has a schema describing its documents' application data. Consumers
   can establish and evolve that schema through means.
-- Each collection contains a standalone `schema.json` using JSON Schema (Draft
+- Each collection contains a standalone `means.schema.json` using JSON Schema (Draft
   2020-12 by default). `init` creates the directory with an example schema or a
   consumer-authored schema from `--schema FILE` / `--schema -` (stdin). Validate
   supplied schemas before creating files; never overwrite an existing schema.
@@ -28,6 +28,9 @@ following its [workflow](issues/MEANS.md).
   <id>-<title-slug>.md. Clients reference stored IDs, never filenames. Lookup scans
   visible subdirectories, ignores hidden paths and symlinks, and rejects duplicate
   IDs. Renames/moves preserve identity; title edits preserve the existing filename.
+  Scans stop at subdirectories containing means.schema.json, even if that schema is
+  invalid. These are separate collections with independent IDs, schemas, and
+  MEANS.md guidance. Adding/removing a nested schema changes subtree ownership.
   Creation reserves candidate IDs temporarily to prevent concurrent allocation;
   collisions retry. Direct edits can introduce duplicates, which list reports.
 - Validate the means envelope and application data on creation and after updates.

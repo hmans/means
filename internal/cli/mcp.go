@@ -27,7 +27,7 @@ Multiple collections:
   instructions and every tool description, before an agent calls any tool.
   Missing or blank title falls back to the directory name; description is optional.
   These schema annotations are separate from document frontmatter fields.
-  Add optional MEANS.md beside schema.json for collection workflow guidance.
+  Add optional MEANS.md beside means.schema.json for collection workflow guidance.
   This plain UTF-8 Markdown file needs no frontmatter and is reserved configuration,
   excluded from document lists and reads. It must be a regular file, not a symlink.
   Its contents are included in server instructions and info results.
@@ -50,7 +50,7 @@ Means owns frontmatter.id (generated, immutable) and frontmatter.title (required
 nonempty string). Omitted data defaults to {} on creation; explicit null is invalid.
 IDs are stored values, not filenames; duplicate IDs fail lookup and appear as list
 errors. Read and update follow IDs after file renames or moves into subdirectories.
-Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads schema.json so
+Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads means.schema.json so
 schema edits take effect immediately. Reads and lists do not validate existing
 data against the schema; list entries may contain individual errors. Search
 matches a case-insensitive literal phrase in title/body and partially matches

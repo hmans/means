@@ -50,7 +50,7 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		Short: "Agentic memory built from Markdown files",
 		Long: `means provides typed Markdown collections for agents and applications.
 
-A collection is a directory containing a standalone schema.json that describes
+A collection is a directory containing a standalone means.schema.json that describes
 application data using JSON Schema. The files are authoritative and can be edited
 directly. Means owns frontmatter.id (generated and immutable) and frontmatter.title
 (required); application fields live under frontmatter.data. Filenames are storage

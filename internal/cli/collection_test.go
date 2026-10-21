@@ -22,7 +22,7 @@ func TestInitCommand(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Path != dir || result.Schema != filepath.Join(dir, "schema.json") || stderr.Len() != 0 {
+	if result.Path != dir || result.Schema != filepath.Join(dir, "means.schema.json") || stderr.Len() != 0 {
 		t.Fatalf("unexpected initialization response: %s, stderr: %s", stdout.String(), stderr.String())
 	}
 	data, err := os.ReadFile(result.Schema)
@@ -55,14 +55,14 @@ func TestInitPaths(t *testing.T) {
 	if !strings.Contains(stdout.String(), "Initialized collection") {
 		t.Fatalf("unexpected text response: %s", stdout.String())
 	}
-	if _, err := os.Stat(filepath.Join(cwd, "memory", "schema.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(cwd, "memory", "means.schema.json")); err != nil {
 		t.Fatal(err)
 	}
 	// Without --path, initialization uses the working directory itself.
 	if err := Execute([]string{"init"}, nil, &stdout, &stderr, "test"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(cwd, "schema.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(cwd, "means.schema.json")); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -83,7 +83,7 @@ func TestCollectionCommandErrors(t *testing.T) {
 			t.Fatalf("Execute(%q): stdout=%s stderr=%s", args, stdout.String(), stderr.String())
 		}
 	}
-	if _, err := os.Stat("schema.json"); !os.IsNotExist(err) {
+	if _, err := os.Stat("means.schema.json"); !os.IsNotExist(err) {
 		t.Fatalf("failed command wrote a collection: %v", err)
 	}
 }

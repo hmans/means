@@ -20,7 +20,9 @@ string). Creation takes title and optional data (default {}); do not supply id.
 List or search documents to find IDs, then read by ID for full bodies. Search
 matches literal text in titles/bodies and filters frontmatter.data by value.
 IDs are stored values, independent of filenames. Lookup scans visible
-subdirectories; renames preserve identity. Duplicate IDs are errors. Patches
+subdirectories, stopping at any directory containing means.schema.json, even if invalid.
+Nested collections have independent IDs, schemas, and MEANS.md guidance.
+Renames within a collection preserve identity. Duplicate IDs are errors. Patches
 may change title and data, never id.
 Title changes preserve existing filenames.
 Creation validates the current schema and is not idempotent: do not retry a
