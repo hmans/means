@@ -28,6 +28,10 @@ JSON
 mise means list --path ./memory --json
 ```
 
+Run `mise deploy` to build this checkout and install `means` into `~/.local/bin`.
+Add that directory to your `PATH` to run `means` from any directory. Run
+`mise deploy` again to replace the installed binary with the current checkout.
+
 `init` writes a starter schema that accepts optional `tags`. Edit `schema.json`
 to fit your application, or supply your own schema during initialization. Use
 the ID returned by `create` to read and update a document; filenames can change

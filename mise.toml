@@ -7,6 +7,11 @@ dir = "{{ cwd }}"
 run = 'go run "{{ config_root }}"'
 raw_args = true
 
+[tasks.deploy]
+description = "Build and install means into ~/.local/bin"
+dir = "{{ config_root }}"
+run = 'GOBIN="$HOME/.local/bin" go install .'
+
 [tasks.test]
 description = "Run the Go test suite"
 run = "go test ./..."
