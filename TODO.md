@@ -1,7 +1,7 @@
 # TODO
 
 Active work has moved to the [issues](issues/) means collection. Follow its
-[workflow](issues/instructions.md) and use means to manage issues:
+[workflow](issues/MEANS.md) and use means to manage issues:
 
 ```sh
 mise means list --path ./issues --limit 0 --json
@@ -36,7 +36,7 @@ were migrated to the collection; add new work there.
 - [x] Add an issue-tracking example collection and AGENTS.md usage instructions.
 - [x] Expose collection information, creation, reading, listing, and patch updates through stdio MCP.
 - [x] Configure the example for Codex with MCP usage instructions.
-- [x] Describe each MCP collection using schema annotations and optional instructions.md.
+- [x] Describe each MCP collection using schema annotations and optional MEANS.md.
 - [x] Make the example's issue workflow available through MCP independently of AGENTS.md.
 - [x] Add a plain-memory example collection alongside issues, with a separate MCP registration.
 

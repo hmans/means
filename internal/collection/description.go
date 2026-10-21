@@ -11,7 +11,7 @@ import (
 )
 
 // InstructionsFilename is collection configuration, not a stored document.
-const InstructionsFilename = "instructions.md"
+const InstructionsFilename = "MEANS.md"
 
 // Description gives consumers the collection's purpose and author-supplied workflow.
 type Description struct {
@@ -20,7 +20,7 @@ type Description struct {
 	Instructions string `json:"instructions"`
 }
 
-// Describe reads top-level schema annotations and optional instructions.md.
+// Describe reads top-level schema annotations and optional MEANS.md.
 // Missing titles fall back to the collection directory name, including for boolean schemas.
 func (c *Collection) Describe() (*Description, error) {
 	info := &Description{Title: filepath.Base(c.Path)}

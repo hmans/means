@@ -37,7 +37,7 @@ whether further matches exist. Malformed documents and duplicate IDs are
 omitted from matches and reported separately in diagnostics, regardless of
 query or result limit. Each diagnostic has an ID when readable, relative path,
 and error. Application data that fails the current schema remains searchable.
-Hidden paths, symlinks, and root instructions.md are skipped.
+Hidden paths, symlinks, and root MEANS.md are skipped.
 
 --json returns {"documents":[...],"diagnostics":[],"has_more":false}.
 Text output shows IDs, metadata, and excerpts, followed by diagnostics.

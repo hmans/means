@@ -15,7 +15,7 @@ Pass the ID returned by create or list, not a filename or path. Lookup scans
 visible .md files recursively; renaming or moving a file preserves its identity.
 IDs contain 1–128 letters, digits, - and _, starting with a letter or digit.
 Missing and duplicate IDs fail instead of choosing an arbitrary document.
-Symlinks and hidden paths are ignored. The root instructions.md is collection
+Symlinks and hidden paths are ignored. The root MEANS.md is collection
 configuration, not a document; read it directly or use MCP info.
 
 Text output is the exact stored Markdown, including YAML frontmatter.

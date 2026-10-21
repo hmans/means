@@ -14,15 +14,15 @@ func TestSearchTextFiltersLimitsAndDiagnostics(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := map[string]string{
-		"a.md":            "---\nid: alpha\ntitle: Schema Guide\ndata:\n  type: feature\n  priority: normal\n  count: 9007199254740993\n  details:\n    owner: Mira\n    state: open\n---\nFirst body",
-		"b.md":            "---\nid: beta\ntitle: Other\ndata:\n  type: feature\n  priority: high\n---\nThe SCHEMA is evolving.",
-		"c.md":            "---\nid: gamma\ntitle: Search\ndata:\n  type: task\n  priority: normal\n---\nA schema (literal) in the body.",
-		"d.md":            "---\nid: stale\ntitle: Schema after evolution\ndata:\n  type: feature\n---\nStill searchable",
-		"e.md":            "---\nid: duplicate\ntitle: Schema one\ndata:\n  type: feature\n  priority: normal\n---\n",
-		"f.md":            "---\nid: duplicate\ntitle: Schema two\ndata:\n  type: feature\n  priority: normal\n---\n",
-		"g.md":            "broken",
-		".hidden.md":      "broken",
-		"instructions.md": "broken",
+		"a.md":       "---\nid: alpha\ntitle: Schema Guide\ndata:\n  type: feature\n  priority: normal\n  count: 9007199254740993\n  details:\n    owner: Mira\n    state: open\n---\nFirst body",
+		"b.md":       "---\nid: beta\ntitle: Other\ndata:\n  type: feature\n  priority: high\n---\nThe SCHEMA is evolving.",
+		"c.md":       "---\nid: gamma\ntitle: Search\ndata:\n  type: task\n  priority: normal\n---\nA schema (literal) in the body.",
+		"d.md":       "---\nid: stale\ntitle: Schema after evolution\ndata:\n  type: feature\n---\nStill searchable",
+		"e.md":       "---\nid: duplicate\ntitle: Schema one\ndata:\n  type: feature\n  priority: normal\n---\n",
+		"f.md":       "---\nid: duplicate\ntitle: Schema two\ndata:\n  type: feature\n  priority: normal\n---\n",
+		"g.md":       "broken",
+		".hidden.md": "broken",
+		"MEANS.md":   "broken",
 	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(c.Path, name), []byte(content), 0o644); err != nil {

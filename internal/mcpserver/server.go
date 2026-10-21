@@ -30,7 +30,7 @@ on the next tool call. Read before update: supply its hash and only the fields t
 patch. A stale hash fails; read again and review changes before retrying. Metadata
 uses JSON Merge Patch (objects merge, null deletes, arrays replace); body replaces
 the whole body when supplied. Deletion and schema editing are not
-exposed as MCP tools yet. The optional instructions.md supplies collection-specific
+exposed as MCP tools yet. The optional MEANS.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
 Call info for current guidance; restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
@@ -51,7 +51,7 @@ func collectionPurpose(info *collection.Description) string {
 func collectionInstructions(info *collection.Description) string {
 	text := collectionPurpose(info) + "\n\n" + instructions
 	if info.Instructions != "" {
-		text += "\n\nCollection workflow (instructions.md):\n" + info.Instructions
+		text += "\n\nCollection workflow (MEANS.md):\n" + info.Instructions
 	}
 	return text
 }
@@ -59,7 +59,7 @@ func collectionInstructions(info *collection.Description) string {
 func collectionStartupInstructions(info *collection.Description) string {
 	text := collectionPurpose(info) + "\n\n" + startupInstructions
 	if info.Instructions != "" {
-		text += "\n\nCollection workflow (instructions.md):\n" + info.Instructions
+		text += "\n\nCollection workflow (MEANS.md):\n" + info.Instructions
 	}
 	return text
 }

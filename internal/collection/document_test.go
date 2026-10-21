@@ -117,7 +117,7 @@ func TestListLimitsAndMalformedFiles(t *testing.T) {
 	for name, content := range map[string]string{
 		"b.md": "malformed", "a.md": "---\nid: alpha\ntitle: A\ndata: {}\n---\nbody", "c.md": "---\nid: charlie\ntitle: C\ndata: {}\n---\nbody",
 		"other.txt": "ignored", ".hidden.md": "ignored",
-		"instructions.md": "# Collection workflow\nThis is configuration, not a document.",
+		"MEANS.md": "# Collection workflow\nThis is configuration, not a document.",
 	} {
 		if err := os.WriteFile(filepath.Join(c.Path, name), []byte(content), 0o644); err != nil {
 			t.Fatal(err)

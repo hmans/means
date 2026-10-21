@@ -3,7 +3,7 @@
 means is a Go tool for agentic memory: collections of Markdown documents with
 typed frontmatter and a collection-local schema. Read [README.md](README.md) for
 the project direction. Track planned work in the [issues](issues/) collection,
-following its [workflow](issues/instructions.md).
+following its [workflow](issues/MEANS.md).
 
 ## Core decisions
 
@@ -50,8 +50,8 @@ following its [workflow](issues/instructions.md).
   each server to one collection, reload its schema per call, and preserve JSON
   number precision. Keep stdout exclusively for MCP messages; --json affects
   help and startup errors, not protocol framing. Use schema title/description for
-  collection identity and optional instructions.md for collection workflows.
-  Root instructions.md is reserved configuration, excluded from document lists/reads.
+  collection identity and optional MEANS.md for collection workflows.
+  Root MEANS.md is reserved configuration, excluded from document lists/reads.
   MCP advertises identity and workflow at startup; info reads current
   guidance. The server does not load AGENTS.md. Multiple registrations may bind
   one agent to multiple collections, with names chosen by the consumer.

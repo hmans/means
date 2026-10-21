@@ -45,5 +45,5 @@ JSON help.
 ## This repository
 
 means tracks its own work in the [issues collection](issues/), using its
-[schema](issues/schema.json) and [workflow](issues/instructions.md). Contributors
+[schema](issues/schema.json) and [workflow](issues/MEANS.md). Contributors
 should read [AGENTS.md](AGENTS.md). Run `mise test` for the Go test suite.

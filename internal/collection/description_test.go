@@ -48,6 +48,41 @@ func TestCollectionDescription(t *testing.T) {
 	}
 }
 
+func TestWorkflowFilenameScope(t *testing.T) {
+	c, err := Init(t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(c.Path, "nested"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for name, id := range map[string]string{
+		"MEANS.md":        "root1",
+		"instructions.md": "old01",
+		"nested/MEANS.md": "nest1",
+	} {
+		content := "---\nid: " + id + "\ntitle: Example\ndata: {}\n---\nWorkflow\n"
+		if err := os.WriteFile(filepath.Join(c.Path, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := c.Read("root1"); err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("root workflow must not be readable as a document: %v", err)
+	}
+	for _, id := range []string{"old01", "nest1"} {
+		if _, err := c.Read(id); err != nil {
+			t.Fatalf("read ordinary document %s: %v", id, err)
+		}
+	}
+	if err := os.Remove(filepath.Join(c.Path, "MEANS.md")); err != nil {
+		t.Fatal(err)
+	}
+	info, err := c.Describe()
+	if err != nil || info.Instructions != "" {
+		t.Fatalf("legacy filename must not supply guidance: %+v, %v", info, err)
+	}
+}
+
 func TestInvalidCollectionInstructions(t *testing.T) {
 	for _, kind := range []string{"directory", "symlink", "invalid UTF-8"} {
 		t.Run(kind, func(t *testing.T) {

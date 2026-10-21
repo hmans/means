@@ -18,7 +18,7 @@ func newListCommand(opts *options) *cobra.Command {
 
 Scan regular .md files recursively, ignoring symlinks and hidden paths.
 IDs come from frontmatter.id, not filenames. Results are sorted by relative
-filename, not creation time. Root instructions.md is excluded.
+filename, not creation time. Root MEANS.md is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
 
 --json returns {"documents":[{"id":"...","frontmatter":{...}}],"has_more":false}.

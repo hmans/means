@@ -27,7 +27,7 @@ Multiple collections:
   instructions and every tool description, before an agent calls any tool.
   Missing or blank title falls back to the directory name; description is optional.
   These schema annotations are separate from document frontmatter fields.
-  Add optional instructions.md beside schema.json for collection workflow guidance.
+  Add optional MEANS.md beside schema.json for collection workflow guidance.
   This plain UTF-8 Markdown file needs no frontmatter and is reserved configuration,
   excluded from document lists and reads. It must be a regular file, not a symlink.
   Its contents are included in server instructions and info results.
@@ -62,7 +62,7 @@ unchanged. Body must be a string when supplied; "" clears it. A stale hash fails
 without writing; read again and review the changes before retrying. The means envelope and resulting
 data are validated. Title edits preserve filenames. See "means update --help" for concurrency and storage details.
 Deletion, initialization, and schema editing are not MCP tools yet.
-info reads current title, description, and instructions.md on each call.
+info reads current title, description, and MEANS.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.
 

@@ -22,7 +22,7 @@ func newDoctorCommand(opts *options) *cobra.Command {
 Doctor checks Markdown and YAML frontmatter, the means-owned id/title/data
 envelope, duplicate IDs, and frontmatter.data against the current schema.json.
 It scans visible subdirectories, ignoring hidden paths, symlinks, and the root
-instructions.md. It only reads files; it never repairs or rewrites them.
+MEANS.md. It only reads files; it never repairs or rewrites them.
 
 --json writes {"healthy":true,"checked":0,"diagnostics":[]} on an empty or
 healthy collection. Each diagnostic has id, relative path, and an actionable

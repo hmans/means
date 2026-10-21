@@ -34,7 +34,7 @@ func TestDoctorReportsInvalidDocumentsWithoutWriting(t *testing.T) {
 		"first.md":          "---\nid: repeated\ntitle: First\ndata:\n  count: 1\n---\n",
 		"second.md":         "---\nid: repeated\ntitle: Second\ndata:\n  count: 2\n---\n",
 		".hidden.md":        "broken",
-		"instructions.md":   "broken",
+		"MEANS.md":          "broken",
 	}
 	for name, content := range files {
 		if err := os.WriteFile(filepath.Join(c.Path, name), []byte(content), 0o644); err != nil {

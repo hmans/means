@@ -59,7 +59,7 @@ After initialization, read or edit schema.json directly. Initialization is not
 a schema update command. Use create to store documents, list to discover IDs,
 and read to retrieve them; see each command's --help. Doctor is not implemented yet.
 Schemas describe application data nested in YAML frontmatter; the body is free-form.
-Optionally author instructions.md beside schema.json for MCP workflow guidance;
+Optionally author MEANS.md beside schema.json for MCP workflow guidance;
 init does not create it. See "means mcp --help" for collection identity and instructions.`,
 		Example: `  # Start with the example schema
   means init --path ./memory

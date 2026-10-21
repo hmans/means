@@ -26,7 +26,7 @@ loads the selected directory exactly; it does not search parent directories.
 Schema edits take effect on the next command or MCP call. Run `doctor` after a
 schema change to find existing documents that need attention.
 
-An optional root `instructions.md` provides collection workflow guidance to MCP
+An optional root `MEANS.md` provides collection workflow guidance to MCP
 clients. It is configuration, not a document, and is excluded from lists and
 reads. The server does not load `AGENTS.md`.
 
@@ -132,7 +132,7 @@ relative to the selected collection.
 The client starts and owns the subprocess; there is no network listener or
 managed daemon. Register the command once per collection to give one agent
 multiple collections. Each server advertises its collection identity and the
-optional `instructions.md` workflow at startup. Call `info` for the current
+optional `MEANS.md` workflow at startup. Call `info` for the current
 schema and guidance. Other tools are `list`, `search`, `read`, `create`, and
 `update`; they use the same collection behavior as the CLI. Each call reloads
 the schema. Restart the server after changing collection title, description, or
@@ -146,7 +146,12 @@ text. The flag also formats CLI help and startup errors. This repository's
 [MCP registration](../.codex/config.toml) serves its
 [issues collection](../issues/) through the `issues-mcp` mise task.
 
-## Migrating earlier documents
+## Migrating earlier collections
+
+Rename the collection's root `instructions.md` to `MEANS.md` to keep its workflow
+guidance available. Only `MEANS.md` is reserved for this purpose; the old name is
+now treated as a document and must have valid frontmatter if kept. Restart MCP
+servers after the rename to refresh their advertised workflow.
 
 Earlier versions used filename stems as IDs and flat application frontmatter.
 Migrate those files explicitly: preserve the old filename stem as
