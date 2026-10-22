@@ -101,6 +101,39 @@ func openSearchIndex(path string, m *mapping.IndexMappingImpl) (bleve.Index, sea
 	return index, empty, err
 }
 
+// Reconcile against the index's own committed hashes, independently of the
+// metadata cache. Updating that cache does not imply an index batch succeeded.
+func reconcileSearchIndex(index bleve.Index, manifest searchManifest, docs map[string]*Document) error {
+	batch := index.NewBatch()
+	next := searchManifest{Version: searchIndexVersion, Hashes: map[string]string{}}
+	changed := false
+	for id, doc := range docs {
+		next.Hashes[id] = doc.Hash
+		if manifest.Hashes[id] != doc.Hash {
+			if err := batch.Index(id, map[string]any{"title": doc.Frontmatter["title"], "body": doc.Body}); err != nil {
+				return err
+			}
+			changed = true
+		}
+	}
+	for id := range manifest.Hashes {
+		if docs[id] == nil {
+			batch.Delete(id)
+			changed = true
+		}
+	}
+	if changed || len(manifest.Hashes) == 0 {
+		data, err := json.Marshal(next)
+		if err != nil {
+			return err
+		}
+		// Hashes and indexed documents commit together; a crash cannot advance one alone.
+		batch.SetInternal(searchManifestKey, data)
+		return index.Batch(batch)
+	}
+	return nil
+}
+
 func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, err error) {
 	m, err := searchMapping()
 	if err != nil {
@@ -142,7 +175,7 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 		return nil, err
 	}
 	defer root.Close()
-	entries, err := scanDocuments(root)
+	entries, err := scanCachedDocuments(root, filepath.Join(cache, "documents.jsonl"))
 	if err != nil {
 		return nil, err
 	}
@@ -174,34 +207,8 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 		return nil, fmt.Errorf("open search cache: %w", err)
 	}
 	defer func() { err = errors.Join(err, index.Close()) }()
-	batch := index.NewBatch()
-	next := searchManifest{Version: searchIndexVersion, Hashes: map[string]string{}}
-	changed := false
-	for id, doc := range docs {
-		next.Hashes[id] = doc.Hash
-		if manifest.Hashes[id] != doc.Hash {
-			if err := batch.Index(id, map[string]any{"title": doc.Frontmatter["title"], "body": doc.Body}); err != nil {
-				return nil, err
-			}
-			changed = true
-		}
-	}
-	for id := range manifest.Hashes {
-		if docs[id] == nil {
-			batch.Delete(id)
-			changed = true
-		}
-	}
-	if changed || len(manifest.Hashes) == 0 {
-		data, err := json.Marshal(next)
-		if err != nil {
-			return nil, err
-		}
-		// Hashes and indexed documents commit together; a crash cannot advance one alone.
-		batch.SetInternal(searchManifestKey, data)
-		if err := index.Batch(batch); err != nil {
-			return nil, err
-		}
+	if err := reconcileSearchIndex(index, manifest, docs); err != nil {
+		return nil, err
 	}
 	if len(tokens) == 0 {
 		return result, nil

@@ -88,7 +88,7 @@ func TestSearchRelevanceFixture(t *testing.T) {
 	}
 }
 
-// Isolate parse work from read+hash work before adding a persisted parse cache.
+// Compare parsing with a persisted parse cache and read+hash work alone.
 // The no-parse baseline is only a lower bound: it excludes cache decoding,
 // envelope checks, duplicate detection, and cache invalidation costs.
 func BenchmarkSearchScanCosts(b *testing.B) {
@@ -141,6 +141,23 @@ func BenchmarkSearchScanCosts(b *testing.B) {
 				}
 			}
 			root.Close()
+		}
+	})
+	b.Run("read_hash_cached_metadata", func(b *testing.B) {
+		root, err := os.OpenRoot(c.Path)
+		if err != nil {
+			b.Fatal(err)
+		}
+		defer root.Close()
+		cache := filepath.Join(b.TempDir(), "documents.jsonl")
+		if _, err := scanCachedDocuments(root, cache); err != nil {
+			b.Fatal(err)
+		}
+		for b.Loop() {
+			entries, err := scanCachedDocuments(root, cache)
+			if err != nil || len(entries) != 1000 {
+				b.Fatalf("cached scan: %d %v", len(entries), err)
+			}
 		}
 	})
 }

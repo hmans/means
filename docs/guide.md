@@ -195,6 +195,21 @@ Renames, deletions, and changes to nested collection boundaries are reflected in
 the next search. Nested collections keep independent caches. Source documents
 and schemas remain authoritative; create, update, and delete need no cache writes.
 
+Full-text search also keeps parsed metadata in `.means/documents.jsonl`. Each
+record contains a relative path, SHA-256 content hash, frontmatter, and the byte
+offset where the body starts. Unchanged files reuse their parsed frontmatter;
+bodies come from the source files. Every file is still read and hashed. Invalid
+documents are parsed again so diagnostics stay current. Application data is not
+validated against the schema during search.
+
+The JSONL file starts with a format version and a checksum of the remaining
+records. Missing, corrupt, truncated, or obsolete files are rebuilt. Refreshes
+use a temporary file and atomic replacement under the search lock; unchanged
+records skip both JSON encoding and writing. This is a disposable internal format, not an
+interchange contract. Removing `.means/documents.jsonl` while no search is running
+forces metadata to be parsed again. Other commands, including literal and
+data-only searches, continue to read documents directly.
+
 Search acquires `.means/search.lock`, opens and refreshes the index, queries it,
 then closes it and releases the lock. Concurrent searches wait at most five
 seconds before failing. OS locks are released when a process exits. MCP uses this

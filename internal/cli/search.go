@@ -55,7 +55,9 @@ Search exits 0 even with per-document diagnostics. Invalid arguments or
 collection-level errors exit 1 and write stderr, as {"error":"..."} in JSON
 mode. Full-text search refreshes a disposable Bleve index in .means/search/ before
 each query. Every visible document is read and hashed to catch filesystem edits;
-only changed documents are reindexed. A lock in .means/search.lock serializes
+only changed documents are reindexed. Parsed frontmatter and body offsets are
+cached in .means/documents.jsonl; unchanged files skip YAML parsing. Missing,
+corrupt, or obsolete metadata caches are rebuilt. A lock in .means/search.lock serializes
 searches with a 5-second wait. No daemon or watcher is used; MCP also closes the
 index after each call. Missing, obsolete, or unopenable indexes are rebuilt.
 Symlinked cache paths and permission errors fail. Remove .means/search/ while

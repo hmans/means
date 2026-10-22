@@ -71,6 +71,11 @@ following its [workflow](issues/MEANS.md).
   .means/search/. Each search locks, scans/hashes visible documents, reconciles
   entries, queries, and closes the index. No watcher or daemon. Cache format
   changes trigger rebuilds. Literal and data-only searches use direct scans.
+  Full-text scans reuse parsed frontmatter and body offsets from
+  .means/documents.jsonl after checking full-file SHA-256 hashes. Its versioned,
+  checksummed records are replaced atomically under search.lock; missing or
+  corrupt metadata rebuilds. Invalid documents are reparsed. Bump the metadata
+  cache version when parsing rules change. Other operations use direct scans.
   Full-text queries AND lowercase Unicode tokens across title/body, boost title
   matches, and sort score ties by ID. No stemming or stop-word removal. Data
   filters keep exact JSON semantics and apply before limits. Init ensures a

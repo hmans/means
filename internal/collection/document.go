@@ -239,6 +239,10 @@ type storedDocument struct {
 // Walk visible Markdown files, excluding nested collections, instructions, and symlinks. Scan the
 // whole collection even for limited lists so duplicates outside the limit count.
 func scanDocuments(root *os.Root) ([]storedDocument, error) {
+	return scanDocumentsWithReader(root, readDocumentFile)
+}
+
+func scanDocumentsWithReader(root *os.Root, read func(*os.Root, string) (*Document, error)) ([]storedDocument, error) {
 	var entries []storedDocument
 	err := fs.WalkDir(root.FS(), ".", func(filename string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -264,7 +268,7 @@ func scanDocuments(root *os.Root) ([]storedDocument, error) {
 		if !entry.Type().IsRegular() || !strings.HasSuffix(filename, ".md") || filename == InstructionsFilename {
 			return nil
 		}
-		doc, err := readDocumentFile(root, filename)
+		doc, err := read(root, filename)
 		entries = append(entries, storedDocument{filename: filename, doc: doc, err: err})
 		return nil
 	})
@@ -275,6 +279,14 @@ func scanDocuments(root *os.Root) ([]storedDocument, error) {
 }
 
 func readDocumentFile(root *os.Root, filename string) (*Document, error) {
+	data, err := readDocumentBytes(root, filename)
+	if err != nil {
+		return nil, err
+	}
+	return parseDocumentFile(filename, data, contentHash(string(data)))
+}
+
+func readDocumentBytes(root *os.Root, filename string) ([]byte, error) {
 	info, err := root.Lstat(filename)
 	if err != nil {
 		return nil, err
@@ -282,16 +294,16 @@ func readDocumentFile(root *os.Root, filename string) (*Document, error) {
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("document %q must be a regular file", filename)
 	}
-	data, err := root.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
+	return root.ReadFile(filename)
+}
+
+func parseDocumentFile(filename string, data []byte, hash string) (*Document, error) {
 	frontmatter, body, err := parseMarkdown(data)
 	if err != nil {
 		return nil, fmt.Errorf("document %q: %w", filename, err)
 	}
 	id, _ := frontmatter["id"].(string)
-	doc := &Document{ID: id, Hash: contentHash(string(data)), Frontmatter: frontmatter, Body: body, Markdown: string(data), filename: filename}
+	doc := &Document{ID: id, Hash: hash, Frontmatter: frontmatter, Body: body, Markdown: string(data), filename: filename}
 	if err := validateEnvelope(frontmatter); err != nil {
 		return doc, fmt.Errorf("document %q: %w", filename, err)
 	}
