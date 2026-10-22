@@ -56,6 +56,27 @@ func TestSearchCommandFiltersAndErrors(t *testing.T) {
 			t.Errorf("invalid args %q: stdout=%s stderr=%s err=%v", args, stdout.String(), stderr.String(), err)
 		}
 	}
+	for _, literal := range []bool{false, true} {
+		stdout.Reset()
+		stderr.Reset()
+		args := []string{"search", "body search", "--path", dir, "--json"}
+		if literal {
+			args = append(args, "--literal")
+		}
+		if err := Execute(args, nil, &stdout, &stderr, "test"); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		want := 1
+		if literal {
+			want = 0
+		}
+		if len(result.Documents) != want {
+			t.Fatalf("literal=%v: %s", literal, stdout.String())
+		}
+	}
 	stdout.Reset()
 	stderr.Reset()
 	if err := Execute([]string{"search", "--help", "--json"}, nil, &stdout, &stderr, "test"); err != nil {

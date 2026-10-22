@@ -19,7 +19,11 @@ to learn the schema for frontmatter.data before creating documents. Means owns
 frontmatter.id (generated and immutable) and frontmatter.title (required nonempty
 string). Creation takes title and optional data (default {}); do not supply id.
 List or search documents to find IDs, then read by ID for full bodies. Search
-matches literal text in titles/bodies and filters frontmatter.data by value.
+matches all query tokens in any order across title/body, ranks with a title boost,
+and filters frontmatter.data by value. Set literal:true for substring matching.
+Full-text search refreshes a disposable .means/search/ index on each call, reads
+and hashes all visible documents, and closes the index before returning. There
+is no watcher. Concurrent searches wait up to five seconds for a cache lock.
 IDs are stored values, independent of filenames. Lookup scans visible
 subdirectories, stopping at any directory containing means.schema.json, even if invalid.
 Nested collections have independent IDs, schemas, and MEANS.md guidance.
@@ -136,8 +140,8 @@ func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
 		},
 		{
 			name:        "search",
-			description: "Find documents by a case-insensitive literal title/body query and/or a partial frontmatter.data filter. Returns IDs, frontmatter, excerpts, and diagnostics, without bodies or hashes. limit defaults to 20; 0 returns all.",
-			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Optional literal substring of title or body, case-insensitive."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
+			description: "Find documents by ranked full text and/or a partial data filter. All lowercase Unicode query tokens must match across title/body; no stemming, stop-word removal, or query syntax. Title matches are boosted; score ties sort by ID. literal:true uses case-insensitive substring matching in filename order. No query uses filename order. Full-text queries refresh .means/search/ from file hashes, then close it; no daemon. Returns IDs, frontmatter, excerpts, and diagnostics, without bodies or hashes. Filters apply before limit (default 20, 0 for all).",
+			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Optional text query; all terms must match, in any order."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				limit, err := limitArg(args)
@@ -146,7 +150,8 @@ func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
 				}
 				query, _ := args["query"].(string)
 				filter, _ := args["filter"].(map[string]any)
-				return c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit})
+				literal, _ := args["literal"].(bool)
+				return c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal})
 			},
 		},
 		{

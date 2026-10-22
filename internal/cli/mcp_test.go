@@ -222,6 +222,30 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if call("info", `{}`, false)["schema"] != true {
 				t.Fatal("boolean schema not preserved")
 			}
+			fixture, err := c.Create(map[string]any{"title": "Search fixture"}, "Timeout during deployment")
+			if err != nil {
+				t.Fatal(err)
+			}
+			full := call("search", `{"query":"deployment timeout"}`, false)
+			if len(full["documents"].([]any)) != 1 {
+				t.Fatalf("full text: %v", full)
+			}
+			literal := call("search", `{"query":"deployment timeout","literal":true}`, false)
+			if len(literal["documents"].([]any)) != 0 {
+				t.Fatalf("literal: %v", literal)
+			}
+			call("search", `{"query":"timeout","literal":"yes"}`, true)
+			// External edits are observed by the next call on the same connection.
+			changed := strings.Replace(fixture.Markdown, "Timeout", "Latency", 1)
+			if err := os.WriteFile(filepath.Join(path, fixture.ID+"-search-fixture.md"), []byte(changed), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if len(call("search", `{"query":"deployment timeout"}`, false)["documents"].([]any)) != 0 {
+				t.Fatal("stale MCP result")
+			}
+			if len(call("search", `{"query":"deployment latency"}`, false)["documents"].([]any)) != 1 {
+				t.Fatal("external edit not indexed")
+			}
 		})
 	}
 }

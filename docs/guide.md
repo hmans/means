@@ -21,7 +21,9 @@ mise means init --path ./memory --schema - --json < ./memory.schema.json
 
 The starter schema accepts optional `tags` and rejects other application fields.
 `init` validates a supplied schema before creating files and never overwrites an
-existing `means.schema.json`. Use `schema set` to validate a replacement, or edit
+existing `means.schema.json`. It also creates `.gitignore` with `.means/`, or
+appends that rule while preserving existing content and avoiding duplicates.
+The search cache is created only when first used. Use `schema set` to validate a replacement, or edit
 the file directly to evolve a collection. Means
 loads the selected directory exactly; it does not search parent directories.
 Schema edits take effect on the next command or MCP call. Run `doctor` after a
@@ -161,11 +163,53 @@ mise means read <id> --path ./memory --json
 
 `list` returns IDs and frontmatter without bodies or hashes. Its default limit
 is 20; `--limit 0` returns all. Malformed documents and duplicate IDs appear as
-entries with errors and paths. `search` matches a case-insensitive literal phrase
-in titles or bodies and/or fields under `data`. Repeated CLI `--filter KEY=VALUE`
-flags combine with AND; JSON values retain their types. Search returns metadata
-and excerpts, not full bodies or hashes, and reports malformed files separately.
-Both commands read files directly without an index.
+entries with errors and paths. `search` uses full-text ranking by default: all
+query terms must occur, in any order, across the title and body. Title matches
+receive a boost; equal scores sort by stored ID. Queries use lowercase Unicode
+tokens with no stemming, stop-word removal, or query-language operators.
+For example, `search "deployment timeout"` finds "timeout during deployment".
+A query with no tokens matches nothing.
+
+Use `search "deployment timeout" --literal` for the original case-insensitive
+substring search. Literal searches and searches with no query use filename order.
+Repeated `--filter KEY=VALUE` flags combine with AND and apply before the result
+limit. JSON numbers retain their precision, objects match recursively, and arrays
+must match in full. Search returns metadata and excerpts, not full bodies or hashes.
+Full-text excerpts prefer the title or body passage containing the most distinct
+query terms. Repeated copies of one term do not outweigh several different terms.
+Ties prefer the title, then the earliest passage. Passages contain at most 180
+Unicode characters plus ellipses; whitespace is collapsed. One excerpt cannot
+always show terms that occur in different fields or far apart. Literal-mode
+excerpts retain their original behavior.
+Malformed documents and every occurrence of duplicate IDs are excluded and reported
+as diagnostics, regardless of query, filter, or limit. Schema-invalid data remains
+searchable. MCP offers the same behavior with the optional `literal` boolean.
+
+### Search cache
+
+Each collection stores a disposable Bleve index in `.means/search/`, for example
+`issues/.means/search/`. Every full-text search scans and hashes the visible
+documents, then updates changed index entries and removes absent or invalid ones.
+Content hashes detect changes even when file size and timestamps stay the same.
+Renames, deletions, and changes to nested collection boundaries are reflected in
+the next search. Nested collections keep independent caches. Source documents
+and schemas remain authoritative; create, update, and delete need no cache writes.
+
+Search acquires `.means/search.lock`, opens and refreshes the index, queries it,
+then closes it and releases the lock. Concurrent searches wait at most five
+seconds before failing. OS locks are released when a process exits. MCP uses this
+same per-call lifecycle. There is no background watcher or daemon. External editors
+do not take the lock: results reflect files observed during the scan, not an atomic
+filesystem snapshot. Concurrent edits may appear on the next search.
+
+Missing indexes, obsolete index formats, and indexes that cannot be opened are
+rebuilt. Permission failures and symlinked cache paths produce errors. To force
+a rebuild, remove `.means/search/` while no search is running. Do not remove the
+lock file while searches are active. Full-text search needs a writable cache;
+literal and data-only searches use direct scans and create no cache. For older
+collections, add `.means/` to their `.gitignore` manually.
+
+### Updating documents
 
 Read before updating. JSON read/create/update results include an ID, frontmatter,
 body, and a SHA-256 hash of the exact stored file bytes. Supply that hash with

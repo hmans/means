@@ -13,9 +13,10 @@ import (
 )
 
 type SearchOptions struct {
-	Query  string
-	Filter map[string]any // Partial match against frontmatter.data.
-	Limit  int            // Zero returns every match.
+	Query   string
+	Filter  map[string]any // Partial match against frontmatter.data.
+	Limit   int            // Zero returns every match.
+	Literal bool           // Use the original case-insensitive substring search.
 }
 
 type SearchMatch struct {
@@ -35,8 +36,8 @@ type SearchResult struct {
 	HasMore     bool         `json:"has_more"`
 }
 
-// Search scans visible documents in filename order. Text is a case-insensitive
-// literal substring of title or body. Filter is a recursive partial match of
+// Search ranks full-text queries using a refreshed collection-local index.
+// Literal and data-only searches scan in filename order. Filter is a recursive partial match of
 // application data; arrays must match completely. Schema-invalid data stays
 // searchable, while malformed and duplicate documents become diagnostics.
 func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
@@ -45,6 +46,9 @@ func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
 	}
 	if !utf8.ValidString(opts.Query) {
 		return nil, fmt.Errorf("query must be valid UTF-8")
+	}
+	if opts.Query != "" && !opts.Literal {
+		return c.searchFullText(opts)
 	}
 	var pattern *regexp.Regexp
 	if opts.Query != "" {

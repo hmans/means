@@ -13,15 +13,23 @@ import (
 func newSearchCommand(opts *options) *cobra.Command {
 	var limit int
 	var filters []string
+	var literal bool
 	cmd := &cobra.Command{
 		Use:   "search [query]",
-		Short: "Find documents by literal text and application data",
+		Short: "Find documents by ranked full text and application data",
 		Long: `Search visible documents in the collection selected by --path.
 
-The optional query is a case-insensitive literal substring of the title or
-Markdown body. It is one phrase, not a regular expression or a set of words.
-Omit it to filter by data alone. Results are sorted by relative filename. A
-text match includes its field (title or body) and a short excerpt. Results
+The optional query matches case-insensitive Unicode tokens in the title and body.
+All terms must match, in any order, possibly across both fields. There is no
+stemming, stop-word removal, or query-language syntax. Punctuation separates
+tokens; quotes are not operators. A query with no tokens matches nothing.
+Results use relevance ranking with a title boost and ID order for score ties.
+Use --literal for the original case-insensitive substring search in filename order.
+Omit the query to filter by data alone, also in filename order. A
+text match includes its field (title or body) and a short excerpt. Full-text
+excerpts prefer a passage with more distinct query terms; ties prefer the title,
+then the earliest passage. A passage is at most 180 characters plus ellipses.
+Terms split across distant passages or fields may not all appear in one excerpt. Results
 include frontmatter but omit bodies and hashes; read by ID for full content.
 
 Repeat --filter KEY=VALUE to match fields directly under frontmatter.data.
@@ -45,7 +53,15 @@ even if their schema is invalid.
 Text output shows IDs, metadata, and excerpts, followed by diagnostics.
 Search exits 0 even with per-document diagnostics. Invalid arguments or
 collection-level errors exit 1 and write stderr, as {"error":"..."} in JSON
-mode. Search only reads files; it does not repair or rewrite documents.`,
+mode. Full-text search refreshes a disposable Bleve index in .means/search/ before
+each query. Every visible document is read and hashed to catch filesystem edits;
+only changed documents are reindexed. A lock in .means/search.lock serializes
+searches with a 5-second wait. No daemon or watcher is used; MCP also closes the
+index after each call. Missing, obsolete, or unopenable indexes are rebuilt.
+Symlinked cache paths and permission errors fail. Remove .means/search/ while
+no search is running to force a rebuild. Results reflect the files observed
+during the scan, not an atomic filesystem snapshot. Literal and data-only searches
+do not use or write an index. Source documents are never changed.`,
 		Example: `  means search schema --path ./issues --json
   means search --path ./issues --filter priority=normal --filter type=feature --json
   means search memory --filter 'tags=["important"]' --limit 0 --json`,
@@ -63,7 +79,7 @@ mode. Search only reads files; it does not repair or rewrite documents.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit})
+			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal})
 			if err != nil {
 				return err
 			}
@@ -89,6 +105,7 @@ mode. Search only reads files; it does not repair or rewrite documents.`,
 		},
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum matching documents; 0 returns all")
+	cmd.Flags().BoolVar(&literal, "literal", false, "Match a literal case-insensitive substring instead of ranked full text")
 	cmd.Flags().StringArrayVar(&filters, "filter", nil, "Match a frontmatter.data field as KEY=VALUE (repeatable)")
 	return cmd
 }

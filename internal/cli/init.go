@@ -44,9 +44,12 @@ Schema input:
 
 Effects:
   Validate the entire schema before creating the target directory or any files.
-  Create missing directories and write only means.schema.json, preserving supplied bytes.
+  Create missing directories and write means.schema.json, preserving supplied bytes.
+  Create .gitignore with .means/, or append the rule while preserving existing
+  content. Do not duplicate an existing .means/ or /.means/ rule. Symlinked or
+  non-regular .gitignore files are rejected. Search caches are created lazily.
   Refuse to overwrite an existing means.schema.json, even if it is invalid.
-  Existing unrelated files are left alone. No documents are created or checked.
+  Other existing files are left alone. No documents are created or checked.
 
 Responses:
   Success: exit 0; stdout describes the initialized collection.

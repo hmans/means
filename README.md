@@ -13,8 +13,8 @@ server. Ordinary commands run to completion; no daemon is needed.
 
 means is in early development. It currently supports collection initialization,
 validated schema replacement, creating and reading documents, hash-checked
-updates and deletion, listing,
-literal text and data search, and collection diagnostics.
+updates and deletion, listing, ranked full-text search with data filters,
+literal search, and collection diagnostics.
 
 ## Try it
 

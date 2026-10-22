@@ -34,8 +34,8 @@ func TestInitAndLoad(t *testing.T) {
 		t.Fatalf("expected a standalone JSON Schema, got %s", data)
 	}
 	entries, err := os.ReadDir(dir)
-	if err != nil || len(entries) != 1 || entries[0].Name() != SchemaFilename {
-		t.Fatalf("expected only means.schema.json, got %v, %v", entries, err)
+	if err != nil || len(entries) != 2 || entries[0].Name() != ".gitignore" || entries[1].Name() != SchemaFilename {
+		t.Fatalf("expected schema and .gitignore, got %v, %v", entries, err)
 	}
 	for _, tt := range []struct {
 		name  string

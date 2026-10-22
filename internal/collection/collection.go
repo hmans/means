@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -54,6 +55,27 @@ func Init(path string, schema []byte) (*Collection, error) {
 	if err := os.MkdirAll(c.Path, 0o755); err != nil {
 		return nil, fmt.Errorf("create collection directory: %w", err)
 	}
+	ignorePath := filepath.Join(c.Path, ".gitignore")
+	var ignore []byte
+	ignoreMode := os.FileMode(0o644)
+	if stat, err := os.Lstat(ignorePath); err == nil {
+		if !stat.Mode().IsRegular() {
+			return nil, fmt.Errorf(".gitignore must be a regular file, not a symlink or directory")
+		}
+		ignoreMode = stat.Mode().Perm()
+		ignore, err = os.ReadFile(ignorePath)
+		if err != nil {
+			return nil, err
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	hasRule := false
+	for _, line := range strings.Split(string(ignore), "\n") {
+		if strings.TrimSpace(line) == ".means/" || strings.TrimSpace(line) == "/.means/" {
+			hasRule = true
+		}
+	}
 	filename := filepath.Join(c.Path, SchemaFilename)
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if errors.Is(err, os.ErrExist) {
@@ -66,6 +88,30 @@ func Init(path string, schema []byte) (*Collection, error) {
 	if err := errors.Join(writeErr, f.Close()); err != nil {
 		removeErr := os.Remove(filename)
 		return nil, fmt.Errorf("write collection schema: %w", errors.Join(err, removeErr))
+	}
+	if !hasRule {
+		if len(ignore) > 0 && ignore[len(ignore)-1] != '\n' {
+			ignore = append(ignore, '\n')
+		}
+		ignore = append(ignore, []byte(".means/\n")...)
+		temp, err := os.CreateTemp(c.Path, ".means-gitignore-*.tmp")
+		if err != nil {
+			return nil, errors.Join(err, os.Remove(filename))
+		}
+		defer os.Remove(temp.Name())
+		_, writeErr := temp.Write(ignore)
+		if writeErr == nil {
+			writeErr = temp.Chmod(ignoreMode)
+		}
+		if writeErr == nil {
+			writeErr = temp.Sync()
+		}
+		if err := errors.Join(writeErr, temp.Close()); err != nil {
+			return nil, errors.Join(err, os.Remove(filename))
+		}
+		if err := os.Rename(temp.Name(), ignorePath); err != nil {
+			return nil, errors.Join(err, os.Remove(filename))
+		}
 	}
 	return c, nil
 }

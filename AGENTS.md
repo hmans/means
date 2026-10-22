@@ -67,7 +67,14 @@ following its [workflow](issues/MEANS.md).
   one agent to multiple collections, with names chosen by the consumer.
 - Keep domain-specific concepts and workflows in schemas and skills. Issue
   tracking and bot memory are applications built on means.
-- Internal storage is optional and derived. Its format is undecided.
+- Full-text search uses a disposable Bleve index in each collection's
+  .means/search/. Each search locks, scans/hashes visible documents, reconciles
+  entries, queries, and closes the index. No watcher or daemon. Cache format
+  changes trigger rebuilds. Literal and data-only searches use direct scans.
+  Full-text queries AND lowercase Unicode tokens across title/body, boost title
+  matches, and sort score ties by ID. No stemming or stop-word removal. Data
+  filters keep exact JSON semantics and apply before limits. Init ensures a
+  .gitignore rule for .means/ while preserving existing content.
 
 ## Development
 

@@ -102,7 +102,7 @@ func TestCreateInvalidInputDoesNotWrite(t *testing.T) {
 		})
 	}
 	entries, err := os.ReadDir(dir)
-	if err != nil || len(entries) != 1 {
+	if err != nil || len(entries) != 2 {
 		t.Fatalf("invalid creates wrote files: %v, %v", entries, err)
 	}
 }

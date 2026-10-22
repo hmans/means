@@ -60,7 +60,7 @@ func TestCreateValidationDoesNotWrite(t *testing.T) {
 		}
 	}
 	entries, err := os.ReadDir(c.Path)
-	if err != nil || len(entries) != 1 || entries[0].Name() != SchemaFilename {
+	if err != nil || len(entries) != 2 || entries[0].Name() != ".gitignore" || entries[1].Name() != SchemaFilename {
 		t.Fatalf("invalid writes changed collection: %v, %v", entries, err)
 	}
 }

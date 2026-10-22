@@ -56,8 +56,17 @@ errors. Read and update follow IDs after file renames or moves into subdirectori
 Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads means.schema.json so
 schema edits take effect immediately. Reads and lists do not validate existing
 data against the schema; list entries may contain individual errors. Search
-matches a case-insensitive literal phrase in title/body and partially matches
-frontmatter.data using JSON values. It reports malformed files separately.
+matches all lowercase Unicode query tokens across title/body in any order, with
+a title boost and ID order for score ties. No stemming, stop-word removal, or
+query-language operators are used. literal:true selects the original substring
+search in filename order; omitting query also uses filename order. Data filters
+retain exact JSON values and apply before the limit. Diagnostics include all
+malformed or duplicate documents regardless of filters and limits.
+Full-text search reads and hashes visible documents on every call and refreshes
+.means/search/. It closes the index after the call, with no watcher or daemon.
+Concurrent searches wait up to five seconds for .means/search.lock. The index is
+disposable and needs write access; literal and data-only searches need no index.
+Results reflect a scan, not an atomic snapshot of concurrent filesystem edits.
 Creation is not idempotent: retrying a success creates another document.
 Read before update and pass its hash. Metadata uses JSON Merge Patch: objects merge
 recursively, null deletes keys, and arrays replace. Omitted frontmatter/body stays

@@ -29,7 +29,7 @@ func TestSearchTextFiltersLimitsAndDiagnostics(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	result, err := c.Search(SearchOptions{Query: "schema", Limit: 2})
+	result, err := c.Search(SearchOptions{Query: "schema", Limit: 2, Literal: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestSearchTextFiltersLimitsAndDiagnostics(t *testing.T) {
 			t.Errorf("bad malformed diagnostic: %#v", d)
 		}
 	}
-	result, err = c.Search(SearchOptions{Query: "SCHEMA", Limit: 0})
+	result, err = c.Search(SearchOptions{Query: "SCHEMA", Limit: 0, Literal: true})
 	if err != nil || len(result.Documents) != 4 || result.HasMore || result.Documents[3].ID != "stale" {
 		t.Fatalf("unlimited search, including schema-invalid data = %#v, %v", result, err)
 	}
@@ -60,7 +60,7 @@ func TestSearchTextFiltersLimitsAndDiagnostics(t *testing.T) {
 	if err != nil || len(result.Documents) != 1 || result.Documents[0].ID != "alpha" {
 		t.Fatalf("typed nested filter = %#v, %v", result, err)
 	}
-	result, err = c.Search(SearchOptions{Query: "schema (literal)", Limit: 0})
+	result, err = c.Search(SearchOptions{Query: "schema (literal)", Limit: 0, Literal: true})
 	if err != nil || len(result.Documents) != 1 || result.Documents[0].ID != "gamma" {
 		t.Fatalf("literal phrase search = %#v, %v", result, err)
 	}
