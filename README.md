@@ -12,8 +12,8 @@ input and output, or connect to one collection through the optional stdio MCP
 server. Ordinary commands run to completion; no daemon is needed.
 
 means is in early development. It currently supports collection initialization,
-creating and reading documents, hash-checked updates, listing, literal text and
-data search, and collection diagnostics. Deletion is still being designed.
+creating and reading documents, hash-checked updates and deletion, listing,
+literal text and data search, and collection diagnostics.
 
 ## Try it
 

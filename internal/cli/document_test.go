@@ -127,6 +127,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 		"read":   {"filename", "--json", "schema", "exit 1"},
 		"list":   {"--limit", "has_more", "Malformed", "exit 1"},
 		"update": {"hash", "read", "--input -", "null deletes", "arrays", "stale", "final check", "exit 1", "<<'JSON'"},
+		"delete": {"hash", "--input -", "Permanently", "stale", "no trash", "concurrent write", "exit 1", "<<'JSON'"},
 	} {
 		for _, jsonMode := range []bool{false, true} {
 			args := []string{command, "--help"}

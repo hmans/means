@@ -15,7 +15,7 @@ mise means update <id> --path ./issues --input - --json
 
 Read `means.schema.json` before creating issues. When accessed through MCP, use `info`
 for the current schema and these instructions; the tools are `list`, `search`,
-`read`, `create`, and `update`.
+`read`, `create`, `update`, and `delete`.
 
 ## Issue content
 
@@ -64,4 +64,5 @@ to preserve it; when supplied, it replaces the full body, so retain useful conte
 Updates validate the means envelope and resulting data. Search can match issue
 titles/bodies and filter `frontmatter.data` fields such as `type`, `status`, and
 `priority`; inspect its diagnostics for malformed files. Doctor checks all
-documents against the current schema. Deletion is not implemented yet.
+documents against the current schema. Delete permanently removes a document by
+ID and current hash. Prefer status `done` or `canceled` to retain issue history.

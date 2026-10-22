@@ -39,7 +39,7 @@ collection, and an unrelated `schema.json` does not establish a boundary.
 
 Ordinary subdirectories belong to the selected collection. A subdirectory with
 its own `means.schema.json` starts a separate collection: all document operations stop
-at that directory, including list, search, doctor, ID lookup, updates, and ID
+at that directory, including list, search, doctor, ID lookup, updates, deletion, and ID
 allocation. The presence of the schema path establishes the boundary, even if
 the schema is invalid, a directory, or a broken symlink.
 
@@ -86,7 +86,7 @@ Means generates a random five-character ID and writes an
 `<id>-<title-slug>.md` filename. Clients use the stored ID, not the filename.
 Renames and moves into visible subdirectories preserve identity; title updates
 leave filenames alone. Discovery ignores hidden paths and symlinks. Direct edits
-can introduce duplicate IDs; reads and updates reject ambiguous IDs, while
+can introduce duplicate IDs; reads, updates, and deletions reject ambiguous IDs, while
 lists report each affected file. Creation checks for collisions and reserves a
 candidate ID temporarily so concurrent means creators cannot allocate it twice.
 
@@ -149,6 +149,29 @@ defaults to the current working directory. Relative collection and input file
 paths both resolve against the process working directory; an input path is not
 relative to the selected collection.
 
+## Deleting documents
+
+Read the document, review it, then supply its ID and current hash:
+
+```sh
+mise means read <id> --path ./memory --json
+mise means delete <id> --path ./memory --input - --json <<'JSON'
+{"hash":"<hash from read>"}
+JSON
+```
+
+Deletion permanently removes only the document file. It preserves directories,
+collection configuration, and unrelated files. There is no trash, undo, force
+option, or confirmation prompt. For archival, use an application field such as
+`data.status` instead. The JSON result is `{"id":"..."}`; text output is the ID.
+
+Missing or duplicate IDs, malformed document envelopes, and stale or invalid
+hashes fail without deletion. A repeated deletion fails because the document is
+missing. Data that fails the current application schema can still be deleted;
+the selected collection must have a valid schema. Collection boundaries apply.
+As with updates, there are no locks: a concurrent write between the hash check
+and removal can still be deleted. On conflict, read again and review the changes.
+
 ## MCP
 
 `means mcp --path /absolute/collection/path` serves one collection over stdio.
@@ -156,8 +179,8 @@ The client starts and owns the subprocess; there is no network listener or
 managed daemon. Register the command once per collection to give one agent
 multiple collections. Each server advertises its collection identity and the
 optional `MEANS.md` workflow at startup. Call `info` for the current
-schema and guidance. Other tools are `list`, `search`, `read`, `create`, and
-`update`; they use the same collection behavior as the CLI. Each call reloads
+schema and guidance. Other tools are `list`, `search`, `read`, `create`,
+`update`, and `delete`; they use the same collection behavior as the CLI. Each call reloads
 the schema. Restart the server after changing collection title, description, or
 workflow to refresh advertised discovery metadata.
 

@@ -31,14 +31,18 @@ inspect per-document errors in list results. Schema and document edits take effe
 on the next tool call. Read before update: supply its hash and only the fields to
 patch. A stale hash fails; read again and review changes before retrying. Metadata
 uses JSON Merge Patch (objects merge, null deletes, arrays replace); body replaces
-the whole body when supplied. Deletion and schema editing are not
-exposed as MCP tools yet. The optional MEANS.md supplies collection-specific
+the whole body when supplied. Delete permanently removes a document by ID and
+hash from read, without validating existing application data. Missing or duplicate
+IDs, malformed envelopes, and stale hashes fail. There is no undo. Directories
+and configuration remain. Concurrent writes can race the final removal.
+Schema editing is not exposed as an MCP tool. The optional MEANS.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
 Call info for current guidance; restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
 
 const startupInstructions = `Call info for the current schema and detailed guidance.
-List or search to find IDs, then read before updating with its hash. Create and
+List or search to find IDs, then read before updating or deleting with its hash.
+Deletion is permanent; a repeated deletion fails. Create and
 update validate frontmatter.data against the current schema. Stored IDs are not
 filenames. Creation is not idempotent; do not retry a successful create.`
 
@@ -155,6 +159,15 @@ func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
 					patch.Body = &body
 				}
 				return c.Update(args["id"].(string), args["hash"].(string), patch)
+			},
+		},
+		{
+			name:        "delete",
+			description: "Permanently remove one document by ID and the hash from read. Returns the deleted ID. Missing or duplicate IDs, malformed envelopes, and stale hashes fail. Does not validate existing application data. Preserves directories and configuration. No undo; concurrent writes can race removal.",
+			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."}},"required":["id","hash"],"additionalProperties":false}`,
+			destructive: true,
+			run: func(c *collection.Collection, args map[string]any) (any, error) {
+				return c.Delete(args["id"].(string), args["hash"].(string))
 			},
 		},
 	} {

@@ -83,5 +83,9 @@ following its [workflow](issues/MEANS.md).
 - Keep CLI help sufficient for agents to discover workflows, input formats,
   examples, output formats, errors, and limitations. Include long descriptions
   and examples in both human-readable and JSON help.
-- Delete semantics are still an open design question.
+- Delete requires the document ID and current content hash. It permanently removes
+  only the document file, preserving directories and configuration. Missing and
+  duplicate IDs, malformed envelopes, and stale hashes fail. Existing application
+  data need not satisfy the current schema. As with updates, concurrent writes
+  can race removal; there are no locks, force option, or automatic retries.
 - Embeddings, vector search, and automatic document repair are deferred.

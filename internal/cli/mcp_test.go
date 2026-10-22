@@ -32,7 +32,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(tools.Tools) != 6 {
+			if len(tools.Tools) != 7 {
 				t.Fatalf("tools = %v", tools.Tools)
 			}
 			foundSearch := false
@@ -43,10 +43,10 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if tool.Description == "" || tool.InputSchema == nil || tool.Annotations == nil {
 					t.Fatalf("missing tool metadata: %+v", tool)
 				}
-				if tool.Annotations.ReadOnlyHint != (tool.Name != "create" && tool.Name != "update") {
+				if tool.Annotations.ReadOnlyHint != (tool.Name != "create" && tool.Name != "update" && tool.Name != "delete") {
 					t.Fatalf("incorrect read-only annotation: %+v", tool)
 				}
-				if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint != (tool.Name == "update") {
+				if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint != (tool.Name == "update" || tool.Name == "delete") {
 					t.Fatalf("incorrect destructive annotation: %+v", tool)
 				}
 			}
@@ -195,6 +195,23 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				t.Fatal("body did not default to empty")
 			}
 			call("read", `{"id":"`+id+`"}`, false)
+			// Delete validates its inputs and hash, but not existing application data.
+			for _, args := range []string{
+				`{}`, `{"id":"` + id + `"}`, `{"id":"` + id + `","hash":null}`,
+				`{"id":"` + id + `","hash":"bad"}`,
+				`{"id":"` + id + `","hash":"` + hash + `"}`,
+				`{"id":"` + id + `","hash":"` + updated["hash"].(string) + `","force":true}`,
+			} {
+				call("delete", args, true)
+			}
+			deleteArgs := `{"id":"` + id + `","hash":"` + updated["hash"].(string) + `"}`
+			deleted := call("delete", deleteArgs, false)
+			if len(deleted) != 1 || deleted["id"] != id {
+				t.Fatalf("delete output: %v", deleted)
+			}
+			call("delete", deleteArgs, true)
+			call("read", `{"id":"`+id+`"}`, true)
+			call("read", `{"id":"`+created["id"].(string)+`"}`, false)
 			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`{"type":42}`), 0o644); err != nil {
 				t.Fatal(err)
 			}

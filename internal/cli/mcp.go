@@ -44,6 +44,7 @@ Tools (all bound to --path; no per-call path argument):
                                      Validate and create; body defaults to empty.
   update {"id":"...","hash":"...","frontmatter":{...},"body":"..."}
                                      Patch metadata and/or replace body.
+  delete {"id":"...","hash":"..."}   Permanently remove one document; returns {"id":"..."}.
 
 Call info before creating documents: its schema validates only frontmatter.data.
 Means owns frontmatter.id (generated, immutable) and frontmatter.title (required,
@@ -61,7 +62,12 @@ recursively, null deletes keys, and arrays replace. Omitted frontmatter/body sta
 unchanged. Body must be a string when supplied; "" clears it. A stale hash fails
 without writing; read again and review the changes before retrying. The means envelope and resulting
 data are validated. Title edits preserve filenames. See "means update --help" for concurrency and storage details.
-Deletion, initialization, and schema editing are not MCP tools yet.
+Delete requires the hash from read. Missing or duplicate IDs, malformed envelopes,
+and stale hashes fail. Existing application data need not match the current schema.
+Only the document file is removed; directories and configuration remain. There
+is no undo or force option. A repeated deletion fails. Concurrent writes can race
+the final removal; see "means delete --help" for details.
+Initialization and schema editing are not MCP tools yet.
 info reads current title, description, and MEANS.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.
