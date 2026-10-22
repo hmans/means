@@ -5,8 +5,8 @@ is a directory of documents and a `means.schema.json` that defines their applica
 data. The files are the source of truth: people and other tools can edit them
 directly.
 
-Each document has a Markdown body and YAML frontmatter. Means assigns its ID and
-title; application fields live under `data` and are checked against the
+Each document has a Markdown body and YAML frontmatter. Means generates its ID;
+the caller supplies its title. Application fields live under `data` and are checked against the
 collection's JSON Schema. Agents and applications can use the CLI with JSON
 input and output, or connect to one collection through the optional stdio MCP
 server. Ordinary commands run to completion; no daemon is needed.

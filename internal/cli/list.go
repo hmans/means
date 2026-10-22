@@ -12,7 +12,7 @@ func newListCommand(opts *options) *cobra.Command {
 	var withBody bool
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List document IDs and metadata without their bodies",
+		Short: "List document IDs and titles, or metadata as JSON",
 		Long: `List documents in the collection selected by --path (default: current directory).
 
 Scan regular .md files recursively, ignoring symlinks and hidden paths.
@@ -21,7 +21,7 @@ IDs come from frontmatter.id, not filenames. Results are sorted by relative
 filename, not creation time. Root MEANS.md is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
 
---json returns {"documents":[{"id":"...","frontmatter":{...}}],"has_more":false}.
+--json returns {"documents":[{"id":"...","frontmatter":{...}}],"diagnostics":[],"has_more":false}.
 Bodies and hashes are omitted by default. --with-body requires --json and adds
 the Markdown body to each valid document, including empty bodies as "".
 Diagnostic entries have no body. Use read --json before updating a document.
@@ -31,10 +31,10 @@ Text output is a colored ID/title table, followed by diagnostics and a notice wh
 the limit hides results. Pipes and NO_COLOR disable styling. Use --json for metadata.
 View a full document with "means show <id>" or its source with "means read <id>".
 
-Malformed documents and duplicate IDs have null frontmatter, an error, and a
-relative path for diagnosis. id is empty when it cannot be extracted. These
-entries count toward the limit. Duplicate detection covers the whole collection,
-even when --limit hides later matches. Listing checks the means envelope but does
+Malformed documents and every occurrence of duplicate IDs are excluded from
+documents and reported in diagnostics with id, path, and error. id is empty when
+it cannot be extracted. Limits count valid documents only. Diagnostics cover the
+whole collection regardless of the limit. Listing checks the means envelope but does
 not validate data against means.schema.json; application schema violations remain readable. Per-document errors still produce exit 0. Collection-level failures
 produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 		Example: `  means list --path ./memory --json
@@ -59,15 +59,10 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 				return opts.write(cmd.OutOrStdout(), result, "")
 			}
 			var rows [][]string
-			var diagnostics []collection.Diagnostic
 			for _, doc := range result.Documents {
-				if doc.Error != "" {
-					diagnostics = append(diagnostics, collection.Diagnostic{ID: doc.ID, Path: doc.Path, Error: doc.Error})
-					continue
-				}
 				rows = append(rows, []string{doc.ID, terminalCell(doc.Frontmatter["title"].(string))})
 			}
-			return writeTerminal(cmd.OutOrStdout(), documentTable(cmd.OutOrStdout(), rows, diagnostics, result.HasMore, "documents"))
+			return writeTerminal(cmd.OutOrStdout(), documentTable(cmd.OutOrStdout(), rows, result.Diagnostics, result.HasMore, "documents"))
 		},
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum documents to return; 0 returns all")

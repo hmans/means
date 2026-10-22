@@ -52,10 +52,11 @@ Call info before creating documents: its schema validates only frontmatter.data.
 Means owns frontmatter.id (generated, immutable) and frontmatter.title (required,
 nonempty string). Omitted data defaults to {} on creation; explicit null is invalid.
 IDs are stored values, not filenames; duplicate IDs fail lookup and appear as list
-errors. Read and update follow IDs after file renames or moves into subdirectories.
+diagnostics. Read and update follow IDs after file renames or moves into subdirectories.
 Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads means.schema.json so
 schema edits take effect immediately. Reads and lists do not validate existing
-data against the schema; list entries may contain individual errors. Search
+data against the schema. List returns documents, diagnostics, and has_more;
+its limit counts valid documents only, while diagnostics cover the whole collection. Search
 matches all lowercase Unicode query tokens across title/body in any order, with
 a title boost and ID order for score ties. No stemming, stop-word removal, or
 query-language operators are used. literal:true selects the original substring

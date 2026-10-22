@@ -37,13 +37,12 @@ type DocumentSummary struct {
 	ID          string         `json:"id"`
 	Frontmatter map[string]any `json:"frontmatter"`
 	Body        *string        `json:"body,omitempty"`
-	Path        string         `json:"path,omitempty"` // Only included for diagnostics.
-	Error       string         `json:"error,omitempty"`
 }
 
 type ListResult struct {
-	Documents []DocumentSummary `json:"documents"`
-	HasMore   bool              `json:"has_more"`
+	Documents   []DocumentSummary `json:"documents"`
+	Diagnostics []Diagnostic      `json:"diagnostics"`
+	HasMore     bool              `json:"has_more"`
 }
 
 func normalizeObject(value map[string]any) (map[string]any, error) {
@@ -367,12 +366,8 @@ func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
 			counts[entry.doc.ID]++
 		}
 	}
-	result := &ListResult{Documents: []DocumentSummary{}}
+	result := &ListResult{Documents: []DocumentSummary{}, Diagnostics: []Diagnostic{}}
 	for _, entry := range entries {
-		if limit > 0 && len(result.Documents) == limit {
-			result.HasMore = true
-			break
-		}
 		summary := DocumentSummary{}
 		if entry.doc != nil {
 			summary.ID = entry.doc.ID
@@ -381,12 +376,16 @@ func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
 			entry.err = fmt.Errorf("%w %q; resolve the duplicate files", ErrDuplicateID, summary.ID)
 		}
 		if entry.err != nil {
-			summary.Path, summary.Error = path.Clean(entry.filename), entry.err.Error()
-		} else {
-			summary.Frontmatter = entry.doc.Frontmatter
-			if opts.WithBody {
-				summary.Body = &entry.doc.Body
-			}
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{ID: summary.ID, Path: path.Clean(entry.filename), Error: entry.err.Error()})
+			continue
+		}
+		if limit > 0 && len(result.Documents) == limit {
+			result.HasMore = true
+			continue
+		}
+		summary.Frontmatter = entry.doc.Frontmatter
+		if opts.WithBody {
+			summary.Body = &entry.doc.Body
 		}
 		result.Documents = append(result.Documents, summary)
 	}

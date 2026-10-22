@@ -43,7 +43,9 @@ following its [workflow](issues/MEANS.md).
 - Validate the means envelope and application data on creation and after updates.
   Reads and lists check the envelope but do not enforce the current data schema,
   allowing retrieval after schema changes. List reports malformed files and
-  duplicate IDs individually, with diagnostic paths, and omits document bodies.
+  duplicate IDs separately in diagnostics, with paths, regardless of limits.
+  List limits count valid documents only. Bodies are omitted by default; CLI
+  list/search --json --with-body includes them for valid documents.
 - Read/create/update JSON returns a SHA-256 hash of the exact stored file bytes.
   Updates require that hash, merge-patch title/data (null deletes nested keys, arrays replace),
   and replace the body only when supplied. Preserve IDs, reject stale writes, and

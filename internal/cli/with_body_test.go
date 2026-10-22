@@ -46,13 +46,19 @@ func TestListSearchWithBody(t *testing.T) {
 				return result
 			}
 			plain, full := run(false), run(true)
+			diagnostics := full["diagnostics"].([]any)
+			if len(diagnostics) != 1 {
+				t.Fatalf("missing diagnostic: %+v", full)
+			}
+			for _, item := range diagnostics {
+				if _, ok := item.(map[string]any)["body"]; ok {
+					t.Fatal("diagnostic has body")
+				}
+			}
 			for _, item := range full["documents"].([]any) {
 				doc := item.(map[string]any)
 				if _, invalid := doc["error"]; invalid {
-					if _, ok := doc["body"]; ok {
-						t.Fatal("diagnostic has body")
-					}
-					continue
+					t.Fatal("diagnostic mixed into documents")
 				}
 				if body, ok := doc["body"]; !ok || body != bodies[doc["id"].(string)] {
 					t.Fatalf("incorrect body: %+v", doc)

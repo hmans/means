@@ -133,8 +133,11 @@ func TestDuplicateIDsAcrossPaths(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, summary := range result.Documents {
-				if summary.ID != doc.ID || summary.Frontmatter != nil || summary.Path == "" || !strings.Contains(summary.Error, "duplicate document ID") {
+			if len(result.Documents) != 0 || len(result.Diagnostics) != 2 || result.HasMore {
+				t.Fatalf("unexpected duplicate listing: %+v", result)
+			}
+			for _, summary := range result.Diagnostics {
+				if summary.ID != doc.ID || summary.Path == "" || !strings.Contains(summary.Error, "duplicate document ID") {
 					t.Fatalf("ambiguous summary: %+v", summary)
 				}
 			}
@@ -210,7 +213,7 @@ func TestCandidateAllocationAcrossProcesses(t *testing.T) {
 		t.Fatalf("same candidate allocated %d times", successes)
 	}
 	listed, err := c.List(0)
-	if err != nil || len(listed.Documents) != 1 || listed.Documents[0].Error != "" {
+	if err != nil || len(listed.Documents) != 1 || len(listed.Diagnostics) != 0 {
 		t.Fatalf("invalid stored allocation: %+v %v", listed, err)
 	}
 	assertNoUpdateArtifacts(t, c.Path)

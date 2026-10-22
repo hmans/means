@@ -164,7 +164,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				t.Fatal(err)
 			}
 			listed = call("list", `{"limit":0}`, false)
-			if len(listed["documents"].([]any)) != 22 || listed["has_more"] != false {
+			if len(listed["documents"].([]any)) != 21 || listed["has_more"] != false || len(listed["diagnostics"].([]any)) != 1 {
 				t.Fatalf("unlimited list: %v", listed)
 			}
 			foundBroken := false
@@ -173,8 +173,11 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if _, exists := doc["body"]; exists {
 					t.Fatal("list includes body")
 				}
-				if doc["path"] == "broken.md" {
-					foundBroken = doc["error"] != nil && doc["frontmatter"] == nil
+			}
+			for _, entry := range listed["diagnostics"].([]any) {
+				d := entry.(map[string]any)
+				if d["path"] == "broken.md" && d["error"] != nil {
+					foundBroken = true
 				}
 			}
 			if !foundBroken {

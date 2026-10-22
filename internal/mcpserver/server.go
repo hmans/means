@@ -32,7 +32,7 @@ may change title and data, never id.
 Title changes preserve existing filenames.
 Creation validates the current schema and is not idempotent: do not retry a
 successful creation. Reads and lists validate the means envelope but not the data schema;
-inspect per-document errors in list results. Schema and document edits take effect
+inspect diagnostics in list results. Schema and document edits take effect
 on the next tool call. Read before update: supply its hash and only the fields to
 patch. A stale hash fails; read again and review changes before retrying. Metadata
 uses JSON Merge Patch (objects merge, null deletes, arrays replace); body replaces
@@ -127,7 +127,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "list",
-			description: "List IDs and frontmatter in filename order, without bodies or hashes. limit defaults to 20; 0 returns all. Malformed and duplicate documents appear with errors. Read an ID before updating it.",
+			description: "List valid document IDs and frontmatter in filename order, without bodies or hashes. Returns documents, diagnostics, and has_more. limit counts valid documents (default 20; 0 returns all). Malformed documents and every duplicate occurrence are excluded and reported in diagnostics regardless of the limit. Read an ID before updating it.",
 			schema:      `{"type":"object","properties":{"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {

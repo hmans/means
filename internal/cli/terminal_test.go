@@ -22,7 +22,7 @@ func TestDocumentTables(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "broken.md"), []byte("bad"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path, "00000-broken.md"), []byte("bad"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, command := range []string{"list", "search"} {
@@ -48,6 +48,9 @@ func TestDocumentTables(t *testing.T) {
 			}
 			if !strings.Contains(out.String(), "--limit 0") {
 				t.Fatal("missing limit notice")
+			}
+			if strings.Contains(out.String(), "No documents.") || !strings.Contains(out.String(), "TITLE") || !strings.Contains(out.String(), "00000-broken.md") {
+				t.Fatalf("limited output hides valid document or diagnostic: %s", &out)
 			}
 		})
 	}

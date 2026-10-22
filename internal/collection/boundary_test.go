@@ -63,10 +63,8 @@ func TestNestedCollectionBoundary(t *testing.T) {
 		if err != nil || len(listed.Documents) != tt.count || listed.HasMore {
 			t.Fatalf("list: %+v, %v", listed, err)
 		}
-		for _, doc := range listed.Documents {
-			if doc.Error != "" {
-				t.Fatalf("unexpected document error: %+v", doc)
-			}
+		if len(listed.Diagnostics) != 0 {
+			t.Fatalf("unexpected diagnostics: %+v", listed.Diagnostics)
 		}
 		found, err := tt.c.Search(SearchOptions{})
 		if err != nil || len(found.Documents) != tt.count || len(found.Diagnostics) != 0 {

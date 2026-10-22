@@ -111,7 +111,7 @@ func TestListLimitsAndMalformedFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	empty, err := c.List(20)
-	if err != nil || empty.Documents == nil || len(empty.Documents) != 0 || empty.HasMore {
+	if err != nil || empty.Documents == nil || empty.Diagnostics == nil || len(empty.Documents) != 0 || empty.HasMore {
 		t.Fatalf("unexpected empty listing: %#v, %v", empty, err)
 	}
 	for name, content := range map[string]string{
@@ -129,7 +129,7 @@ func TestListLimitsAndMalformedFiles(t *testing.T) {
 	for _, tt := range []struct {
 		limit, count int
 		more         bool
-	}{{1, 1, true}, {2, 2, true}, {3, 3, false}, {20, 3, false}, {0, 3, false}} {
+	}{{1, 1, true}, {2, 2, false}, {3, 2, false}, {20, 2, false}, {0, 2, false}} {
 		result, err := c.List(tt.limit)
 		if err != nil || len(result.Documents) != tt.count || result.HasMore != tt.more {
 			t.Fatalf("List(%d) = %#v, %v", tt.limit, result, err)
@@ -138,10 +138,10 @@ func TestListLimitsAndMalformedFiles(t *testing.T) {
 		for _, doc := range result.Documents {
 			ids = append(ids, doc.ID)
 		}
-		if !reflect.DeepEqual(ids, []string{"alpha", "", "charlie"}[:tt.count]) {
+		if !reflect.DeepEqual(ids, []string{"alpha", "charlie"}[:tt.count]) {
 			t.Fatalf("unexpected order: %v", ids)
 		}
-		if tt.count >= 2 && result.Documents[1].Error == "" {
+		if len(result.Diagnostics) != 1 || result.Diagnostics[0].Path != "b.md" || result.Diagnostics[0].Error == "" {
 			t.Fatal("malformed document was not reported")
 		}
 		data, _ := json.Marshal(result.Documents[0])
@@ -177,5 +177,46 @@ func TestReadRejectsPathsAndSymlinks(t *testing.T) {
 	result, err := c.List(0)
 	if err != nil || len(result.Documents) != 0 {
 		t.Fatalf("symlink listed: %#v, %v", result, err)
+	}
+}
+
+func TestListDiagnosticsMatchSearchRegardlessOfLimit(t *testing.T) {
+	c, err := Init(t.TempDir(), []byte(`false`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range map[string]string{
+		"a.md": "broken before",
+		"b.md": "---\nid: valid\ntitle: Valid envelope\ndata: {}\n---\nbody",
+		"c.md": "---\nid: duplicate\ntitle: First\ndata: {}\n---\nbody",
+		"d.md": "---\nid: duplicate\ntitle: Second\ndata: {}\n---\nbody",
+		"z.md": "broken after",
+	} {
+		if err := os.WriteFile(filepath.Join(c.Path, name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, limit := range []int{1, 2, 0} {
+		list, err := c.ListWithOptions(ListOptions{Limit: limit, WithBody: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		search, err := c.Search(SearchOptions{Limit: limit})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(list.Documents) != 1 || list.Documents[0].ID != "valid" || list.Documents[0].Body == nil || *list.Documents[0].Body != "body" || list.HasMore {
+			t.Fatalf("limit %d: %+v", limit, list)
+		}
+		if len(list.Diagnostics) != 4 || !reflect.DeepEqual(list.Diagnostics, search.Diagnostics) {
+			t.Fatalf("diagnostics differ: %+v / %+v", list, search)
+		}
+	}
+	if err := os.Remove(filepath.Join(c.Path, "b.md")); err != nil {
+		t.Fatal(err)
+	}
+	list, err := c.List(1)
+	if err != nil || len(list.Documents) != 0 || len(list.Diagnostics) != 4 || list.HasMore {
+		t.Fatalf("all invalid: %+v %v", list, err)
 	}
 }
