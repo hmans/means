@@ -13,10 +13,11 @@ import (
 )
 
 type SearchOptions struct {
-	Query   string
-	Filter  map[string]any // Partial match against frontmatter.data.
-	Limit   int            // Zero returns every match.
-	Literal bool           // Use the original case-insensitive substring search.
+	WithBody bool
+	Query    string
+	Filter   map[string]any // Partial match against frontmatter.data.
+	Limit    int            // Zero returns every match.
+	Literal  bool           // Use the original case-insensitive substring search.
 }
 
 type SearchMatch struct {
@@ -25,6 +26,7 @@ type SearchMatch struct {
 }
 
 type SearchHit struct {
+	Body        *string        `json:"body,omitempty"`
 	ID          string         `json:"id"`
 	Frontmatter map[string]any `json:"frontmatter"`
 	Match       *SearchMatch   `json:"match,omitempty"`
@@ -106,7 +108,11 @@ func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
 			result.HasMore = true
 			continue
 		}
-		result.Documents = append(result.Documents, SearchHit{ID: id, Frontmatter: entry.doc.Frontmatter, Match: match})
+		hit := SearchHit{ID: id, Frontmatter: entry.doc.Frontmatter, Match: match}
+		if opts.WithBody {
+			hit.Body = &entry.doc.Body
+		}
+		result.Documents = append(result.Documents, hit)
 	}
 	return result, nil
 }

@@ -249,7 +249,11 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 			if err != nil {
 				return nil, err
 			}
-			result.Documents = append(result.Documents, SearchHit{ID: doc.ID, Frontmatter: doc.Frontmatter, Match: match})
+			hit := SearchHit{ID: doc.ID, Frontmatter: doc.Frontmatter, Match: match}
+			if opts.WithBody {
+				hit.Body = &doc.Body
+			}
+			result.Documents = append(result.Documents, hit)
 		}
 		if len(found.Hits) < 100 {
 			break

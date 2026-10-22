@@ -13,6 +13,7 @@ func newSearchCommand(opts *options) *cobra.Command {
 	var limit int
 	var filters []string
 	var literal bool
+	var withBody bool
 	cmd := &cobra.Command{
 		Use:   "search [query]",
 		Short: "Find documents by ranked full text and application data",
@@ -29,7 +30,9 @@ text match includes its field (title or body) and a short excerpt. Full-text
 excerpts prefer a passage with more distinct query terms; ties prefer the title,
 then the earliest passage. A passage is at most 180 characters plus ellipses.
 Terms split across distant passages or fields may not all appear in one excerpt. Results
-include frontmatter but omit bodies and hashes; read by ID for full content.
+include frontmatter but omit bodies and hashes by default. --with-body requires
+--json and adds the Markdown body to each match, including empty bodies as "".
+Hashes remain omitted; read by ID before updating a document.
 
 Repeat --filter KEY=VALUE to match fields directly under frontmatter.data.
 All filters combine with AND. Plain values such as priority=normal are strings;
@@ -69,6 +72,9 @@ do not use or write an index. Source documents are never changed.`,
   means search memory --filter 'tags=["important"]' --limit 0 --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if withBody && !opts.json {
+				return fmt.Errorf("--with-body requires --json")
+			}
 			filter, err := parseSearchFilters(filters)
 			if err != nil {
 				return err
@@ -81,7 +87,7 @@ do not use or write an index. Source documents are never changed.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal})
+			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal, WithBody: withBody})
 			if err != nil {
 				return err
 			}
@@ -97,6 +103,7 @@ do not use or write an index. Source documents are never changed.`,
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum matching documents; 0 returns all")
 	cmd.Flags().BoolVar(&literal, "literal", false, "Match a literal case-insensitive substring instead of ranked full text")
+	cmd.Flags().BoolVar(&withBody, "with-body", false, "Include Markdown bodies in JSON matches (requires --json)")
 	cmd.Flags().StringArrayVar(&filters, "filter", nil, "Match a frontmatter.data field as KEY=VALUE (repeatable)")
 	return cmd
 }

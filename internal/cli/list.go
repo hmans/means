@@ -9,6 +9,7 @@ import (
 
 func newListCommand(opts *options) *cobra.Command {
 	var limit int
+	var withBody bool
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List document IDs and metadata without their bodies",
@@ -21,7 +22,9 @@ filename, not creation time. Root MEANS.md is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
 
 --json returns {"documents":[{"id":"...","frontmatter":{...}}],"has_more":false}.
-Bodies and hashes are omitted; use read --json before updating a document.
+Bodies and hashes are omitted by default. --with-body requires --json and adds
+the Markdown body to each valid document, including empty bodies as "".
+Diagnostic entries have no body. Use read --json before updating a document.
 An empty collection returns an empty documents array.
 If more results exist, has_more is true; increase --limit or use 0 to retrieve all.
 Text output is a colored ID/title table, followed by diagnostics and a notice when
@@ -38,6 +41,9 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
   means list --path ./memory --limit 0 --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if withBody && !opts.json {
+				return fmt.Errorf("--with-body requires --json")
+			}
 			if limit < 0 {
 				return fmt.Errorf("--limit must be zero or greater")
 			}
@@ -45,7 +51,7 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.List(limit)
+			result, err := c.ListWithOptions(collection.ListOptions{Limit: limit, WithBody: withBody})
 			if err != nil {
 				return err
 			}
@@ -65,5 +71,6 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 		},
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum documents to return; 0 returns all")
+	cmd.Flags().BoolVar(&withBody, "with-body", false, "Include Markdown bodies in JSON documents (requires --json)")
 	return cmd
 }

@@ -36,6 +36,7 @@ type Document struct {
 type DocumentSummary struct {
 	ID          string         `json:"id"`
 	Frontmatter map[string]any `json:"frontmatter"`
+	Body        *string        `json:"body,omitempty"`
 	Path        string         `json:"path,omitempty"` // Only included for diagnostics.
 	Error       string         `json:"error,omitempty"`
 }
@@ -338,6 +339,16 @@ func readDocument(root *os.Root, id string) (*Document, error) {
 // List returns frontmatter in relative filename order. Zero means no limit.
 // Invalid documents and duplicate IDs produce individual diagnostic entries.
 func (c *Collection) List(limit int) (*ListResult, error) {
+	return c.ListWithOptions(ListOptions{Limit: limit})
+}
+
+type ListOptions struct {
+	Limit    int
+	WithBody bool
+}
+
+func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
+	limit := opts.Limit
 	if limit < 0 {
 		return nil, fmt.Errorf("limit must be zero or greater")
 	}
@@ -373,6 +384,9 @@ func (c *Collection) List(limit int) (*ListResult, error) {
 			summary.Path, summary.Error = path.Clean(entry.filename), entry.err.Error()
 		} else {
 			summary.Frontmatter = entry.doc.Frontmatter
+			if opts.WithBody {
+				summary.Body = &entry.doc.Body
+			}
 		}
 		result.Documents = append(result.Documents, summary)
 	}

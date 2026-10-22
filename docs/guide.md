@@ -166,6 +166,9 @@ Without `--json`, `list` and `search` show colored tables of ID and title, follo
 by diagnostics and limit notices. Tables wrap to the terminal width (80 columns
 when piped). Piped output and `NO_COLOR` disable terminal styling. Use `--json`
 for complete metadata and search excerpts.
+Add `--with-body` to `list --json` or `search --json` to include each document's
+Markdown body. Empty bodies appear as `"body": ""`; diagnostic entries have no
+body. The flag requires `--json` and does not add hashes or change limits or order.
 
 `show <id>` prints the title, ID, and Markdown-rendered body, including styled
 headings, lists, and code blocks. `show --json` returns the same document and
