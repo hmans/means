@@ -32,7 +32,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(tools.Tools) != 7 {
+			if len(tools.Tools) != 8 {
 				t.Fatalf("tools = %v", tools.Tools)
 			}
 			foundSearch := false
@@ -43,10 +43,10 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				if tool.Description == "" || tool.InputSchema == nil || tool.Annotations == nil {
 					t.Fatalf("missing tool metadata: %+v", tool)
 				}
-				if tool.Annotations.ReadOnlyHint != (tool.Name != "create" && tool.Name != "update" && tool.Name != "delete") {
+				if tool.Annotations.ReadOnlyHint != (tool.Name != "create" && tool.Name != "update" && tool.Name != "delete" && tool.Name != "schema_set") {
 					t.Fatalf("incorrect read-only annotation: %+v", tool)
 				}
-				if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint != (tool.Name == "update" || tool.Name == "delete") {
+				if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint != (tool.Name == "update" || tool.Name == "delete" || tool.Name == "schema_set") {
 					t.Fatalf("incorrect destructive annotation: %+v", tool)
 				}
 			}

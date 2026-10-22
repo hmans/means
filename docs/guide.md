@@ -68,7 +68,18 @@ searches remain available for schema-invalid data; each update must leave the
 whole document valid. For staged migrations, first accept both old and new
 forms, migrate documents, then tighten the schema. Means does not rewrite data
 automatically. MCP calls load the new schema; restart MCP to refresh advertised
-collection metadata. Schema installation is currently a CLI operation.
+collection metadata. MCP provides the same operation through `schema_set`:
+
+```json
+{"schema":{"type":"object","required":["status"]},"force":false}
+```
+
+Pass a schema object or boolean, not a JSON string. `force` defaults to false.
+Rejected compatibility checks return a tool error with structured diagnostics;
+forced installations return success with those diagnostics. Error responses
+retain explanatory text even in structured-only mode. Schema numbers retain
+their precision, but JSON formatting is regenerated. A running server can repair
+an externally invalidated schema; starting a server still requires a valid schema.
 
 ### Subdirectories and collection boundaries
 
@@ -220,7 +231,7 @@ managed daemon. Register the command once per collection to give one agent
 multiple collections. Each server advertises its collection identity and the
 optional `MEANS.md` workflow at startup. Call `info` for the current
 schema and guidance. Other tools are `list`, `search`, `read`, `create`,
-`update`, and `delete`; they use the same collection behavior as the CLI. Each call reloads
+`update`, `delete`, and `schema_set`; they use the same collection behavior as the CLI. Each document call reloads
 the schema. Restart the server after changing collection title, description, or
 workflow to refresh advertised discovery metadata.
 

@@ -35,6 +35,8 @@ Multiple collections:
   complete usage guidance with the current collection workflow.
 
 Tools (all bound to --path; no per-call path argument):
+  schema_set {"schema":{"type":"object"},"force":false}
+                                     Validate and install; report document diagnostics.
   info {}                            Title, description, schema, path, instructions.
   list {"limit":20}                  IDs and metadata; 0 returns all, no bodies.
   search {"query":"schema","filter":{"priority":"normal"},"limit":20}
@@ -67,7 +69,15 @@ and stale hashes fail. Existing application data need not match the current sche
 Only the document file is removed; directories and configuration remain. There
 is no undo or force option. A repeated deletion fails. Concurrent writes can race
 the final removal; see "means delete --help" for details.
-Initialization and schema editing are not MCP tools yet.
+schema_set accepts a complete JSON Schema object or boolean, not a string.
+force defaults to false. Document violations reject installation with isError
+and structured {error,installed:false,healthy,checked,diagnostics}. With force:true,
+installation succeeds and retains diagnostics. Invalid schemas and filesystem
+errors cannot be forced. Checks cover current data, not every future value.
+Documents are never rewritten. Schema JSON is serialized without losing number
+precision; formatting is not preserved. Concurrent edits can race installation.
+A running server can repair an externally invalidated schema using schema_set;
+startup still requires a valid schema. Initialization is not an MCP tool yet.
 info reads current title, description, and MEANS.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.

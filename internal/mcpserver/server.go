@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -35,7 +36,12 @@ the whole body when supplied. Delete permanently removes a document by ID and
 hash from read, without validating existing application data. Missing or duplicate
 IDs, malformed envelopes, and stale hashes fail. There is no undo. Directories
 and configuration remain. Concurrent writes can race the final removal.
-Schema editing is not exposed as an MCP tool. The optional MEANS.md supplies collection-specific
+Use schema_set with a schema object or boolean and optional force boolean to
+validate and install a replacement. Document violations block installation unless
+force is true; diagnostics are always returned. Invalid schemas and filesystem
+errors cannot be forced. No documents are rewritten. Checks cover current data,
+not all possible future data, and concurrent edits can race installation.
+The optional MEANS.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
 Call info for current guidance; restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
@@ -44,7 +50,8 @@ const startupInstructions = `Call info for the current schema and detailed guida
 List or search to find IDs, then read before updating or deleting with its hash.
 Deletion is permanent; a repeated deletion fails. Create and
 update validate frontmatter.data against the current schema. Stored IDs are not
-filenames. Creation is not idempotent; do not retry a successful create.`
+filenames. Creation is not idempotent; do not retry a successful create.
+Use schema_set to validate and install schema changes; force permits document violations.`
 
 func collectionPurpose(info *collection.Description) string {
 	purpose := "Collection: " + info.Title + "."
@@ -85,6 +92,20 @@ func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
 	server := mcp.NewServer(&mcp.Implementation{Name: "means", Title: info.Title, Description: info.Description, Version: version},
 		&mcp.ServerOptions{Instructions: collectionStartupInstructions(info)})
 	for _, tool := range []toolDefinition{
+		{
+			name:        "schema_set",
+			description: "Validate and install a JSON Schema for this collection. Pass schema as an object or boolean, not a string. Optional force (default false) permits existing document violations but never invalid schemas or filesystem errors. Returns installed, healthy, checked, and diagnostics. Rejection is a tool error with structured diagnostics and leaves the schema unchanged. Checks current data, not abstract schema compatibility. Does not rewrite documents; concurrent edits can race installation. Can repair an externally invalidated schema while this server remains running. Restart to refresh discovery metadata.",
+			schema:      `{"type":"object","properties":{"schema":{"type":["object","boolean"],"description":"Complete self-contained JSON Schema. Draft 2020-12 by default; external references are unsupported."},"force":{"type":"boolean","default":false}},"required":["schema"],"additionalProperties":false}`,
+			destructive: true,
+			runPath: func(path string, args map[string]any) (any, error) {
+				schema, err := json.Marshal(args["schema"])
+				if err != nil {
+					return nil, err
+				}
+				force, _ := args["force"].(bool)
+				return collection.SetSchema(path, schema, force)
+			},
+		},
 		{
 			name:        "info",
 			description: "Return current collection identity, schema, path, and full guidance. Call before creating documents.",
@@ -199,6 +220,7 @@ type toolDefinition struct {
 	readOnly                  bool
 	destructive               bool
 	run                       func(*collection.Collection, map[string]any) (any, error)
+	runPath                   func(string, map[string]any) (any, error) // Operations that need no valid current schema.
 }
 
 func addTool(server *mcp.Server, path string, tool toolDefinition, structuredOnly bool) error {
@@ -236,13 +258,25 @@ func addTool(server *mcp.Server, path string, tool toolDefinition, structuredOnl
 		if err := ctx.Err(); err != nil {
 			return toolError(err), nil
 		}
-		c, err := collection.Load(path)
-		if err != nil {
+		var output any
+		if tool.runPath != nil {
+			output, err = tool.runPath(path, value.(map[string]any))
+		} else {
+			var c *collection.Collection
+			c, err = collection.Load(path)
+			if err == nil {
+				output, err = tool.run(c, value.(map[string]any))
+			}
+		}
+		rejected := errors.Is(err, collection.ErrSchemaIncompatible)
+		if err != nil && !rejected {
 			return toolError(err), nil
 		}
-		output, err := tool.run(c, value.(map[string]any))
-		if err != nil {
-			return toolError(err), nil
+		if rejected {
+			output = struct {
+				Error string `json:"error"`
+				*collection.SchemaSetResult
+			}{err.Error(), output.(*collection.SchemaSetResult)}
 		}
 		// Keep JSON text for clients that do not consume structuredContent.
 		// Encode it compactly once to avoid duplicating pretty-print whitespace.
@@ -250,8 +284,8 @@ func addTool(server *mcp.Server, path string, tool toolDefinition, structuredOnl
 		if err != nil {
 			return toolError(err), nil
 		}
-		result := &mcp.CallToolResult{StructuredContent: json.RawMessage(encoded), Content: []mcp.Content{}}
-		if !structuredOnly {
+		result := &mcp.CallToolResult{IsError: rejected, StructuredContent: json.RawMessage(encoded), Content: []mcp.Content{}}
+		if !structuredOnly || rejected {
 			result.Content = []mcp.Content{&mcp.TextContent{Text: string(encoded)}}
 		}
 		return result, nil

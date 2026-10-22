@@ -15,7 +15,7 @@ mise means update <id> --path ./issues --input - --json
 
 Read `means.schema.json` before creating issues. When accessed through MCP, use `info`
 for the current schema and these instructions; the tools are `list`, `search`,
-`read`, `create`, `update`, and `delete`.
+`read`, `create`, `update`, `delete`, and `schema_set`.
 
 ## Issue content
 

@@ -22,6 +22,9 @@ following its [workflow](issues/MEANS.md).
   proposal and checks existing documents before replacing the schema. --force
   permits document diagnostics but never invalid schemas or filesystem failures.
   It does not migrate documents or prove compatibility for future data. Schemas
+  can also be installed through MCP schema_set with the same validation and
+  diagnostics; force is an optional boolean. A running server can repair an
+  externally invalidated schema, while startup requires a valid schema. Schemas
   are currently self-contained.
   Documents use YAML frontmatter and free-form Markdown bodies. The schema
   validates only frontmatter.data; schema title/description still describe the collection.
