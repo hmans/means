@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -50,7 +49,8 @@ Subdirectories containing means.schema.json are separate collections and are ski
 even if their schema is invalid.
 
 --json returns {"documents":[...],"diagnostics":[],"has_more":false}.
-Text output shows IDs, metadata, and excerpts, followed by diagnostics.
+Text output is a colored ID/title table, followed by diagnostics and limit notices.
+Pipes and NO_COLOR disable styling. Metadata and excerpts are available with --json.
 Search exits 0 even with per-document diagnostics. Invalid arguments or
 collection-level errors exit 1 and write stderr, as {"error":"..."} in JSON
 mode. Full-text search refreshes a disposable Bleve index in .means/search/ before
@@ -85,25 +85,14 @@ do not use or write an index. Source documents are never changed.`,
 			if err != nil {
 				return err
 			}
-			var output strings.Builder
+			if opts.json {
+				return opts.write(cmd.OutOrStdout(), result, "")
+			}
+			var rows [][]string
 			for _, doc := range result.Documents {
-				metadata, err := json.Marshal(doc.Frontmatter)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintf(&output, "%s\t%s", doc.ID, metadata)
-				if doc.Match != nil {
-					fmt.Fprintf(&output, "\t%s: %s", doc.Match.Field, doc.Match.Excerpt)
-				}
-				output.WriteByte('\n')
+				rows = append(rows, []string{doc.ID, terminalCell(doc.Frontmatter["title"].(string))})
 			}
-			for _, diagnostic := range result.Diagnostics {
-				fmt.Fprintf(&output, "%s\t%s\tERROR: %s\n", diagnostic.ID, diagnostic.Path, diagnostic.Error)
-			}
-			if result.HasMore {
-				output.WriteString("More matches available; increase --limit or use --limit 0.\n")
-			}
-			return opts.write(cmd.OutOrStdout(), result, output.String())
+			return writeTerminal(cmd.OutOrStdout(), documentTable(cmd.OutOrStdout(), rows, result.Diagnostics, result.HasMore, "matches"))
 		},
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum matching documents; 0 returns all")

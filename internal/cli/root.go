@@ -59,7 +59,8 @@ details. Read and update use the stored ID, even after file renames or moves.
 Start with "means init --help" for the complete schema-authoring workflow,
 file and stdin input examples, validation rules, and response formats.
 Then use "means create --help" to store a validated document, "means list" to
-discover IDs and metadata, and "means read <id>" to retrieve a document.
+discover IDs and titles, and "means show <id>" to view rendered Markdown.
+Use "means read <id>" to retrieve the exact stored Markdown.
 Use "means mcp --help" to expose a collection to an MCP client over stdio.
 Use "means update --help" to patch a document using the hash from read --json.
 Use "means delete --help" to permanently remove a document using its content hash.
@@ -120,6 +121,6 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		},
 	})
 	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts),
-		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
+		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

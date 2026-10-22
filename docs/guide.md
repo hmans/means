@@ -159,9 +159,21 @@ mise means list --path ./memory --limit 0 --json
 mise means search decision --path ./memory --json
 mise means search --path ./memory --filter 'tags=["decision"]' --json
 mise means read <id> --path ./memory --json
+mise means show <id> --path ./memory
 ```
 
-`list` returns IDs and frontmatter without bodies or hashes. Its default limit
+Without `--json`, `list` and `search` show colored tables of ID and title, followed
+by diagnostics and limit notices. Tables wrap to the terminal width (80 columns
+when piped). Piped output and `NO_COLOR` disable terminal styling. Use `--json`
+for complete metadata and search excerpts.
+
+`show <id>` prints the title, ID, and Markdown-rendered body, including styled
+headings, lists, and code blocks. `show --json` returns the same document and
+content hash as `read --json`. Use `read` without `--json` for the exact source,
+including YAML frontmatter. Neither command enforces the current application data
+schema, so documents remain readable after schema changes.
+
+`list --json` returns IDs and frontmatter without bodies or hashes. Its default limit
 is 20; `--limit 0` returns all. Malformed documents and duplicate IDs appear as
 entries with errors and paths. `search` uses full-text ranking by default: all
 query terms must occur, in any order, across the title and body. Title matches
@@ -174,7 +186,7 @@ Use `search "deployment timeout" --literal` for the original case-insensitive
 substring search. Literal searches and searches with no query use filename order.
 Repeated `--filter KEY=VALUE` flags combine with AND and apply before the result
 limit. JSON numbers retain their precision, objects match recursively, and arrays
-must match in full. Search returns metadata and excerpts, not full bodies or hashes.
+must match in full. Search JSON returns metadata and excerpts, not full bodies or hashes.
 Full-text excerpts prefer the title or body passage containing the most distinct
 query terms. Repeated copies of one term do not outweigh several different terms.
 Ties prefer the title, then the earliest passage. Passages contain at most 180

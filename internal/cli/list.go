@@ -1,9 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hmans/means/internal/collection"
 	"github.com/spf13/cobra"
@@ -26,8 +24,9 @@ filename, not creation time. Root MEANS.md is excluded.
 Bodies and hashes are omitted; use read --json before updating a document.
 An empty collection returns an empty documents array.
 If more results exist, has_more is true; increase --limit or use 0 to retrieve all.
-Text output contains one ID and its JSON metadata per line, plus a notice when
-the limit hides results. Read a full document with "means read <id>".
+Text output is a colored ID/title table, followed by diagnostics and a notice when
+the limit hides results. Pipes and NO_COLOR disable styling. Use --json for metadata.
+View a full document with "means show <id>" or its source with "means read <id>".
 
 Malformed documents and duplicate IDs have null frontmatter, an error, and a
 relative path for diagnosis. id is empty when it cannot be extracted. These
@@ -50,22 +49,19 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 			if err != nil {
 				return err
 			}
-			var text strings.Builder
+			if opts.json {
+				return opts.write(cmd.OutOrStdout(), result, "")
+			}
+			var rows [][]string
+			var diagnostics []collection.Diagnostic
 			for _, doc := range result.Documents {
 				if doc.Error != "" {
-					fmt.Fprintf(&text, "%s\t%s\tERROR: %s\n", doc.ID, doc.Path, doc.Error)
+					diagnostics = append(diagnostics, collection.Diagnostic{ID: doc.ID, Path: doc.Path, Error: doc.Error})
 					continue
 				}
-				metadata, err := json.Marshal(doc.Frontmatter)
-				if err != nil {
-					return err
-				}
-				fmt.Fprintf(&text, "%s\t%s\n", doc.ID, metadata)
+				rows = append(rows, []string{doc.ID, terminalCell(doc.Frontmatter["title"].(string))})
 			}
-			if result.HasMore {
-				text.WriteString("More documents available; increase --limit or use --limit 0.\n")
-			}
-			return opts.write(cmd.OutOrStdout(), result, text.String())
+			return writeTerminal(cmd.OutOrStdout(), documentTable(cmd.OutOrStdout(), rows, diagnostics, result.HasMore, "documents"))
 		},
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum documents to return; 0 returns all")

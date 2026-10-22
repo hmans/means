@@ -56,6 +56,10 @@ following its [workflow](issues/MEANS.md).
 - Use Cobra for the CLI. Every command inherits `--path` (defaulting to the
   current working directory) and `--json`. Use the shared output helpers for
   responses; write errors to stderr and successful results to stdout.
+  List/search text output uses Charm Lip Gloss ID/title tables, with diagnostics
+  below. Show renders title/ID and the Markdown body with Glamour; show --json
+  equals read --json. Read text preserves exact source. Disable terminal styling
+  for pipes and NO_COLOR; keep JSON and MCP responses independent of rendering.
 - MCP uses the official Go SDK and calls the collection package directly. Bind
   each server to one collection, reload its schema per call, and preserve JSON
   number precision. Keep stdout exclusively for MCP messages; --json affects
