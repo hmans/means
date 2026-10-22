@@ -50,6 +50,10 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		Short: "Agentic memory built from Markdown files",
 		Long: `means provides typed Markdown collections for agents and applications.
 
+Setting up means for agents? Run "means agents" for the complete onboarding guide:
+design a schema, write MEANS.md, and make the collection discoverable through
+project instructions, a skill, or MCP. Creating storage alone does not finish agent setup.
+
 A collection is a directory containing a standalone means.schema.json that describes
 application data using JSON Schema. The files are authoritative and can be edited
 directly. Means owns frontmatter.id (generated and immutable) and frontmatter.title
@@ -120,7 +124,7 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			return opts.writeHelp(target)
 		},
 	})
-	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts),
+	root.AddCommand(newAgentsCommand(opts), newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts),
 		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

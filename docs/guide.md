@@ -4,6 +4,13 @@ This guide covers the file format and common workflows. For exact flags, input
 shapes, responses, errors, and limitations, run `means <command> --help` (or add
 `--json` for machine-readable help).
 
+For an end-to-end agent setup workflow, run `means agents`. The guide is embedded
+in the binary and works before a collection exists. It explains collection design,
+`MEANS.md`, discovery through project instructions, skills or MCP, and routine
+operations. `means agents --json` returns the same Markdown in a `guide` field.
+It does not create files or install integrations. Successful `init` output points
+to it; JSON initialization responses include `next_steps: ["means agents"]`.
+
 ## Collections
 
 A collection is one directory with a standalone `means.schema.json`. The schema

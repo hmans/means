@@ -19,6 +19,10 @@ and collection diagnostics.
 
 ## Try it
 
+Setting up a collection for agents? Run `means agents` (or `mise means agents`
+from this checkout) for schema design, workflow guidance, and agent discovery
+through project instructions, a skill, or MCP.
+
 From this checkout, use the Go toolchain configured by [mise](https://mise.jdx.dev/):
 
 ```sh

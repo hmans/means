@@ -17,6 +17,10 @@ func newInitCommand(opts *options) *cobra.Command {
 		Short: "Create a collection with an example or supplied means.schema.json",
 		Long: `Initialize a collection in --path (default: the current working directory).
 
+For agent setup, run "means agents" first. After initialization, write MEANS.md
+and establish discovery through project instructions, a skill, or MCP. Init creates
+storage; it does not install agent integrations or write workflow guidance.
+
 Without --schema, write an example data schema allowing optional tags (an array
 of strings), rejecting other data fields. An empty data object is valid.
 The schema validates only frontmatter.data. Means separately owns id (generated,
@@ -53,7 +57,7 @@ Effects:
 
 Responses:
   Success: exit 0; stdout describes the initialized collection.
-  With --json: {"path":"/absolute/collection","schema":"/absolute/collection/means.schema.json"}.
+  With --json: {"path":"/absolute/collection","schema":"/absolute/collection/means.schema.json","next_steps":["means agents"]}.
   Failure: exit 1; stderr explains the error and stdout is empty.
   With --json: {"error":"..."}; schema errors identify the invalid constraint.
   JSON responses use two-space indentation and end with a newline.
@@ -108,9 +112,10 @@ JSON`,
 				return err
 			}
 			return opts.write(cmd.OutOrStdout(), struct {
-				Path   string `json:"path"`
-				Schema string `json:"schema"`
-			}{c.Path, filepath.Join(c.Path, collection.SchemaFilename)}, "Initialized collection at "+c.Path+"\n")
+				Path      string   `json:"path"`
+				Schema    string   `json:"schema"`
+				NextSteps []string `json:"next_steps"`
+			}{c.Path, filepath.Join(c.Path, collection.SchemaFilename), []string{"means agents"}}, "Initialized collection at "+c.Path+"\nNext: run means agents to add workflow guidance and agent discovery.\n")
 		},
 	}
 	cmd.Flags().StringVar(&schemaSource, "schema", "", "Read JSON Schema from FILE, or - for stdin (default: example schema)")
