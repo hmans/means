@@ -83,7 +83,7 @@ func collectionStartupInstructions(info *collection.Description) string {
 
 // New validates the selected collection and builds a server bound to its path.
 // Each call reloads the collection so external schema edits take effect immediately.
-func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
+func New(path, version string) (*mcp.Server, error) {
 	c, err := collection.Load(path)
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func New(path, version string, structuredOnly bool) (*mcp.Server, error) {
 		},
 	} {
 		tool.description = collectionPurpose(info) + "\n\n" + tool.description
-		if err := addTool(server, path, tool, structuredOnly); err != nil {
+		if err := addTool(server, path, tool); err != nil {
 			return nil, err
 		}
 	}
@@ -228,7 +228,7 @@ type toolDefinition struct {
 	runPath                   func(string, map[string]any) (any, error) // Operations that need no valid current schema.
 }
 
-func addTool(server *mcp.Server, path string, tool toolDefinition, structuredOnly bool) error {
+func addTool(server *mcp.Server, path string, tool toolDefinition) error {
 	schema, err := jsonschema.UnmarshalJSON(bytes.NewBufferString(tool.schema))
 	if err != nil {
 		return err
@@ -283,14 +283,13 @@ func addTool(server *mcp.Server, path string, tool toolDefinition, structuredOnl
 				*collection.SchemaSetResult
 			}{err.Error(), output.(*collection.SchemaSetResult)}
 		}
-		// Keep JSON text for clients that do not consume structuredContent.
-		// Encode it compactly once to avoid duplicating pretty-print whitespace.
+		// Preserve exact JSON numbers in the structured wire response.
 		encoded, err := json.Marshal(output)
 		if err != nil {
 			return toolError(err), nil
 		}
 		result := &mcp.CallToolResult{IsError: rejected, StructuredContent: json.RawMessage(encoded), Content: []mcp.Content{}}
-		if !structuredOnly || rejected {
+		if rejected {
 			result.Content = []mcp.Content{&mcp.TextContent{Text: string(encoded)}}
 		}
 		return result, nil

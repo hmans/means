@@ -62,7 +62,8 @@ following its [workflow](issues/MEANS.md).
   for pipes and NO_COLOR; keep JSON and MCP responses independent of rendering.
 - MCP uses the official Go SDK and calls the collection package directly. Bind
   each server to one collection, reload its schema per call, and preserve JSON
-  number precision. Keep stdout exclusively for MCP messages; --json affects
+  number precision. Successful MCP results always use structuredContent without
+  text copies; errors retain explanations. Keep stdout exclusively for MCP messages; --json affects
   help and startup errors, not protocol framing. Use schema title/description for
   collection identity and optional MEANS.md for collection workflows.
   Root MEANS.md is reserved configuration, excluded from document lists/reads.

@@ -27,7 +27,7 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 					t.Fatal(err)
 				}
 				writeFile(t, filepath.Join(path, collection.InstructionsFilename), "Workflow for "+title)
-				server, err := New(path, "test", false)
+				server, err := New(path, "test")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -111,8 +111,15 @@ func callTool(t *testing.T, ctx context.Context, session *mcp.ClientSession, nam
 	if err != nil || result.IsError {
 		t.Fatalf("%s: %+v %v", name, result, err)
 	}
+	if len(result.Content) != 0 {
+		t.Fatal("unexpected text content")
+	}
+	encoded, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var value map[string]any
-	if err := json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &value); err != nil {
+	if err := json.Unmarshal(encoded, &value); err != nil {
 		t.Fatal(err)
 	}
 	return value

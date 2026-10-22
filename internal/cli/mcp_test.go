@@ -68,18 +68,14 @@ func TestMCPToolsOverStdio(t *testing.T) {
 					}
 					return nil
 				}
-				if result.StructuredContent == nil || len(result.Content) != 1 {
-					t.Fatalf("missing structured/text output: %+v", result)
+				if result.StructuredContent == nil || len(result.Content) != 0 {
+					t.Fatalf("expected structured-only output: %+v", result)
 				}
-				text, ok := result.Content[0].(*mcp.TextContent)
-				if !ok {
-					t.Fatalf("unexpected content: %T", result.Content[0])
+				encoded, err := json.Marshal(result.StructuredContent)
+				if err != nil {
+					t.Fatal(err)
 				}
-				var compact bytes.Buffer
-				if err := json.Compact(&compact, []byte(text.Text)); err != nil || compact.String() != text.Text {
-					t.Fatalf("text is not compact JSON: %+v", result)
-				}
-				value, err := jsonschema.UnmarshalJSON(strings.NewReader(text.Text))
+				value, err := jsonschema.UnmarshalJSON(bytes.NewReader(encoded))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -118,8 +114,19 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			}
 			read := call("read", `{"id":"`+id+`"}`, false)
 			metadata := read["frontmatter"].(map[string]any)["data"].(map[string]any)
-			if metadata["count"] != json.Number("9007199254740993") || metadata["ratio"] != json.Number("0.1234567890123456789") || read["body"] != "## Notes\n\nExact body.\n" {
+			// The SDK decodes structured numbers through float64. Compare its
+			// round trip here; verify exact values in storage and on the wire.
+			createdMetadata := created["frontmatter"].(map[string]any)["data"].(map[string]any)
+			if metadata["count"] != createdMetadata["count"] || metadata["ratio"] != createdMetadata["ratio"] || read["body"] != "## Notes\n\nExact body.\n" {
 				t.Fatalf("round-trip lost content: %v", read)
+			}
+			stored, err := c.Read(id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			storedData := stored.Frontmatter["data"].(map[string]any)
+			if storedData["count"] != json.Number("9007199254740993") || storedData["ratio"] != json.Number("0.1234567890123456789") {
+				t.Fatal("stored numbers lost precision")
 			}
 			hash := read["hash"].(string)
 			if hash != created["hash"] || len(hash) != 64 {
@@ -350,7 +357,7 @@ func TestMCPStartupAndHelp(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &help); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(help["description"], "info") || !strings.Contains(help["description"], "--json omits") ||
+	if !strings.Contains(help["description"], "info") || !strings.Contains(help["description"], "--json only") ||
 		!strings.Contains(help["description"], "framing") || strings.Contains(help["usage"], "--structured-only") {
 		t.Fatalf("incomplete MCP help: %v", help)
 	}

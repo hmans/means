@@ -92,21 +92,20 @@ Restart the server/client to refresh advertised tool descriptions and connection
 instructions after editing these files. AGENTS.md is not loaded by the server.
 
 Output is always MCP JSON-RPC, one compact message per line on stdout. Successful
-tool results include structuredContent and a compact JSON text equivalent by
-default. --json omits the text copy for clients that consume structuredContent.
-Use it when every client of this registration supports structured results.
+tool results always use structuredContent without a redundant text copy.
+Clients must consume structured results. --json only formats CLI help and startup
+errors; it does not change protocol results.
 Tool errors still include explanatory text.
 Tool failures use MCP isError results; the server stays available for later calls.
 Startup failures and diagnostics go to stderr. --json also formats CLI help and
 startup errors; it never changes MCP message framing.`,
 		Example: `  means mcp --path ./issues
-  means mcp --path ./issues --json
   # Register separately to give the same agent another collection
   means mcp --path ./decisions
   means mcp --help --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			server, err := mcpserver.New(opts.path, version, opts.json)
+			server, err := mcpserver.New(opts.path, version)
 			if err != nil {
 				return err
 			}

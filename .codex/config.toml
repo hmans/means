@@ -1,6 +1,6 @@
 # Resolve the server's working directory relative to this .codex directory.
 [mcp_servers.issues]
 command = "mise"
-args = ["--quiet", "run", "--raw", "means", "--", "mcp", "--path", "./issues", "--json"]
+args = ["--quiet", "run", "--raw", "means", "--", "mcp", "--path", "./issues"]
 cwd = ".."
 startup_timeout_sec = 60

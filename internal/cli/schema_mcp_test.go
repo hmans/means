@@ -15,8 +15,8 @@ import (
 
 func TestMCPSchemaSet(t *testing.T) {
 	for _, protocol := range []string{"2025-11-25", "2026-07-28"} {
-		for _, structuredOnly := range []bool{false, true} {
-			t.Run(protocol+map[bool]string{true: "/structured", false: "/text"}[structuredOnly], func(t *testing.T) {
+		for _, jsonFlag := range []bool{false, true} {
+			t.Run(protocol+map[bool]string{true: "/json-flag", false: "/default"}[jsonFlag], func(t *testing.T) {
 				c, err := collection.Init(t.TempDir(), nil)
 				if err != nil {
 					t.Fatal(err)
@@ -28,7 +28,7 @@ func TestMCPSchemaSet(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 				defer cancel()
 				var flags []string
-				if structuredOnly {
+				if jsonFlag {
 					flags = []string{"--json"}
 				}
 				session := connectMCP(t, ctx, c.Path, protocol, flags...)
@@ -41,7 +41,7 @@ func TestMCPSchemaSet(t *testing.T) {
 					if wantError && len(r.Content) == 0 {
 						t.Fatal("error missing text")
 					}
-					if !wantError && (len(r.Content) == 0) != structuredOnly {
+					if !wantError && len(r.Content) != 0 {
 						t.Fatalf("wrong content mode: %+v", r)
 					}
 					return r

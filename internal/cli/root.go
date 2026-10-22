@@ -72,8 +72,8 @@ Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
 Means works with that exact directory and does not search parent directories.
 --json returns two-space-indented JSON, including help and errors.
-The mcp command always uses MCP message framing on stdout; --json omits redundant
-text copies from successful MCP results for clients that read structuredContent.
+The mcp command always uses MCP message framing and structured JSON tool results;
+--json only affects its CLI help and startup errors.
 Successful responses go to stdout (exit 0); errors go to stderr (exit 1) as
 {"error":"..."} in JSON mode. Doctor reports invalid documents on stdout and
 exits 1. Parse the entire JSON response, not individual lines.
@@ -101,7 +101,7 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		},
 	}
 	root.PersistentFlags().StringVar(&opts.path, "path", ".", "Directory to work with (defaults to the current working directory)")
-	root.PersistentFlags().BoolVar(&opts.json, "json", false, "Return CLI responses as JSON; for MCP omit duplicate text content")
+	root.PersistentFlags().BoolVar(&opts.json, "json", false, "Return CLI responses, help, and errors as JSON")
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		opts.helpErr = opts.writeHelp(cmd)
 	})

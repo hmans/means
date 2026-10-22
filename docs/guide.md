@@ -79,7 +79,7 @@ collection metadata. MCP provides the same operation through `schema_set`:
 Pass a schema object or boolean, not a JSON string. `force` defaults to false.
 Rejected compatibility checks return a tool error with structured diagnostics;
 forced installations return success with those diagnostics. Error responses
-retain explanatory text even in structured-only mode. Schema numbers retain
+retain explanatory text. Schema numbers retain
 their precision, but JSON formatting is regenerated. A running server can repair
 an externally invalidated schema; starting a server still requires a valid schema.
 
@@ -310,12 +310,12 @@ the schema. Restart the server after changing collection title, description, or
 workflow to refresh advertised discovery metadata.
 
 MCP messages use protocol JSON framing regardless of `--json`. Successful tool
-results include structured content and, by default, a compact JSON text copy
-for clients that only read text. `means mcp --json` omits that text copy for
-clients that read structured content; tool errors still contain explanatory
-text. The flag also formats CLI help and startup errors. This repository's
+results always use `structuredContent` without a redundant text copy; clients
+must consume structured results. Tool errors still contain explanatory text.
+`--json` only formats CLI help and startup errors; it does not change MCP results.
+This repository's
 [MCP registration](../.codex/config.toml) serves its
-[issues collection](../issues/) by running `mise run --raw means -- mcp --path ./issues --json`
+[issues collection](../issues/) by running `mise run --raw means -- mcp --path ./issues`
 from the repository root. The MCP registration sets the working directory and
 arguments directly; no collection-specific mise task is needed. Raw mode keeps
 stdio connected to the MCP client. Each server startup runs the current source;
