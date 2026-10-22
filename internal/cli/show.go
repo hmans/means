@@ -13,7 +13,8 @@ func newShowCommand(opts *options) *cobra.Command {
 
 Print the title, ID, and Markdown-rendered body using terminal styling.
 Application metadata and the content hash are available with --json. Output wraps
-to the terminal width, or 80 columns when piped. Pipes and NO_COLOR disable styling.
+to at most 80 columns, shrinking to fit narrower terminals. Pipes and NO_COLOR
+disable styling. Bullet markers have a separate accent color.
 Use read for the exact stored Markdown, including YAML frontmatter.
 
 --json returns {"id":"...","hash":"...","frontmatter":{...},"body":"..."},

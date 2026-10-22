@@ -123,3 +123,28 @@ func TestTableWrappingAndEmptyOutput(t *testing.T) {
 		t.Fatal("escape codes in plain output")
 	}
 }
+
+func TestShowProseWrapAndBulletColor(t *testing.T) {
+	doc := &collection.Document{
+		ID: "wrap1", Frontmatter: map[string]any{"title": "A long document"},
+		Body: strings.Repeat("Words in a paragraph. ", 20) + "\n\n- " + strings.Repeat("Words in a bullet. ", 20) + "\n  - Nested item\n",
+	}
+	for _, width := range []int{24, 40, 80, 160} {
+		text, err := renderDocumentWidth(width, doc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range strings.Split(text, "\n") {
+			if ansi.StringWidth(line) > min(width, 80) {
+				t.Fatalf("width %d overflow: %q", width, line)
+			}
+		}
+		if !strings.Contains(text, "\x1b[38;5;37m• ") {
+			t.Fatalf("bullet has no accent: %q", text)
+		}
+		plain := ansi.Strip(text)
+		if strings.Count(plain, "Words") != 40 || !strings.Contains(plain, "Nested item") {
+			t.Fatal("wrapping lost content")
+		}
+	}
+}

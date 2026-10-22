@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/styles"
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/table"
 	"github.com/charmbracelet/colorprofile"
@@ -85,7 +86,19 @@ func documentTable(w io.Writer, rows [][]string, diagnostics []collection.Diagno
 }
 
 func renderDocument(w io.Writer, doc *collection.Document) (string, error) {
-	renderer, err := glamour.NewTermRenderer(glamour.WithStandardStyle("dark"), glamour.WithWordWrap(max(20, terminalWidth(w)-4)))
+	return renderDocumentWidth(terminalWidth(w), doc)
+}
+
+func renderDocumentWidth(width int, doc *collection.Document) (string, error) {
+	width = max(1, min(80, width))
+	theme := styles.DarkStyleConfig
+	// BlockPrefix inherits the paragraph color. Prefix uses the item's own
+	// style, so the bullet can be colored without coloring the whole list.
+	accent := "37"
+	theme.Item.BlockPrefix = ""
+	theme.Item.Prefix = "• "
+	theme.Item.Color = &accent
+	renderer, err := glamour.NewTermRenderer(glamour.WithStyles(theme), glamour.WithWordWrap(width))
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +106,7 @@ func renderDocument(w io.Writer, doc *collection.Document) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99")).Width(terminalWidth(w)).Render(terminalCell(doc.Frontmatter["title"].(string)))
+	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99")).Width(width).Render(terminalCell(doc.Frontmatter["title"].(string)))
 	id := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(doc.ID)
 	return title + "\n" + id + "\n" + body, nil
 }

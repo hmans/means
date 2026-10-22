@@ -171,7 +171,8 @@ Markdown body. Empty bodies appear as `"body": ""`; diagnostic entries have no
 body. The flag requires `--json` and does not add hashes or change limits or order.
 
 `show <id>` prints the title, ID, and Markdown-rendered body, including styled
-headings, lists, and code blocks. `show --json` returns the same document and
+headings, accented bullet markers, and code blocks. Prose wraps to at most 80
+columns, shrinking to fit narrower terminals. `show --json` returns the same document and
 content hash as `read --json`. Use `read` without `--json` for the exact source,
 including YAML frontmatter. Neither command enforces the current application data
 schema, so documents remain readable after schema changes.
