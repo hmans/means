@@ -300,7 +300,11 @@ for clients that only read text. `means mcp --json` omits that text copy for
 clients that read structured content; tool errors still contain explanatory
 text. The flag also formats CLI help and startup errors. This repository's
 [MCP registration](../.codex/config.toml) serves its
-[issues collection](../issues/) through the `issues-mcp` mise task.
+[issues collection](../issues/) by running `mise run --raw means -- mcp --path ./issues --json`
+from the repository root. The MCP registration sets the working directory and
+arguments directly; no collection-specific mise task is needed. Raw mode keeps
+stdio connected to the MCP client. Each server startup runs the current source;
+restart the server to pick up code changes.
 
 ## Migrating earlier collections
 
