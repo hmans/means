@@ -18,7 +18,11 @@ following its [workflow](issues/MEANS.md).
   2020-12 by default). `init` creates the directory with an example schema or a
   consumer-authored schema from `--schema FILE` / `--schema -` (stdin). Validate
   supplied schemas before creating files; never overwrite an existing schema.
-  Consumers edit schemas directly. Schemas are currently self-contained.
+  Consumers use schema set or edit schemas directly. Schema set compiles the
+  proposal and checks existing documents before replacing the schema. --force
+  permits document diagnostics but never invalid schemas or filesystem failures.
+  It does not migrate documents or prove compatibility for future data. Schemas
+  are currently self-contained.
   Documents use YAML frontmatter and free-form Markdown bodies. The schema
   validates only frontmatter.data; schema title/description still describe the collection.
 - Means owns the top-level frontmatter fields: id (generated, immutable), title

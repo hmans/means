@@ -70,7 +70,7 @@ func TestInitPaths(t *testing.T) {
 func TestCollectionCommandErrors(t *testing.T) {
 	t.Chdir(t.TempDir())
 	for _, args := range [][]string{
-		{"schema", "--json"},
+		{"schema", "set", "--json"},
 		{"init", "--schema", "missing.json", "--json"},
 		{"init", "--schema=", "--json"},
 		{"init", "unexpected", "--json"},

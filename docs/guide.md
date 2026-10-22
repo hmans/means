@@ -21,7 +21,8 @@ mise means init --path ./memory --schema - --json < ./memory.schema.json
 
 The starter schema accepts optional `tags` and rejects other application fields.
 `init` validates a supplied schema before creating files and never overwrites an
-existing `means.schema.json`. Edit the file directly to evolve a collection. Means
+existing `means.schema.json`. Use `schema set` to validate a replacement, or edit
+the file directly to evolve a collection. Means
 loads the selected directory exactly; it does not search parent directories.
 Schema edits take effect on the next command or MCP call. Run `doctor` after a
 schema change to find existing documents that need attention.
@@ -29,6 +30,45 @@ schema change to find existing documents that need attention.
 An optional root `MEANS.md` provides collection workflow guidance to MCP
 clients. It is configuration, not a document, and is excluded from lists and
 reads. The server does not load `AGENTS.md`.
+
+### Changing the schema
+
+Use `schema set` to check a proposed schema against existing documents before
+installing it:
+
+```sh
+mise means schema set --path ./memory --input new-schema.json --json
+mise means schema set --path ./memory --input - --force --json < new-schema.json
+mise means doctor --path ./memory --json
+```
+
+Input is the JSON Schema itself. Means parses and compiles it with the same
+rules as `init`; invalid or unsupported schemas always fail. The command requires
+an existing regular `means.schema.json` file, but can replace an invalid schema.
+It checks visible documents against the proposal, excluding nested collections.
+This tests existing data, not abstract compatibility with the old schema or
+future callers. A stricter schema can pass on an empty collection.
+
+By default, data violations, malformed envelopes, and duplicate IDs prevent
+installation. The command exits 1 and reports IDs, paths, and errors on stderr;
+the schema stays unchanged. `--force` allows these document diagnostics and
+installs the schema, returning exit 0 with the diagnostics on stdout. It never
+bypasses schema validation or filesystem errors. JSON results include `installed`,
+`healthy`, `checked`, and `diagnostics`; rejected compatibility checks also have
+an `error` field. Other errors use the usual `{"error":"..."}` format.
+
+Only the schema changes. Its supplied bytes and existing permission bits are
+preserved through a same-directory temporary replacement. There are no locks:
+concurrent document edits can invalidate the check, and schema edits can race
+replacement. Observed schema changes abort installation.
+
+After a forced change, the agent or user migrates documents: read each affected
+ID, patch its data using the returned hash, and run `doctor` again. Reads and
+searches remain available for schema-invalid data; each update must leave the
+whole document valid. For staged migrations, first accept both old and new
+forms, migrate documents, then tighten the schema. Means does not rewrite data
+automatically. MCP calls load the new schema; restart MCP to refresh advertised
+collection metadata. Schema installation is currently a CLI operation.
 
 ### Subdirectories and collection boundaries
 

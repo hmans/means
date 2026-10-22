@@ -30,7 +30,7 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer, version s
 	command, err := root.ExecuteC()
 	err = errors.Join(err, opts.helpErr)
 	if err != nil {
-		if errors.Is(err, ErrUnhealthy) {
+		if errors.Is(err, ErrUnhealthy) || errors.Is(err, ErrSchemaRejected) {
 			return err
 		}
 		// Flag parsing can stop before reaching --json. Re-read command flags
@@ -63,6 +63,7 @@ discover IDs and metadata, and "means read <id>" to retrieve a document.
 Use "means mcp --help" to expose a collection to an MCP client over stdio.
 Use "means update --help" to patch a document using the hash from read --json.
 Use "means delete --help" to permanently remove a document using its content hash.
+Use "means schema set --help" to validate and install a replacement schema.
 Use "means doctor" to check all documents
 against the current schema, or "means search" to find documents by text/data.
 
@@ -118,7 +119,7 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			return opts.writeHelp(target)
 		},
 	})
-	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts),
+	root.AddCommand(newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts),
 		newCreateCommand(opts), newReadCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

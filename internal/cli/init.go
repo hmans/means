@@ -55,9 +55,9 @@ Responses:
   With --json: {"error":"..."}; schema errors identify the invalid constraint.
   JSON responses use two-space indentation and end with a newline.
 
-After initialization, read or edit means.schema.json directly. Initialization is not
-a schema update command. Use create to store documents, list to discover IDs,
-and read to retrieve them; see each command's --help. Doctor is not implemented yet.
+After initialization, use "means schema set --help" to validate and replace the
+schema, or edit means.schema.json directly. Use create to store documents, list
+to discover IDs, read to retrieve them, and doctor to check their current validity.
 Schemas describe application data nested in YAML frontmatter; the body is free-form.
 Optionally author MEANS.md beside means.schema.json for MCP workflow guidance;
 init does not create it. See "means mcp --help" for collection identity and instructions.`,
