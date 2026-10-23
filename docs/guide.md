@@ -194,14 +194,20 @@ query terms must occur, in any order, across the title and body. Title matches
 receive a boost; equal scores sort by stored ID. Queries use lowercase Unicode
 tokens with no stemming, stop-word removal, or query-language operators.
 For example, `search "deployment timeout"` finds "timeout during deployment".
-A query with no tokens matches nothing.
+A nonempty query with no tokens matches nothing. An omitted query or empty string
+uses data-only search; without filters, all valid documents are eligible.
 
 Use `search "deployment timeout" --literal` for the original case-insensitive
 substring search. Literal searches and searches with no query use filename order.
 Repeated `--filter KEY=VALUE` flags combine with AND and apply before the result
 limit. JSON numbers retain their precision, objects match recursively, and arrays
-must match in full. Search JSON returns metadata and excerpts; bodies require
-`--with-body`, and hashes are omitted.
+must match in full. Search JSON returns `documents`, `diagnostics`, and `has_more`.
+Each document has `id` and `frontmatter`; text matches also have a `match` object
+with `field` (`title` or `body`) and `excerpt`. Data-only results omit `match`.
+Bodies require `--with-body`, and hashes are omitted. The default limit is 20;
+0 returns all matches, and negative limits fail. No matches returns an empty
+`documents` array. Search exits 0 even with diagnostics; invalid arguments or
+collection-level failures exit 1 with an error on stderr.
 Full-text excerpts prefer the title or body passage containing the most distinct
 query terms. Repeated copies of one term do not outweigh several different terms.
 Ties prefer the title, then the earliest passage. Passages contain at most 180
@@ -277,8 +283,15 @@ write racing the final replacement.
 
 `mise means doctor --path ./memory --json` checks every visible document against
 the current schema without changing files. It reports malformed frontmatter,
-invalid means fields, duplicate IDs, and application schema violations. Healthy
-collections exit 0; an unhealthy report goes to stdout and exits 1.
+invalid means fields, duplicate IDs, and application schema violations. It takes
+no positional arguments or structured input and has no result limit. JSON reports
+contain `healthy`, `checked`, and `diagnostics`. `checked` counts inspected files,
+including malformed files and duplicate occurrences. Each diagnostic has `id`
+(empty when unreadable), a collection-relative `path`, and `error`; a file can
+have multiple diagnostics. Text reports show the count and affected paths.
+Healthy collections exit 0; an unhealthy report goes to stdout and exits 1 with
+no stderr response. Collection-level failures, such as an invalid schema, exit 1
+with an error on stderr instead of a report.
 
 CLI success goes to stdout; errors go to stderr. With `--json`, ordinary commands
 return structured responses and errors such as `{"error":"..."}`. `--path`

@@ -80,7 +80,9 @@ The mcp command always uses MCP message framing and structured JSON tool results
 --json only affects its CLI help and startup errors.
 Successful responses go to stdout (exit 0); errors go to stderr (exit 1) as
 {"error":"..."} in JSON mode. Doctor reports invalid documents on stdout and
-exits 1. Parse the entire JSON response, not individual lines.
+exits 1. Schema set rejects incompatible documents with a diagnostic report on
+stderr (exit 1), including an error field in JSON mode; see "means schema set --help".
+Parse the entire JSON response, not individual lines.
 Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 		Args:             cobra.NoArgs,
 		SilenceUsage:     true,
