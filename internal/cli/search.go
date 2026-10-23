@@ -43,8 +43,8 @@ contains JSON quotes or spaces. Nested objects match recursively by supplied
 keys; arrays must match in full. A missing field never matches, even for null.
 Duplicate filter keys are rejected.
 
---limit defaults to 20 matching documents; 0 returns all; negative values fail. has_more reports
-whether further matches exist. Malformed documents and duplicate IDs are
+--limit defaults to 20 matching documents; 0 returns all; negative values fail.
+has_more reports whether further matches exist. Malformed documents and duplicate IDs are
 omitted from matches and reported separately in diagnostics, regardless of
 query or result limit. Each diagnostic has an ID when readable, relative path,
 and error. Application data that fails the current schema remains searchable.
@@ -53,8 +53,9 @@ Subdirectories containing means.schema.json are separate collections and are ski
 even if their schema is invalid.
 
 --json returns {"documents":[...],"diagnostics":[],"has_more":false}.
-Each document has id and frontmatter. Text matches also have
-match: {"field":"title or body","excerpt":"..."}; data-only results omit match.
+Each document has id and frontmatter. Text matches also have a match object,
+for example {"field":"title","excerpt":"..."}. field is "title" or "body";
+data-only results omit match.
 No matches returns an empty documents array and exits 0; inspect diagnostics too.
 Text output is a colored ID/title table, followed by diagnostics and limit notices.
 Pipes and NO_COLOR disable styling. Metadata and excerpts are available with --json.
