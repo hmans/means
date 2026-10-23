@@ -26,8 +26,13 @@ MEANS.md. It only reads files; it never repairs or rewrites them.
 Subdirectories containing means.schema.json are separate collections and are skipped,
 even if their schema is invalid. Run doctor with their --path to inspect them.
 
---json writes {"healthy":true,"checked":0,"diagnostics":[]} on an empty or
-healthy collection. Each diagnostic has id, relative path, and an actionable
+Doctor accepts no positional arguments or structured input; it checks all documents
+without a result limit.
+
+--json writes {"healthy":true,"checked":0,"diagnostics":[]} on an empty collection.
+checked counts all inspected document files, including malformed and duplicate
+files, not the number of diagnostics. healthy is true when diagnostics is empty.
+Each diagnostic has id, relative path, and an actionable
 error. id is empty if the file has no readable ID. A file can have multiple
 diagnostics. Text output shows the checked count and each affected path.
 
