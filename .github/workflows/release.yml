@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install Sweet Release
+        run: go install github.com/chattocorp/sweet-release/apps/sweet/cmd/sweet@v0.2.0
+      - name: Validate release and extract notes
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          version=$(sweet status --json | jq -er '.[] | select(.path == ".") | select((.problems | length) == 0) | .version')
+          test "$TAG" = "v$version"
+          test "$version" != "0.0.0"
+          sweet changelog . --version "$version" > "$RUNNER_TEMP/release-notes.md"
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.18.2
+          args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

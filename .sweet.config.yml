@@ -1,0 +1,15 @@
+repository: https://github.com/hmans/means
+types:
+  fix:
+    bump: patch
+    section: Fixes
+  feature:
+    bump: minor
+    section: Features
+  performance:
+    bump: patch
+    section: Performance
+  chore:
+    bump: none
+  refactor:
+    bump: none

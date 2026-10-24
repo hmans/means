@@ -93,6 +93,9 @@ following its [workflow](issues/MEANS.md).
 - Use the Go toolchain configured in `mise.toml`.
 - Keep changes small and focused on the current milestone. Avoid building
   speculative abstractions or infrastructure for future features.
+- Record user-visible changes with `mise sweet change .` and commit the generated
+  `.sweet/` note with the code. See [docs/releases.md](docs/releases.md) for release
+  policies and the tagging and publishing workflow.
 - Keep document operations independent of CLI presentation so other interfaces
   can reuse the same behavior.
 - Once Go code exists, format it with `gofmt` and run relevant tests using
