@@ -7,3 +7,5 @@
 .means-*.tmp
 
 .vscode/settings.json
+
+.env
