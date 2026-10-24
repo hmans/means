@@ -52,7 +52,7 @@ func TestNestedCollectionBoundary(t *testing.T) {
 	}
 	defer root.Close()
 	// A child ID does not prevent allocation in the parent collection.
-	doc, err := createCandidate(root, "same1", map[string]any{"title": "Parent", "data": map[string]any{}}, "Parent body")
+	doc, err := createCandidate(root, "same1", map[string]any{"title": "Parent", "data": map[string]any{}}, "Parent body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

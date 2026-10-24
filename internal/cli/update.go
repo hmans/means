@@ -50,8 +50,11 @@ Effects:
   the original bytes and hash. File permission bits are preserved.
   Updates recheck the hash before replacement and write a same-directory temporary
   file, then rename it over the original (atomic on supported filesystems).
-  There are no locks: a simultaneous write between the final check and rename
-  can still be overwritten.
+  Opted-in embedding operations share a cache lock; external editors do not.
+  A simultaneous external write between the final check and rename can still
+  be overwritten. With embeddings disabled, updates do not take locks.
+  When enabled, cache the title/body vector before replacement; API/cache errors
+  leave the document unchanged. Unchanged input reuses its vector; see embed --help.
 
 Output:
   Text: the ID followed by a newline.
@@ -90,7 +93,7 @@ JSON`,
 			if err != nil {
 				return err
 			}
-			doc, err := c.Update(args[0], hash, patch)
+			doc, err := c.WithEmbeddingProgress(opts.embeddingProgress(cmd)).Update(args[0], hash, patch)
 			if err != nil {
 				return err
 			}

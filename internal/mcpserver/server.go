@@ -21,6 +21,19 @@ string). Creation takes title and optional data (default {}); do not supply id.
 List or search documents to find IDs, then read by ID for full bodies. Search
 matches all query tokens in any order across title/body, ranks with a title boost,
 and filters frontmatter.data by value. Set literal:true for substring matching.
+With embeddings configured in MEANS.md, create/update/delete maintain local
+title/body embeddings automatically. API/cache errors prevent document mutations.
+Set semantic:true on search for cosine ranking of stored document vectors; this
+sends only the query to the configured embedding endpoint. Search never changes
+document vectors and skips missing or stale vectors; use the CLI command
+means embed to refresh them. It
+requires a nonempty query and cannot combine with literal:true. Semantic hits
+have score instead of match; min_score defaults to 0.3 (inclusive, before limit).
+Override min_score from -1 to 1; -1 includes all scores. It requires semantic:true.
+Embedding refresh is CLI-only, via means embed (optionally --force).
+Embeddings use a separate
+.means/embeddings.jsonl cache and lock. No watcher is used. API calls may incur
+charges. Keys and endpoint overrides come from the server process environment.
 Full-text search refreshes a disposable .means/search/ index on each call, reads
 and hashes all visible documents, and closes the index before returning. There
 is no watcher. Concurrent searches wait up to five seconds for a cache lock.
@@ -84,6 +97,12 @@ func collectionStartupInstructions(info *collection.Description) string {
 // New validates the selected collection and builds a server bound to its path.
 // Each call reloads the collection so external schema edits take effect immediately.
 func New(path, version string) (*mcp.Server, error) {
+	return NewWithEmbeddingProgress(path, version, nil)
+}
+
+// NewWithEmbeddingProgress reports embedding work through progress. Concurrent
+// calls may invoke progress concurrently; callers must serialize their output.
+func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp.Server, error) {
 	c, err := collection.Load(path)
 	if err != nil {
 		return nil, err
@@ -119,6 +138,7 @@ func New(path, version string) (*mcp.Server, error) {
 				current := c.Describe()
 				return map[string]any{"path": c.Path, "schema": c.Schema,
 					"title": current.Title, "description": current.Description,
+					"embeddings":   c.Embeddings(),
 					"instructions": collectionInstructions(current)}, nil
 			},
 		},
@@ -138,8 +158,9 @@ func New(path, version string) (*mcp.Server, error) {
 		{
 			name:        "search",
 			description: "Find documents by ranked full text and/or a partial data filter. All lowercase Unicode query tokens must match across title/body; no stemming, stop-word removal, or query syntax. Title matches are boosted; score ties sort by ID. literal:true uses case-insensitive substring matching in filename order. No query uses filename order. Full-text queries refresh .means/search/ from file hashes, then close it; no daemon. Returns IDs, frontmatter, excerpts, and diagnostics, without bodies or hashes. Filters apply before limit (default 20, 0 for all).",
-			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Optional text query; all terms must match, in any order."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
+			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Text query. Full text requires all terms; semantic search ranks similarity."},"min_score":{"type":"number","minimum":-1,"maximum":1,"default":0.3,"description":"Inclusive cosine similarity threshold, applied before limit. Requires semantic:true. Use -1 for all scores."},"semantic":{"type":"boolean","default":false,"description":"Opt-in semantic search: embed only the query, rank stored document vectors, return cosine scores instead of excerpts. Never changes document vectors; skips missing or stale vectors (refresh with CLI means embed). Requires a nonempty query and API credentials; cannot combine with literal. May incur charges."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
+			openWorld:   true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				limit, err := limitArg(args)
 				if err != nil {
@@ -148,7 +169,16 @@ func New(path, version string) (*mcp.Server, error) {
 				query, _ := args["query"].(string)
 				filter, _ := args["filter"].(map[string]any)
 				literal, _ := args["literal"].(bool)
-				return c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal})
+				semantic, _ := args["semantic"].(bool)
+				var minScore *float64
+				if value, exists := args["min_score"]; exists {
+					n, err := value.(json.Number).Float64()
+					if err != nil {
+						return nil, fmt.Errorf("min_score must be a finite number from -1 to 1")
+					}
+					minScore = &n
+				}
+				return c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
 			},
 		},
 		{
@@ -162,6 +192,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "create",
+			openWorld:   true,
 			description: "Create a document with a required title, optional application data, and optional Markdown body. Call info for the data schema. Means generates the ID. Each successful call creates another document.",
 			schema:      `{"type":"object","properties":{"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Application fields validated against the schema returned by info. Omit for {}."}},"required":["title"],"additionalProperties":false},"body":{"type":"string","description":"Markdown body, preserved exactly; defaults to empty."}},"required":["frontmatter"],"additionalProperties":false}`,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -171,6 +202,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 		{
 			name:        "update",
+			openWorld:   true,
 			description: "Patch title/data or replace the body using the hash from read. Omit unchanged fields; null deletes nested data keys. The ID cannot change. A stale hash fails; read again before retrying.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."},"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Merge patch for application data. Null values delete nested keys; arrays replace."}},"additionalProperties":false},"body":{"type":"string","description":"Replacement Markdown body; omit to retain."}},"required":["id","hash"],"minProperties":3,"additionalProperties":false}`,
 			destructive: true,
@@ -195,7 +227,7 @@ func New(path, version string) (*mcp.Server, error) {
 		},
 	} {
 		tool.description = collectionPurpose(info) + "\n\n" + tool.description
-		if err := addTool(server, path, tool); err != nil {
+		if err := addTool(server, path, tool, progress); err != nil {
 			return nil, err
 		}
 	}
@@ -220,12 +252,13 @@ func limitArg(args map[string]any) (int, error) {
 type toolDefinition struct {
 	name, description, schema string
 	readOnly                  bool
+	openWorld                 bool
 	destructive               bool
 	run                       func(*collection.Collection, map[string]any) (any, error)
 	runPath                   func(string, json.RawMessage) (any, error) // Operations that need no valid current schema.
 }
 
-func addTool(server *mcp.Server, path string, tool toolDefinition) error {
+func addTool(server *mcp.Server, path string, tool toolDefinition, progress func(string)) error {
 	schema, err := jsonschema.UnmarshalJSON(bytes.NewBufferString(tool.schema))
 	if err != nil {
 		return err
@@ -238,11 +271,10 @@ func addTool(server *mcp.Server, path string, tool toolDefinition) error {
 	if err != nil {
 		return err
 	}
-	no := false
 	server.AddTool(&mcp.Tool{
 		Name: tool.name, Description: tool.description, InputSchema: schema,
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: tool.readOnly,
-			DestructiveHint: &tool.destructive, OpenWorldHint: &no},
+			DestructiveHint: &tool.destructive, OpenWorldHint: &tool.openWorld},
 	}, func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Decode and validate ourselves: generic SDK handlers decode arbitrary
 		// metadata through float64, which can lose large integers and decimals.
@@ -267,7 +299,7 @@ func addTool(server *mcp.Server, path string, tool toolDefinition) error {
 			var c *collection.Collection
 			c, err = collection.Load(path)
 			if err == nil {
-				output, err = tool.run(c, value.(map[string]any))
+				output, err = tool.run(c.WithContext(ctx).WithEmbeddingProgress(progress), value.(map[string]any))
 			}
 		}
 		rejected := errors.Is(err, collection.ErrSchemaIncompatible)

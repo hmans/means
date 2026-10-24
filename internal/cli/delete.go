@@ -29,12 +29,15 @@ malformed document envelopes, and stale or invalid hashes fail without deletion.
 Existing application data need not match the current schema, but the selected
 collection must have a valid MEANS.md.
 
-Only the matched document file is removed. Directories, collection configuration,
+The matched document file and its optional cached embedding are removed. Directories, collection configuration,
 and unrelated files remain. There is no trash, undo, force option, or confirmation
 prompt. A repeated deletion fails because the document is missing. Use a data
 field such as status for archival instead of deletion when retention is needed.
-There are no locks: a concurrent write between the hash check and removal can
-still be deleted. On conflict, read again and review before retrying.
+Opted-in embedding operations share a cache lock; external editors do not.
+A concurrent write from an external editor between the hash check and removal can still be
+deleted. With embeddings disabled, deletion takes no lock. On conflict, read
+again and review before retrying. Embedding cache failures prevent deletion;
+removing an embedding needs no API call. See means embed --help.
 
 Success exits 0. Text output is the deleted ID followed by a newline.
 --json returns {"id":"..."}. Errors exit 1 and go to stderr, formatted as

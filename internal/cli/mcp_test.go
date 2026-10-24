@@ -37,6 +37,9 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			}
 			foundSearch := false
 			for _, tool := range tools.Tools {
+				if tool.Name == "embed" {
+					t.Fatal("embed must remain CLI-only")
+				}
 				if tool.Name == "search" {
 					foundSearch = true
 				}

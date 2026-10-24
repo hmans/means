@@ -15,7 +15,7 @@ means is in early development. It currently supports collection initialization,
 validated schema replacement, creating and reading documents, hash-checked
 updates and deletion, listing, ranked full-text search with data filters,
 literal search, terminal tables, Markdown-rendered document viewing with `show`,
-and collection diagnostics.
+collection diagnostics, and opt-in OpenAI embeddings with semantic search.
 
 ## Try it
 

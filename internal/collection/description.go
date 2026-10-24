@@ -24,6 +24,10 @@ func configFields(data []byte) (map[string]any, string, error) {
 	for key, value := range fields {
 		switch key {
 		case "schema":
+		case "embeddings":
+			if _, err := embeddingConfig(value); err != nil {
+				return nil, "", err
+			}
 		case "title", "description":
 			if _, ok := value.(string); !ok {
 				return nil, "", fmt.Errorf("%s must be a string", key)

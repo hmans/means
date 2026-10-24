@@ -17,12 +17,15 @@ following its [workflow](issues/MEANS.md).
 - Each collection contains one `MEANS.md`: YAML frontmatter with optional string
   title/description and required schema (JSON Schema object or boolean expressed
   as YAML, Draft 2020-12 by default), followed by Markdown guidance. Unknown
-  configuration fields are rejected. Missing/blank title defaults to the directory
+  configuration fields are rejected. Optional embeddings config enables OpenAI
+  embedding maintenance (see docs/guide.md). Missing/blank title defaults to the directory
   name. Schema annotations do not define collection identity.
   `init` generates an example, accepts a complete file through `--input FILE|-`,
   or accepts JSON Schema through `--schema FILE|-`; these flags are exclusive.
   Validate before creating files; never overwrite MEANS.md. Init JSON returns
-  its path in config. Complete file input preserves bytes; schema input becomes YAML.
+  its path in config. Complete file input preserves bytes unless enabled embeddings
+  omit model/dimensions: init adds explicit defaults, may reformat frontmatter, and
+  preserves exact body bytes. Schema input becomes YAML.
   Consumers use schema set or edit schemas directly. Schema set compiles the
   proposal and checks existing documents before replacing the schema. --force
   permits document diagnostics but never invalid schemas or filesystem failures.
@@ -124,5 +127,34 @@ following its [workflow](issues/MEANS.md).
   only the document file, preserving directories and configuration. Missing and
   duplicate IDs, malformed envelopes, and stale hashes fail. Existing application
   data need not satisfy the current schema. As with updates, concurrent writes
-  can race removal; there are no locks, force option, or automatic retries.
-- Embeddings, vector search, and automatic document repair are deferred.
+  can race removal; no force option or automatic retries. Opted-in embedding
+  operations share a cache lock, but external document edits do not take it.
+- Embeddings are opt-in through MEANS.md embeddings (object, or false to disable).
+  Require provider openai or openrouter; default endpoint/model/key variable follows
+  that provider. OpenAI text-embedding-3-small/large only (openai/ prefix required
+  for OpenRouter). Environment overrides may change endpoint/key; keys never fall
+  back across providers. Provider/model/dimension/endpoint changes invalidate vectors.
+  Default to the provider's OpenAI text-embedding-3-small model and 512 dimensions.
+  Init writes omitted model and dimensions explicitly for enabled embeddings.
+  CLI JSON mode suppresses embedding progress to keep errors valid JSON.
+  Refresh changed documents in sequential batches of at most 32; validate all response
+  indices/vectors, then checkpoint once per batch. Failed batches preserve earlier work.
+  Embed is CLI-only; MCP exposes no embed tool. Embed --force clears stored vectors under the cache lock
+  before regenerating all valid documents. Failures retain only batches completed
+  in that run; ordinary embed resumes without discarding those batches.
+  Embed title plus exact body into one float vector. Store in a separate versioned,
+  checksummed .means/embeddings.jsonl, serialized under embeddings.lock. Create/update
+  persist the vector before the document; API/cache failures prevent document writes.
+  Delete removes its vector before the file, without an API call. Failed source
+  writes/crashes can leave stale derived data; embed reconciles against visible
+  documents, including direct edits and nested boundaries. Search embeds only the
+  query and never changes the embedding cache; it skips missing/stale vectors and
+  invisible documents. The cache lock is released before the query API call.
+  Data-only edits reuse vectors. Semantic queries use cosine ranking,
+  exact data filters before limits, and ID ties. The inclusive minimum cosine score
+  defaults to 0.3; --min-score / MCP min_score override it from -1 to 1 and require
+  semantic search. Apply the threshold before limits/has_more. Semantic text tables
+  display scores to three decimals; filtering uses full precision.
+  No chunking, quantization, sharing,
+  or hybrid search yet. Read/list/full-text/literal operations remain offline.
+- Automatic document repair is deferred.
