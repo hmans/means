@@ -41,6 +41,8 @@ Storage:
   and list reports them. Hidden paths and symlinks are excluded from discovery.
   Store frontmatter as YAML between --- lines, followed immediately by the body.
   Body bytes and trailing newlines are preserved. JSON number precision is retained.
+  When embeddings are enabled, generate and cache the title/body vector before
+  writing the document. API/cache failures leave it uncreated; see means embed --help.
 
 Output:
   Text: the generated ID followed by a newline, suitable for passing to read.
@@ -82,7 +84,7 @@ JSON
 			if err != nil {
 				return err
 			}
-			doc, err := c.Create(frontmatter, body)
+			doc, err := c.WithEmbeddingProgress(opts.embeddingProgress(cmd)).Create(frontmatter, body)
 			if err != nil {
 				return err
 			}

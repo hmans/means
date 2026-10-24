@@ -38,7 +38,8 @@ The schema validates only document `frontmatter.data`; means owns each document'
 default. Internal references work; external files and remote schemas do not.
 
 The required `schema` field accepts an object or boolean. Optional `title` and
-`description` must be strings; unknown configuration fields are rejected.
+`description` must be strings. Optional `embeddings` enables automatic embedding
+maintenance, as described below; unknown configuration fields are rejected.
 Missing or blank title falls back to the directory name; description defaults to
 empty. Schema annotations do not define collection identity. The Markdown body
 provides self-description and workflow and may be empty. Configuration uses the
@@ -57,7 +58,10 @@ mise means init --path ./memory --schema - --json < ./memory.schema.json
 
 The starter includes a directory-derived title, editable guidance, and a schema
 accepting optional `tags` while rejecting other application fields.
-`--input` preserves a complete file's bytes; `--schema` accepts JSON and writes YAML.
+`--input` preserves a complete file's bytes unless enabled embeddings omit model
+or dimensions. In that case, init writes the provider's default model and 512
+dimensions explicitly, preserves supplied values and exact body bytes, and may
+reformat frontmatter. `--schema` accepts JSON and writes YAML.
 These flags are mutually exclusive. Init JSON returns `path`, `config` (the absolute
 MEANS.md path), and `next_steps`. `init` validates configuration and schema before
 creating files and never overwrites an existing `MEANS.md`. It also creates `.gitignore` with `.means/`, or
@@ -292,6 +296,138 @@ lock file while searches are active. Full-text search needs a writable cache;
 literal and data-only searches use direct scans and create no cache. For older
 collections, add `.means/` to their `.gitignore` manually.
 
+### Opt-in semantic search
+
+Add `embeddings` alongside `schema` in `MEANS.md` frontmatter:
+
+```yaml
+embeddings:
+  provider: openrouter
+```
+
+The provider is required; an empty object is invalid. Omit `embeddings` or set it
+to `false` to disable embedding operations. Providers supply these defaults:
+
+| Provider | Model | Endpoint | Credential |
+| --- | --- | --- | --- |
+| `openai` | `text-embedding-3-small` | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
+| `openrouter` | `openai/text-embedding-3-small` | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
+
+Optional `model` also accepts the corresponding `text-embedding-3-large` model.
+OpenRouter requires the `openai/` prefix; direct OpenAI rejects it. Optional
+`dimensions` must be positive and at most 1536 for small or 3072 for large;
+omitted dimensions default to 512 for either model. For example:
+
+```yaml
+embeddings:
+  provider: openrouter
+  model: openai/text-embedding-3-small
+  dimensions: 512
+```
+
+Set the selected provider's API key in the process environment, then backfill
+existing documents:
+
+```sh
+means embed --path ./memory --json
+means search "why did we choose Go" --semantic --path ./memory --json
+```
+
+To discard existing vectors and regenerate every valid document, including
+unchanged documents, use `means embed --force --path ./memory`. This clears the
+embedding cache under its lock before calling the API and incurs fresh API
+charges. Markdown files are unchanged. If the run fails, only batches completed
+during that run remain cached. Resume with `means embed` without `--force` to
+reuse that progress. Refresh and forced rebuilds are CLI-only; MCP does not
+expose an `embed` tool.
+
+Once enabled, CLI and MCP create/update/delete maintain embeddings automatically.
+Each document has one vector for `Title: ` plus its title, two newlines, and its
+exact Markdown body. Application data is excluded; data-only edits reuse the
+vector. A title or body change generates a replacement. Inputs are not chunked
+or truncated; inputs exceeding the provider's token limit fail. This version
+uses the provider's limit errors rather than a local tokenizer.
+
+Create and update store the vector before writing the document. API or cache-write
+errors leave the document unchanged. Delete removes the cached vector before
+removing the document, without an API call. Cache and Markdown are separate files,
+not an atomic transaction: a later document-write failure or crash can leave a
+stale or orphan vector. Search skips stale vectors and documents no longer visible;
+`means embed` repairs the cache.
+External edits can still race the final hash check and document replacement.
+
+`embed` scans the current collection, refreshes missing/changed vectors, and
+removes vectors for deleted, malformed, duplicate, and newly nested documents.
+It sends document input to the configured endpoint and may incur charges.
+Semantic search sends only the query and never writes the embedding cache.
+Each request has a 60-second timeout and
+no automatic retries. Refreshes send up to 32 changed documents per request,
+process batches sequentially, and replace the JSONL cache once per completed batch.
+Responses are matched by index, even if returned out of order. An invalid or
+failed batch contributes no vectors; earlier completed batches remain cached.
+Over-limit documents fail their whole batch without truncation. Single-document
+create/update operations still use one request.
+CLI and MCP embedding progress goes to stderr: document IDs for single writes,
+completed/total changed documents for batches,
+and refresh counts for generated, reused, and removed
+vectors. Logs omit document/query text, vectors, and credentials. CLI `--json`
+suppresses progress so errors remain valid JSON on stderr. MCP progress remains
+on stderr, separate from protocol messages on stdout.
+Redirect stderr to suppress progress. Semantic search emits no progress messages.
+Read, list, doctor, full-text search, and literal search stay offline. No watcher
+or managed service is required; direct file edits are detected on the next refresh.
+
+Semantic search requires a nonempty query and cannot combine with `--literal`.
+It uses stored vectors that match the current title/body and embedding configuration.
+Documents with missing or stale vectors are skipped. A missing, corrupt, or
+incompatible cache produces no semantic hits; run `means embed` to rebuild it.
+Search does not prune vectors or repair the cache. If no eligible vectors exist,
+it returns without a query API call. The cache lock is released before the query
+API call, so that call does not block document writes.
+It ranks all eligible documents by cosine similarity, descending, with ID order
+for ties. Scores must be at least **0.30** by default. Override this with
+`--min-score NUMBER` (requires `--semantic`); values must be finite and between
+-1 and 1. Higher thresholds return fewer results. Use `--min-score -1` to include
+all scores, or `--min-score 0` to include zero and positive scores. The threshold
+is inclusive and applies at full precision before `--limit`, together with exact
+data filters. `has_more` counts only results that pass these filters.
+
+The default is a starting point for the default embedding model, not a guarantee
+of relevance across models or collections. Inspect scores for representative
+queries before choosing a different threshold:
+
+```sh
+means search openai --semantic --min-score 0.3 --path ./issues
+```
+
+Semantic text tables include a score column rounded to three decimal places.
+JSON hits contain the full-precision `score` instead of `match`; semantic results
+have no literal-match excerpt. Use `--with-body --json` for bodies. Existing
+diagnostics behavior applies. Full-text search remains the default.
+
+The cache is `.means/embeddings.jsonl`, separate from `.means/documents.jsonl`.
+It contains float vectors, IDs, input hashes, a version/model/dimension/endpoint
+profile, and a record checksum. It is derived local data, excluded by `.means/`
+in `.gitignore`. Atomic file replacements under `.means/embeddings.lock` protect
+concurrent means operations. Lock waits stop after five seconds. Missing, corrupt,
+or obsolete cache data regenerates on demand, potentially incurring API charges;
+permission errors and symlinked cache paths fail. Do not delete cache files while
+embedding operations run. There is no SQLite dependency. Quantized vectors,
+frontmatter sharing, chunking, and hybrid ranking are not implemented yet.
+
+#### OpenRouter
+
+[OpenRouter supports embedding requests](https://openrouter.ai/docs/api/api-reference/embeddings/submit-an-embedding-request)
+for OpenAI models. Use `embeddings: {provider: openrouter}` and set
+`OPENROUTER_API_KEY`. Neither `OPENAI_API_KEY` nor a base URL override is required.
+
+`MEANS_EMBEDDING_BASE_URL` overrides the selected provider's endpoint for proxies
+or testing. `MEANS_EMBEDDING_API_KEY` overrides its credential. Changing the URL
+does not change the provider, model, or credential selection. Missing credentials
+fail; means never falls back to another provider's key. Endpoint overrides and
+credentials are never loaded from collection files. Changing the provider, endpoint, model, or dimensions
+invalidates the local vector profile and causes regeneration on the next refresh.
+
 ### Updating documents
 
 Read before updating. JSON read/create/update results include an ID, frontmatter,
@@ -345,7 +481,7 @@ mise means delete <id> --path ./memory --input - --json <<'JSON'
 JSON
 ```
 
-Deletion permanently removes only the document file. It preserves directories,
+Deletion permanently removes the document file and its optional cached embedding. It preserves directories,
 collection configuration, and unrelated files. There is no trash, undo, force
 option, or confirmation prompt. For archival, use an application field such as
 `data.status` instead. The JSON result is `{"id":"..."}`; text output is the ID.
@@ -354,8 +490,10 @@ Missing or duplicate IDs, malformed document envelopes, and stale or invalid
 hashes fail without deletion. A repeated deletion fails because the document is
 missing. Data that fails the current application schema can still be deleted;
 the selected collection must have a valid schema. Collection boundaries apply.
-As with updates, there are no locks: a concurrent write between the hash check
-and removal can still be deleted. On conflict, read again and review the changes.
+Opted-in embedding operations share a cache lock; external edits do not take it.
+A concurrent external write between the hash check and removal can still be
+deleted. With embeddings disabled, updates/deletes take no locks. On conflict,
+read again and review the changes.
 
 ## MCP
 
@@ -365,7 +503,14 @@ managed daemon. Register the command once per collection to give one agent
 multiple collections. Each server advertises its collection identity and the
 Markdown workflow from `MEANS.md` at startup. Call `info` for the current
 schema and guidance. Other tools are `list`, `search`, `read`, `create`,
-`update`, `delete`, and `schema_set`; they use the same collection behavior as the CLI. Each document call reloads
+`update`, `delete`, and `schema_set`; they use the same collection behavior as the CLI.
+Embedding maintenance on create/update/delete is automatic. Backfills and forced
+rebuilds use CLI `means embed`; they are not exposed as MCP tools.
+`info` includes the current embedding configuration (or null when disabled).
+Use `search` with `semantic: true` for embedding similarity. Optional `min_score`
+has the same range and default (0.3) as CLI `--min-score` and requires
+`semantic: true`. Give the MCP server
+process the same API environment variables as the CLI. Each document call reloads
 the schema. Restart the server after changing collection title, description, or
 workflow to refresh advertised discovery metadata.
 

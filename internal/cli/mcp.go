@@ -99,6 +99,7 @@ tool results always use structuredContent without a redundant text copy.
 Clients must consume structured results. --json only formats CLI help and startup
 errors; it does not change protocol results.
 Tool errors still include explanatory text.
+Embedding progress goes to stderr; stdout remains exclusively MCP messages.
 Tool failures use MCP isError results; the server stays available for later calls.
 Startup failures and diagnostics go to stderr. --json also formats CLI help and
 startup errors; it never changes MCP message framing.`,
@@ -108,7 +109,7 @@ startup errors; it never changes MCP message framing.`,
   means mcp --help --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			server, err := mcpserver.New(opts.path, version)
+			server, err := mcpserver.NewWithEmbeddingProgress(opts.path, version, embeddingProgress(cmd))
 			if err != nil {
 				return err
 			}

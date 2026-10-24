@@ -3,6 +3,7 @@ package collection
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"path"
@@ -13,12 +14,16 @@ import (
 )
 
 type SearchOptions struct {
+	MinScore *float64 // Semantic cosine threshold; nil uses DefaultSemanticMinScore.
 	WithBody bool
 	Query    string
 	Filter   map[string]any // Partial match against frontmatter.data.
 	Limit    int            // Zero returns every match.
 	Literal  bool           // Use the original case-insensitive substring search.
+	Semantic bool           // Use opt-in OpenAI embeddings and cosine ranking.
 }
+
+const DefaultSemanticMinScore = 0.3
 
 type SearchMatch struct {
 	Field   string `json:"field"` // title or body
@@ -30,6 +35,7 @@ type SearchHit struct {
 	ID          string         `json:"id"`
 	Frontmatter map[string]any `json:"frontmatter"`
 	Match       *SearchMatch   `json:"match,omitempty"`
+	Score       *float64       `json:"score,omitempty"`
 }
 
 type SearchResult struct {
@@ -43,11 +49,25 @@ type SearchResult struct {
 // application data; arrays must match completely. Schema-invalid data stays
 // searchable, while malformed and duplicate documents become diagnostics.
 func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
+	if opts.MinScore != nil {
+		if !opts.Semantic {
+			return nil, fmt.Errorf("min_score requires semantic search")
+		}
+		if math.IsNaN(*opts.MinScore) || math.IsInf(*opts.MinScore, 0) || *opts.MinScore < -1 || *opts.MinScore > 1 {
+			return nil, fmt.Errorf("min_score must be a finite number from -1 to 1")
+		}
+	}
 	if opts.Limit < 0 {
 		return nil, fmt.Errorf("limit must be zero or greater")
 	}
 	if !utf8.ValidString(opts.Query) {
 		return nil, fmt.Errorf("query must be valid UTF-8")
+	}
+	if opts.Semantic {
+		if opts.Literal || strings.TrimSpace(opts.Query) == "" {
+			return nil, fmt.Errorf("semantic search requires a nonempty query and cannot be combined with literal search")
+		}
+		return c.searchSemantic(opts)
 	}
 	if opts.Query != "" && !opts.Literal {
 		return c.searchFullText(opts)

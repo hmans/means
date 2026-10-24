@@ -71,6 +71,8 @@ Use "means delete --help" to permanently remove a document using its content has
 Use "means schema set --help" to validate and install a replacement schema.
 Use "means doctor" to check all documents
 against the current schema, or "means search" to find documents by text/data.
+Use "means embed --help" for opt-in OpenAI embeddings, automatic maintenance,
+and semantic search with "means search --semantic".
 
 Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
@@ -126,7 +128,7 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			return opts.writeHelp(target)
 		},
 	})
-	root.AddCommand(newAgentsCommand(opts), newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts),
+	root.AddCommand(newAgentsCommand(opts), newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts), newEmbedCommand(opts),
 		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
 }

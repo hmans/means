@@ -83,6 +83,11 @@ func (c *Collection) Create(frontmatter map[string]any, body string) (*Document,
 	if !utf8.ValidString(body) {
 		return nil, fmt.Errorf("body must be valid UTF-8")
 	}
+	embeddings, err := c.openEmbeddings()
+	if err != nil {
+		return nil, err
+	}
+	defer embeddings.close()
 	root, err := os.OpenRoot(c.Path)
 	if err != nil {
 		return nil, err
@@ -93,7 +98,7 @@ func (c *Collection) Create(frontmatter map[string]any, body string) (*Document,
 		if err != nil {
 			return nil, err
 		}
-		doc, err := createCandidate(root, id, frontmatter, body)
+		doc, err := createCandidate(root, id, frontmatter, body, embeddings)
 		if errors.Is(err, os.ErrExist) {
 			continue
 		}
@@ -114,7 +119,7 @@ func generateID() (string, error) {
 	return string(random[:]), nil
 }
 
-func createCandidate(root *os.Root, id string, frontmatter map[string]any, body string) (*Document, error) {
+func createCandidate(root *os.Root, id string, frontmatter map[string]any, body string, embeddings *embeddingStore) (*Document, error) {
 	// An exclusive allocation file prevents concurrent means creators from using
 	// the same candidate, even with different titles. Crashed allocations are
 	// simply skipped on a future collision; no stale-lock recovery is needed.
@@ -142,6 +147,12 @@ func createCandidate(root *os.Root, id string, frontmatter map[string]any, body 
 		return nil, err
 	}
 	filename := id + "-" + titleSlug(frontmatter["title"].(string)) + ".md"
+	if err := embeddings.upsert(id, frontmatter, body); err != nil {
+		return nil, err
+	}
+	if err := embeddings.save(); err != nil {
+		return nil, err
+	}
 	file, err := root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return nil, fmt.Errorf("create document: %w", err)

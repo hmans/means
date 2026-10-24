@@ -25,7 +25,8 @@ Configuration input:
   --input FILE reads a complete MEANS.md; --input - reads stdin until EOF.
   MEANS.md starts with --- delimited YAML frontmatter. The required schema field
   is a JSON Schema object or boolean expressed in YAML. Optional title and
-  description fields must be strings. Unknown fields are rejected.
+  description fields must be strings. Optional embeddings configuration enables
+  automatic OpenAI embeddings; see means embed --help. Unknown fields are rejected.
   Missing or blank title falls back to the directory name; description defaults
   to empty. The Markdown body supplies collection self-description and workflow.
   Use JSON-compatible YAML: string keys, exact numbers, no aliases, merge keys,
@@ -60,7 +61,11 @@ Schema input:
 
 Effects:
   Validate configuration and schema before creating the target directory or files.
-  Create missing directories and write MEANS.md. --input preserves supplied bytes;
+  Create missing directories and write MEANS.md. If embeddings are enabled, fill
+  omitted model and dimensions with provider defaults (text-embedding-3-small,
+  512 dimensions; openai/ model prefix for OpenRouter). Explicit values are kept.
+  Adding these fields may reformat frontmatter; the Markdown body is preserved.
+  Otherwise --input preserves supplied bytes;
   --schema serializes the JSON Schema into YAML, keeping key order and exact numbers.
   Create .gitignore with .means/, or append the rule while preserving existing
   content. Do not duplicate an existing .means/ or /.means/ rule. Symlinked or

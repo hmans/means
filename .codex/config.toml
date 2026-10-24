@@ -3,4 +3,5 @@
 command = "mise"
 args = ["--quiet", "run", "--raw", "means", "--", "mcp", "--path", "./issues"]
 cwd = ".."
+env_vars = ["OPENROUTER_API_KEY"]
 startup_timeout_sec = 60

@@ -1,3 +1,6 @@
+[env]
+_.file = { path = ".env", redact = true }
+
 [tools]
 go = "latest"
 goreleaser = "2.18.2"

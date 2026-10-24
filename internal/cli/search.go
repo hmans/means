@@ -13,6 +13,8 @@ func newSearchCommand(opts *options) *cobra.Command {
 	var limit int
 	var filters []string
 	var literal bool
+	var semantic bool
+	var minScore float64
 	var withBody bool
 	cmd := &cobra.Command{
 		Use:   "search [query]",
@@ -25,6 +27,15 @@ stemming, stop-word removal, or query-language syntax. Punctuation separates
 tokens; quotes are not operators. A nonempty query with no tokens matches nothing.
 Results use relevance ranking with a title boost and ID order for score ties.
 Use --literal for the original case-insensitive substring search in filename order.
+Use --semantic for opt-in embedding search: embed only the query and rank stored
+document vectors by cosine similarity (ID breaks ties). Search never refreshes
+or removes document vectors. Missing or stale vectors are skipped; run means embed
+to refresh them. Only the query is sent to the configured embedding endpoint.
+Requires embeddings configuration in MEANS.md and API credentials; see means embed
+--help. A nonempty query is required; --literal and --semantic are exclusive.
+Semantic results include score and omit match. --min-score defaults to 0.3 and
+keeps scores at or above the threshold before applying --limit. Values must be
+finite and between -1 and 1; -1 includes all scores. Requires --semantic.
 Omit the query or pass an empty string to filter by data alone, also in filename
 order. With no query or filters, all valid documents are eligible. A
 text match includes its field (title or body) and a short excerpt. Full-text
@@ -57,7 +68,9 @@ Each document has id and frontmatter. Text matches also have a match object,
 for example {"field":"title","excerpt":"..."}. field is "title" or "body";
 data-only results omit match.
 No matches returns an empty documents array and exits 0; inspect diagnostics too.
-Text output is a colored ID/title table, followed by diagnostics and limit notices.
+Text output is a colored ID/title table (ID/score/title for semantic search),
+followed by diagnostics and limit notices. Scores are shown to three decimals;
+filtering uses full precision, not the displayed rounded value.
 Pipes and NO_COLOR disable styling. Metadata and excerpts are available with --json.
 Search exits 0 even with per-document diagnostics. Invalid arguments or
 collection-level errors exit 1 and write stderr, as {"error":"..."} in JSON
@@ -73,6 +86,7 @@ no search is running to force a rebuild. Results reflect the files observed
 during the scan, not an atomic filesystem snapshot. Literal and data-only searches
 do not use or write an index. Source documents are never changed.`,
 		Example: `  means search schema --path ./issues --json
+  means search openai --semantic --min-score 0.3 --path ./issues
   means search "deployment timeout" --literal --path ./memory --json
   means search --path ./issues --filter priority=normal --filter type=feature --json
   means search memory --filter 'tags=["important"]' --limit 0 --json`,
@@ -93,7 +107,11 @@ do not use or write an index. Source documents are never changed.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal, WithBody: withBody})
+			var threshold *float64
+			if cmd.Flags().Changed("min-score") {
+				threshold = &minScore
+			}
+			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
 			if err != nil {
 				return err
 			}
@@ -102,13 +120,23 @@ do not use or write an index. Source documents are never changed.`,
 			}
 			var rows [][]string
 			for _, doc := range result.Documents {
-				rows = append(rows, []string{doc.ID, terminalCell(doc.Frontmatter["title"].(string))})
+				row := []string{doc.ID}
+				if semantic {
+					row = append(row, fmt.Sprintf("%.3f", *doc.Score))
+				}
+				rows = append(rows, append(row, terminalCell(doc.Frontmatter["title"].(string))))
 			}
-			return writeTerminal(cmd.OutOrStdout(), documentTable(cmd.OutOrStdout(), rows, result.Diagnostics, result.HasMore, "matches"))
+			headers := []string{"ID", "TITLE"}
+			if semantic {
+				headers = []string{"ID", "SCORE", "TITLE"}
+			}
+			return writeTerminal(cmd.OutOrStdout(), documentTable(cmd.OutOrStdout(), rows, result.Diagnostics, result.HasMore, "matches", headers...))
 		},
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum matching documents; 0 returns all")
 	cmd.Flags().BoolVar(&literal, "literal", false, "Match a literal case-insensitive substring instead of ranked full text")
+	cmd.Flags().BoolVar(&semantic, "semantic", false, "Rank by embedding similarity (requires opt-in configuration and API credentials)")
+	cmd.Flags().Float64Var(&minScore, "min-score", collection.DefaultSemanticMinScore, "Minimum cosine similarity, inclusive, from -1 to 1 (requires --semantic; -1 includes all scores)")
 	cmd.Flags().BoolVar(&withBody, "with-body", false, "Include Markdown bodies in JSON matches (requires --json)")
 	cmd.Flags().StringArrayVar(&filters, "filter", nil, "Match a frontmatter.data field as KEY=VALUE (repeatable)")
 	return cmd

@@ -53,6 +53,11 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 			return nil, err
 		}
 	}
+	embeddings, err := c.openEmbeddings()
+	if err != nil {
+		return nil, err
+	}
+	defer embeddings.close()
 	root, err := os.OpenRoot(c.Path)
 	if err != nil {
 		return nil, err
@@ -76,8 +81,26 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 	if patch.Body != nil {
 		body = *patch.Body
 	}
+	if !utf8.ValidString(body) {
+		return nil, fmt.Errorf("body must be valid UTF-8")
+	}
+	if err := embeddings.upsert(id, frontmatter, body); err != nil {
+		return nil, err
+	}
+	if err := embeddings.save(); err != nil {
+		return nil, err
+	}
 	metadataChanged := !reflect.DeepEqual(frontmatter, current.Frontmatter)
 	if !metadataChanged && body == current.Body {
+		if embeddings != nil {
+			latest, err := readDocument(root, id)
+			if err != nil {
+				return nil, err
+			}
+			if latest.Hash != hash || latest.filename != current.filename {
+				return nil, conflict(id)
+			}
+		}
 		return current, nil
 	}
 	var markdown string
@@ -87,9 +110,6 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 			return nil, err
 		}
 	} else {
-		if !utf8.ValidString(body) {
-			return nil, fmt.Errorf("body must be valid UTF-8")
-		}
 		prefix := current.Markdown[:len(current.Markdown)-len(current.Body)]
 		if body != "" && !strings.HasSuffix(prefix, "\n") {
 			prefix += "\n"
