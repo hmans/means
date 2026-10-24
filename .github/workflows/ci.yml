@@ -26,7 +26,7 @@ jobs:
 
   release-plan:
     if: github.event_name == 'pull_request'
-    uses: chattocorp/sweet-release/.github/workflows/release.yml@ccee4355cc84229bf23b3f6dfd9658dd21672cba
+    uses: chattocorp/sweet-release/.github/workflows/release.yml@7e3acbc56982d381442bfba2cf9b4e3ac6732c89
     with:
       base: ${{ github.event.pull_request.base.sha }}
       head: ${{ github.event.pull_request.head.sha }}
@@ -38,12 +38,11 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: chattocorp/sweet-release/.github/workflows/release.yml@ccee4355cc84229bf23b3f6dfd9658dd21672cba
+    uses: chattocorp/sweet-release/.github/workflows/release.yml@7e3acbc56982d381442bfba2cf9b4e3ac6732c89
     with:
       base: ${{ github.event.before }}
       head: ${{ github.sha }}
       sweet-version: sweet@0.3.0
-    secrets:
-      # A personal/App token lets pushed tags start release.yml.
-      release-token: ${{ secrets.RELEASE_PR_TOKEN }}
+      github-release: true
+      goreleaser: v2.18.2
 

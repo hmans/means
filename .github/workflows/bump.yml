@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   bump:
-    uses: chattocorp/sweet-release/.github/workflows/bump.yml@ccee4355cc84229bf23b3f6dfd9658dd21672cba
+    uses: chattocorp/sweet-release/.github/workflows/bump.yml@7e3acbc56982d381442bfba2cf9b4e3ac6732c89
     with:
       sweet-version: sweet@0.3.0
     secrets:

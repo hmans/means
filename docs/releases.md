@@ -1,9 +1,9 @@
 # Releases
 
 Means uses [Sweet Release 0.3.0](https://github.com/chattocorp/sweet-release/releases/tag/sweet%400.3.0)
-to manage change notes, release PRs, versions, changelogs, and tags. GoReleaser builds
-binaries and uploads them to a draft GitHub Release when a `v*` tag is pushed.
-The workflow publishes the release automatically after all uploads succeed.
+to manage change notes, versions, changelogs, and tags. Sweet's reusable GitHub
+workflows create release PRs and publish GitHub Releases. GoReleaser only builds
+binaries and archives; the shared workflow uploads and publishes them.
 
 Run `mise install` before using these commands. The `mise sweet` task runs the
 pinned Sweet version with Go; it does not require a global `sweet` installation.
@@ -14,12 +14,12 @@ not a Go module version tag. The shared workflows download the published binary.
 
 Add a repository Actions secret named `RELEASE_PR_TOKEN`. Use a fine-grained
 personal token with access to `hmans/means`, Contents read/write, and Pull requests
-read/write. The same token creates release PRs and pushes tags, so those actions
-can trigger subsequent GitHub workflows. The built-in `GITHUB_TOKEN` does not
-trigger CI for those PRs or the tag-driven release workflow.
+read/write. This token lets release PRs trigger CI. Tagging, building, and
+publication run together through the shared workflow using `GITHUB_TOKEN`;
+there is no separate tag-triggered workflow.
 
 The shared workflows are pinned to Sweet Release commit
-`ccee4355cc84229bf23b3f6dfd9658dd21672cba`; their CLI input is `sweet@0.3.0`.
+`7e3acbc56982d381442bfba2cf9b4e3ac6732c89`; their CLI input is `sweet@0.3.0`.
 Update the workflow references in `bump.yml` and `ci.yml` together when upgrading.
 
 ## Record a change
@@ -69,30 +69,22 @@ not released again just because the automation is installed.
 
 ## Build and publish
 
-The release workflow checks that the tag matches `.sweet.yml` and extracts the
+The shared release workflow checks that the tag matches `.sweet.yml` and extracts the
 matching changelog entry with `sweet changelog`. It runs Go tests and vet, then
 builds Linux, macOS, and Windows binaries for amd64 and arm64. Archives use
 tar.gz on Linux/macOS and ZIP on Windows, with `checksums.txt` for SHA-256 hashes.
 The linker sets the version reported by `means version`.
 
-The workflow uploads a draft named `means <version>`, then publishes it after
-GoReleaser completes successfully. Build or upload failures leave the release
+The workflow creates a draft named `means <version>`, runs GoReleaser, uploads
+archives and checksums, then publishes. Build or upload failures leave the release
 unpublished. Versions with prerelease suffixes are marked as
 prereleases. The workflow uses the built-in `GITHUB_TOKEN` with `contents: write`;
-the separate PR/tag steps use `RELEASE_PR_TOKEN` as described above.
+only release PR creation uses `RELEASE_PR_TOKEN` as described above.
 
-If release PR preparation fails, rerun all jobs in the Bump run. If tagging fails,
-rerun the original CI run to preserve its commit range. If the tag already exists
-but the publishing workflow did not start, dispatch it explicitly:
-
-```sh
-gh workflow run release.yml --ref main -f tag=v0.1.0
-```
-
-If a failed upload left a partial draft, delete that draft before retrying. Keep
-the Git tag. If only the final publication step failed, publish the complete draft
-with `gh release edit <tag> --draft=false`. Do not rerun the build for an already
-published release. Existing drafts are not published just by merging this setup.
+If release PR preparation fails, rerun all jobs in the Bump run. For a failed
+release, rerun the original CI run to preserve its commit range. Retries reuse
+matching tags and drafts, replace partial uploads, and skip already-published
+releases. Existing drafts outside that commit range are untouched.
 
 For local checks, use `mise run release:check` to validate the GoReleaser config
 and `mise run release:snapshot` to run tests, vet, and all six builds. Snapshots
