@@ -8,6 +8,10 @@ data:
 id: qbt4w
 title: Use shared Sweet Release workflows
 ---
-Use the published Sweet Release bump and release workflows in Means. Create release PRs on main pushes, gate version tags on Go checks, and publish GitHub Releases automatically after all GoReleaser uploads succeed. Document token setup and recovery.
+Use shared Sweet Release bump and release workflows with a thin consumer configuration. Keep all GitHub lifecycle behavior in the reusable workflows and only binary build configuration in Means.
 
-Implemented in PR #6: pinned reusable workflows and Sweet 0.3.0, Go race tests and vet, read-only PR release planning, and automatic publication after draft uploads. Local race tests, vet, workflow lint, GoReleaser configuration validation, and the initial consumer PR CI passed. The maintainer will add RELEASE_PR_TOKEN before merge. Live bump/tag/publication verification remains pending merge and the next release PR.
+The first integration (PR #6) successfully published Means 0.1.1 end to end, including automatic PR checks, tags, and publication. The maintainer configured RELEASE_PR_TOKEN.
+
+Follow-up: remove Means tag-triggered publishing workflow and call the shared GitHub lifecycle with the GoReleaser preset. The shared workflow prepares notes/drafts, builds, verifies/uploads assets, and publishes; retries skip published releases. Means retains .goreleaser.yml, uses GITHUB_TOKEN for tagging/publication, and needs RELEASE_PR_TOKEN only for bump PRs.
+
+Validation: local six-platform snapshot build and native binary version pass; the shared uploader validates all seven assets. Configuration and workflow lint pass. Companion Sweet and Means PR CI and a future live release will verify the simplified path.

@@ -31,13 +31,8 @@ checksum:
   name_template: checksums.txt
 
 snapshot:
-  version_template: "0.0.0-SNAPSHOT-{{ .ShortCommit }}"
+  version_template: '{{ if index .Env "RELEASE_VERSION" }}{{ .Env.RELEASE_VERSION }}{{ else }}0.0.0-SNAPSHOT-{{ .ShortCommit }}{{ end }}'
 
-# Keep changelog processing enabled: --release-notes supplies the Sweet notes
-# and skips automatic generation. Disabling it also skips loading those notes.
-
-release:
-  name_template: "means {{ .Version }}"
-  # The workflow publishes only after all asset uploads succeed.
-  draft: true
-  prerelease: auto
+# The shared GitHub workflow owns release notes and publication.
+changelog:
+  disable: true
