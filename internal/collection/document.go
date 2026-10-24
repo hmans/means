@@ -257,7 +257,7 @@ func scanDocumentsWithReader(root *os.Root, read func(*os.Root, string) (*Docume
 		if filename != "." && entry.IsDir() {
 			// Presence alone defines the boundary, even for an invalid schema or
 			// a dangling symlink. Never adopt a broken child collection's files.
-			_, err := root.Lstat(path.Join(filename, SchemaFilename))
+			_, err := root.Lstat(path.Join(filename, ConfigFilename))
 			if err == nil {
 				return fs.SkipDir
 			}
@@ -265,7 +265,7 @@ func scanDocumentsWithReader(root *os.Root, read func(*os.Root, string) (*Docume
 				return fmt.Errorf("inspect collection boundary %q: %w", filename, err)
 			}
 		}
-		if !entry.Type().IsRegular() || !strings.HasSuffix(filename, ".md") || filename == InstructionsFilename {
+		if !entry.Type().IsRegular() || !strings.HasSuffix(filename, ".md") || filename == ConfigFilename {
 			return nil
 		}
 		doc, err := read(root, filename)

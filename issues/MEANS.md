@@ -1,3 +1,32 @@
+---
+title: means issues
+description: "The means project backlog: bugs, features, design decisions, and planned work on means itself. Use this collection to track priorities, acceptance criteria, and outcomes."
+schema:
+  $schema: https://json-schema.org/draft/2020-12/schema
+  type: object
+  properties:
+    type:
+      type: string
+      enum: [task, bug, feature]
+      description: Task for general work, bug for incorrect behavior, or feature for new functionality.
+    status:
+      type: string
+      enum: [todo, in_progress, done, canceled]
+      description: Todo before work starts, in_progress while working, done after acceptance criteria are met, or canceled when intentionally abandoned.
+    priority:
+      type: string
+      enum: [low, normal, high, urgent]
+      description: Relative importance, ordered urgent, high, normal, then low.
+    tags:
+      type: array
+      items:
+        type: string
+        minLength: 1
+      uniqueItems: true
+      description: Optional labels for grouping related issues.
+  required: [type, status, priority]
+  additionalProperties: false
+---
 # Working with means issues
 
 This collection is the means project's own backlog. It contains actionable work,
@@ -13,7 +42,7 @@ mise means create --path ./issues --input - --json
 mise means update <id> --path ./issues --input - --json
 ```
 
-Read `means.schema.json` before creating issues. When accessed through MCP, use `info`
+Read the schema in this file's frontmatter before creating issues. When accessed through MCP, use `info`
 for the current schema and these instructions; the tools are `list`, `search`,
 `read`, `create`, `update`, `delete`, and `schema_set`.
 

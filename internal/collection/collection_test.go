@@ -22,19 +22,19 @@ func TestInitAndLoad(t *testing.T) {
 	if c.Path != dir || loaded.Path != dir {
 		t.Fatalf("collection paths = %q, %q; want %q", c.Path, loaded.Path, dir)
 	}
-	data, err := os.ReadFile(filepath.Join(dir, SchemaFilename))
+	data, err := os.ReadFile(filepath.Join(dir, ConfigFilename))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var schema map[string]any
-	if err := json.Unmarshal(data, &schema); err != nil {
+	if err := json.Unmarshal(loaded.Schema, &schema); err != nil {
 		t.Fatal(err)
 	}
 	if schema["type"] != "object" || schema["schema"] != nil {
-		t.Fatalf("expected a standalone JSON Schema, got %s", data)
+		t.Fatalf("expected an embedded JSON Schema, got %s", data)
 	}
 	entries, err := os.ReadDir(dir)
-	if err != nil || len(entries) != 2 || entries[0].Name() != ".gitignore" || entries[1].Name() != SchemaFilename {
+	if err != nil || len(entries) != 2 || entries[0].Name() != ".gitignore" || entries[1].Name() != ConfigFilename {
 		t.Fatalf("expected schema and .gitignore, got %v, %v", entries, err)
 	}
 	for _, tt := range []struct {
@@ -58,7 +58,7 @@ func TestInitAndLoad(t *testing.T) {
 
 func TestInitDoesNotOverwrite(t *testing.T) {
 	dir := t.TempDir()
-	filename := filepath.Join(dir, SchemaFilename)
+	filename := filepath.Join(dir, ConfigFilename)
 	original := []byte("existing schema, even if invalid\n")
 	if err := os.WriteFile(filename, original, 0o644); err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func TestCustomSchemaAndReload(t *testing.T) {
 		"properties": {"status": {"$ref": "#/$defs/status"}},
 		"required": ["status"]
 	}`)
-	if err := os.WriteFile(filepath.Join(dir, SchemaFilename), schema, 0o644); err != nil {
+	if _, err := Init(dir, schema); err != nil {
 		t.Fatal(err)
 	}
 	c, err := Load(dir)
@@ -93,7 +93,7 @@ func TestCustomSchemaAndReload(t *testing.T) {
 	if err := c.ValidateData(map[string]any{"status": "unknown"}); err == nil {
 		t.Fatal("invalid enum value was accepted")
 	}
-	if err := os.WriteFile(filepath.Join(dir, SchemaFilename), []byte(`{"type":"object","required":["summary"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ConfigFilename), []byte("---\nschema: {type: object, required: [summary]}\n---\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	c, err = Load(dir)
@@ -117,15 +117,16 @@ func TestLoadInvalidSchema(t *testing.T) {
 	} {
 		t.Run(schema, func(t *testing.T) {
 			dir := t.TempDir()
-			filename := filepath.Join(dir, SchemaFilename)
-			if err := os.WriteFile(filename, []byte(schema), 0o644); err != nil {
+			filename := filepath.Join(dir, ConfigFilename)
+			content := "---\nschema: " + schema + "\n---\n"
+			if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := Load(dir); err == nil || !strings.Contains(err.Error(), SchemaFilename) {
-				t.Fatalf("Load() = %v, want an error identifying means.schema.json", err)
+			if _, err := Load(dir); err == nil || !strings.Contains(err.Error(), ConfigFilename) {
+				t.Fatalf("Load() = %v, want an error identifying MEANS.md", err)
 			}
 			after, err := os.ReadFile(filename)
-			if err != nil || string(after) != schema {
+			if err != nil || string(after) != content {
 				t.Fatalf("loading invalid schema modified it: %q, %v", after, err)
 			}
 		})

@@ -31,7 +31,7 @@ func TestDeletePreservesOtherFiles(t *testing.T) {
 	// The same ID in another collection must not block or be affected by deletion.
 	files := map[string]string{
 		"child/copy.md": doc.Markdown,
-		"MEANS.md":      "Workflow",
+		"MEANS.md":      "---\nschema: false\n---\nWorkflow",
 		"unrelated.txt": "Keep",
 		"broken.md":     "Malformed unrelated document",
 		".hidden.md":    doc.Markdown,
@@ -42,7 +42,7 @@ func TestDeletePreservesOtherFiles(t *testing.T) {
 		}
 	}
 	// Schema evolution must not prevent deletion of readable documents.
-	if err := os.WriteFile(filepath.Join(c.Path, SchemaFilename), []byte(`false`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path, ConfigFilename), []byte(files["MEANS.md"]), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	c, err = Load(c.Path)
@@ -65,7 +65,7 @@ func TestDeletePreservesOtherFiles(t *testing.T) {
 			t.Fatalf("changed %s: %q %v", name, got, err)
 		}
 	}
-	if got, err := os.ReadFile(filepath.Join(c.Path, SchemaFilename)); err != nil || string(got) != "false" {
+	if got, err := os.ReadFile(filepath.Join(c.Path, ConfigFilename)); err != nil || string(got) != files["MEANS.md"] {
 		t.Fatalf("schema changed: %s %v", got, err)
 	}
 	if _, err := child.Read(doc.ID); err != nil {
@@ -119,7 +119,7 @@ func TestDeleteFailuresPreserveDocument(t *testing.T) {
 					filename = moved
 				}
 			case "workflow":
-				moved := filepath.Join(c.Path, InstructionsFilename)
+				moved := filepath.Join(c.Path, ConfigFilename)
 				err = os.Rename(filename, moved)
 				filename = moved
 			case "hidden":

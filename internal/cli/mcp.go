@@ -23,14 +23,14 @@ No network listener, background daemon, or separate service is required.
 Multiple collections:
   Register this command once per collection, each with its own --path. Choose
   registration names in the client, e.g. issues, decisions, or memories.
-  The schema's top-level title and description identify the collection in server
+  MEANS.md frontmatter title and description identify the collection in server
   instructions and every tool description, before an agent calls any tool.
   Missing or blank title falls back to the directory name; description is optional.
-  These schema annotations are separate from document frontmatter fields.
-  Add optional MEANS.md beside means.schema.json for collection workflow guidance.
-  This plain UTF-8 Markdown file needs no frontmatter and is reserved configuration,
-  excluded from document lists and reads. It must be a regular file, not a symlink.
-  Its contents are included in server instructions and info results.
+  Its required schema field is JSON Schema expressed in YAML. Schema annotations
+  do not define collection identity. The Markdown body supplies workflow guidance.
+  MEANS.md is reserved configuration, excluded from document lists and reads.
+  It must be a regular UTF-8 file, not a symlink.
+  The body is included in server instructions and info results.
   Startup instructions give concise means usage guidance; info returns the
   complete usage guidance with the current collection workflow.
 
@@ -53,7 +53,7 @@ Means owns frontmatter.id (generated, immutable) and frontmatter.title (required
 nonempty string). Omitted data defaults to {} on creation; explicit null is invalid.
 IDs are stored values, not filenames; duplicate IDs fail lookup and appear as list
 diagnostics. Read and update follow IDs after file renames or moves into subdirectories.
-Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads means.schema.json so
+Patch title and/or data; never include id inside the frontmatter patch. Each tool reloads MEANS.md so
 schema edits take effect immediately. Reads and lists do not validate existing
 data against the schema. List returns documents, diagnostics, and has_more;
 its limit counts valid documents only, while diagnostics cover the whole collection. Search
@@ -84,13 +84,15 @@ force defaults to false. Document violations reject installation with isError
 and structured {error,installed:false,healthy,checked,diagnostics}. With force:true,
 installation succeeds and retains diagnostics. Invalid schemas and filesystem
 errors cannot be forced. Checks cover current data, not every future value.
-Documents are never rewritten. Schema JSON is serialized without losing number
-precision; formatting is not preserved. Concurrent edits can race installation.
-A running server can repair an externally invalidated schema using schema_set;
-startup still requires a valid schema. Initialization is not an MCP tool yet.
+Documents are never rewritten. Schema JSON is stored as YAML without losing number
+precision. Other configuration values and exact Markdown body bytes are preserved;
+frontmatter formatting may change. Concurrent edits can race installation.
+A running server can repair an invalid or missing embedded schema using schema_set
+if the YAML and other configuration fields are valid. Malformed YAML requires a
+direct edit. Startup requires valid configuration. Initialization is not an MCP tool yet.
 info reads current title, description, and MEANS.md on each call.
 Restart the server/client to refresh advertised tool descriptions and connection
-instructions after editing these files. AGENTS.md is not loaded by the server.
+instructions after editing MEANS.md. AGENTS.md is not loaded by the server.
 
 Output is always MCP JSON-RPC, one compact message per line on stdout. Successful
 tool results always use structuredContent without a redundant text copy.

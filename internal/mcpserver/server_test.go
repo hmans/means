@@ -22,11 +22,10 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 			paths := make(map[string]string)
 			for _, title := range []string{"Issues", "Decisions"} {
 				path := t.TempDir()
-				schema, _ := json.Marshal(map[string]any{"title": title, "description": "Stores " + title, "type": "object"})
-				if _, err := collection.Init(path, schema); err != nil {
+				config := "---\ntitle: " + title + "\ndescription: Stores " + title + "\nschema: {type: object}\n---\nWorkflow for " + title
+				if _, err := collection.InitConfig(path, []byte(config)); err != nil {
 					t.Fatal(err)
 				}
-				writeFile(t, filepath.Join(path, collection.InstructionsFilename), "Workflow for "+title)
 				server, err := New(path, "test")
 				if err != nil {
 					t.Fatal(err)
@@ -81,8 +80,7 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 				}
 			}
 			// Discovery is a startup snapshot; info always reads current guidance.
-			writeFile(t, filepath.Join(paths["Issues"], collection.SchemaFilename), `{"title":"Backlog","description":"Updated purpose","type":"object"}`)
-			writeFile(t, filepath.Join(paths["Issues"], collection.InstructionsFilename), "Updated workflow")
+			writeFile(t, filepath.Join(paths["Issues"], collection.ConfigFilename), "---\ntitle: Backlog\ndescription: Updated purpose\nschema: {type: object}\n---\nUpdated workflow")
 			info := callTool(t, ctx, sessions["Issues"], "info", `{}`)
 			if info["title"] != "Backlog" || info["description"] != "Updated purpose" || !strings.Contains(info["instructions"].(string), "Updated workflow") {
 				t.Fatalf("stale info: %v", info)
@@ -94,9 +92,7 @@ func TestMultipleCollectionDescriptions(t *testing.T) {
 			if !strings.HasPrefix(tools.Tools[0].Description, "Collection: Issues.") {
 				t.Fatal("discovery unexpectedly changed")
 			}
-			if err := os.Remove(filepath.Join(paths["Issues"], collection.InstructionsFilename)); err != nil {
-				t.Fatal(err)
-			}
+			writeFile(t, filepath.Join(paths["Issues"], collection.ConfigFilename), "---\nschema: true\n---\n")
 			info = callTool(t, ctx, sessions["Issues"], "info", `{}`)
 			if strings.Contains(info["instructions"].(string), "Updated workflow") {
 				t.Fatal("removed workflow retained")

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -12,7 +13,9 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-func encodeMarkdown(frontmatter map[string]any, body string) (string, error) {
+// encodeMarkdown writes the order keys first, in that order; other top-level
+// keys follow alphabetically.
+func encodeMarkdown(frontmatter map[string]any, body string, order ...string) (string, error) {
 	if !utf8.ValidString(body) {
 		return "", fmt.Errorf("body must be valid UTF-8")
 	}
@@ -25,9 +28,32 @@ func encodeMarkdown(frontmatter map[string]any, body string) (string, error) {
 	if err := yaml.Unmarshal(data, &node); err != nil {
 		return "", err
 	}
+	if len(order) > 0 {
+		mapping := node.Content[0]
+		rank := func(i int) int {
+			if r := slices.Index(order, mapping.Content[2*i].Value); r >= 0 {
+				return r
+			}
+			return len(order)
+		}
+		pairs := make([]int, len(mapping.Content)/2)
+		for i := range pairs {
+			pairs[i] = i
+		}
+		slices.SortStableFunc(pairs, func(a, b int) int { return rank(a) - rank(b) })
+		content := make([]*yaml.Node, 0, len(mapping.Content))
+		for _, i := range pairs {
+			content = append(content, mapping.Content[2*i], mapping.Content[2*i+1])
+		}
+		mapping.Content = content
+	}
 	var blockStyle func(*yaml.Node)
 	blockStyle = func(n *yaml.Node) {
 		n.Style = 0
+		// The encoder leaves a plain << unquoted, which YAML reads as a merge key.
+		if n.Kind == yaml.ScalarNode && n.Tag == "!!str" && n.Value == "<<" {
+			n.Style = yaml.DoubleQuotedStyle
+		}
 		for _, child := range n.Content {
 			blockStyle(child)
 		}
@@ -45,6 +71,10 @@ func encodeMarkdown(frontmatter map[string]any, body string) (string, error) {
 	}
 	out.WriteString("---\n")
 	out.WriteString(body)
+	// Never write frontmatter that means itself cannot read back.
+	if _, _, err := parseMarkdown(out.Bytes()); err != nil {
+		return "", fmt.Errorf("encoded frontmatter does not round-trip: %w", err)
+	}
 	return out.String(), nil
 }
 

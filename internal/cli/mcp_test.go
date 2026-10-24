@@ -97,7 +97,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				call("create", args, true)
 			}
 			files, err := filepath.Glob(filepath.Join(path, "*.md"))
-			if err != nil || len(files) != 0 {
+			if err != nil || len(files) != 1 || filepath.Base(files[0]) != collection.ConfigFilename {
 				t.Fatalf("invalid calls created files: %v, %v", files, err)
 			}
 			created := call("create", `{"frontmatter":{"title":"Precise numbers","data":{"count":9007199254740993,"ratio":0.1234567890123456789}},"body":"## Notes\n\nExact body.\n"}`, false)
@@ -192,7 +192,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			call("info", `{"path":"elsewhere"}`, true)
 			call("info", `null`, true)
 			// Schema changes affect the next call; reads still allow old metadata.
-			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`{"type":"object","required":["category"]}`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "MEANS.md"), []byte("---\nschema: {type: object, required: [category]}\n---\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			info = call("info", `{}`, false)
@@ -222,11 +222,11 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			call("delete", deleteArgs, true)
 			call("read", `{"id":"`+id+`"}`, true)
 			call("read", `{"id":"`+created["id"].(string)+`"}`, false)
-			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`{"type":42}`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "MEANS.md"), []byte("---\nschema: {type: 42}\n---\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			call("info", `{}`, true)
-			if err := os.WriteFile(filepath.Join(path, "means.schema.json"), []byte(`true`), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "MEANS.md"), []byte("---\nschema: true\n---\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			if call("info", `{}`, false)["schema"] != true {

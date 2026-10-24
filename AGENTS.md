@@ -14,20 +14,28 @@ following its [workflow](issues/MEANS.md).
   tools can edit them directly.
 - A collection has a schema describing its documents' application data. Consumers
   can establish and evolve that schema through means.
-- Each collection contains a standalone `means.schema.json` using JSON Schema (Draft
-  2020-12 by default). `init` creates the directory with an example schema or a
-  consumer-authored schema from `--schema FILE` / `--schema -` (stdin). Validate
-  supplied schemas before creating files; never overwrite an existing schema.
+- Each collection contains one `MEANS.md`: YAML frontmatter with optional string
+  title/description and required schema (JSON Schema object or boolean expressed
+  as YAML, Draft 2020-12 by default), followed by Markdown guidance. Unknown
+  configuration fields are rejected. Missing/blank title defaults to the directory
+  name. Schema annotations do not define collection identity.
+  `init` generates an example, accepts a complete file through `--input FILE|-`,
+  or accepts JSON Schema through `--schema FILE|-`; these flags are exclusive.
+  Validate before creating files; never overwrite MEANS.md. Init JSON returns
+  its path in config. Complete file input preserves bytes; schema input becomes YAML.
   Consumers use schema set or edit schemas directly. Schema set compiles the
   proposal and checks existing documents before replacing the schema. --force
   permits document diagnostics but never invalid schemas or filesystem failures.
   It does not migrate documents or prove compatibility for future data. Schemas
   can also be installed through MCP schema_set with the same validation and
   diagnostics; force is an optional boolean. A running server can repair an
-  externally invalidated schema, while startup requires a valid schema. Schemas
-  are currently self-contained.
+  invalid or missing embedded schema if YAML and other fields are valid; malformed
+  YAML requires direct editing. Startup requires valid configuration. Schemas are
+  self-contained. Schema replacement preserves other field values, exact body bytes,
+  and permissions; frontmatter may be reformatted. Observed changes to the whole
+  configuration file reject replacement.
   Documents use YAML frontmatter and free-form Markdown bodies. The schema
-  validates only frontmatter.data; schema title/description still describe the collection.
+  validates only frontmatter.data.
 - Means owns the top-level frontmatter fields: id (generated, immutable), title
   (required nonempty string), and data (application object). Custom fields belong
   under data. Creation defaults omitted data to {}; explicit null is invalid.
@@ -35,9 +43,9 @@ following its [workflow](issues/MEANS.md).
   <id>-<title-slug>.md. Clients reference stored IDs, never filenames. Lookup scans
   visible subdirectories, ignores hidden paths and symlinks, and rejects duplicate
   IDs. Renames/moves preserve identity; title edits preserve the existing filename.
-  Scans stop at subdirectories containing means.schema.json, even if that schema is
+  Scans stop at subdirectories containing MEANS.md, even if that configuration is
   invalid. These are separate collections with independent IDs, schemas, and
-  MEANS.md guidance. Adding/removing a nested schema changes subtree ownership.
+  MEANS.md guidance. Adding/removing a nested MEANS.md changes subtree ownership.
   Creation reserves candidate IDs temporarily to prevent concurrent allocation;
   collisions retry. Direct edits can introduce duplicates, which list reports.
 - Validate the means envelope and application data on creation and after updates.
@@ -66,8 +74,8 @@ following its [workflow](issues/MEANS.md).
   each server to one collection, reload its schema per call, and preserve JSON
   number precision. Successful MCP results always use structuredContent without
   text copies; errors retain explanations. Keep stdout exclusively for MCP messages; --json affects
-  help and startup errors, not protocol framing. Use schema title/description for
-  collection identity and optional MEANS.md for collection workflows.
+  help and startup errors, not protocol framing. Use MEANS.md frontmatter title/description for
+  collection identity and its Markdown body for collection workflows.
   Root MEANS.md is reserved configuration, excluded from document lists/reads.
   MCP advertises identity and workflow at startup; info reads current
   guidance. The server does not load AGENTS.md. Multiple registrations may bind

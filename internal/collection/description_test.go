@@ -14,11 +14,12 @@ func TestCollectionDescription(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			info, err := c.Describe()
+			c, err = Load(c.Path)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if info.Title != filepath.Base(c.Path) || info.Description != "" || info.Instructions != "" {
+			info := c.Describe()
+			if info.Title != filepath.Base(c.Path) || info.Description != "" || info.Instructions == "" {
 				t.Fatalf("unexpected fallback: %+v", info)
 			}
 		})
@@ -28,13 +29,14 @@ func TestCollectionDescription(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, guidance := range []string{"# Workflow\n\nCheck duplicates first.\n", "Updated instructions.\n", ""} {
-		if err := os.WriteFile(filepath.Join(c.Path, InstructionsFilename), []byte(guidance), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(c.Path, ConfigFilename), []byte("---\ntitle: Project issues\ndescription: Planned work.\nschema: true\n---\n"+guidance), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		info, err := c.Describe()
+		c, err = Load(c.Path)
 		if err != nil {
 			t.Fatal(err)
 		}
+		info := c.Describe()
 		if info.Title != "Project issues" || info.Description != "Planned work." || info.Instructions != guidance {
 			t.Fatalf("description = %+v", info)
 		}
@@ -69,17 +71,19 @@ func TestWorkflowFilenameScope(t *testing.T) {
 	if _, err := c.Read("root1"); err == nil || !strings.Contains(err.Error(), "does not exist") {
 		t.Fatalf("root workflow must not be readable as a document: %v", err)
 	}
-	for _, id := range []string{"old01", "nest1"} {
+	for _, id := range []string{"old01"} {
 		if _, err := c.Read(id); err != nil {
 			t.Fatalf("read ordinary document %s: %v", id, err)
 		}
 	}
+	if _, err := c.Read("nest1"); err == nil {
+		t.Fatal("nested configuration read as document")
+	}
 	if err := os.Remove(filepath.Join(c.Path, "MEANS.md")); err != nil {
 		t.Fatal(err)
 	}
-	info, err := c.Describe()
-	if err != nil || info.Instructions != "" {
-		t.Fatalf("legacy filename must not supply guidance: %+v, %v", info, err)
+	if _, err := Load(c.Path); err == nil {
+		t.Fatal("missing configuration accepted")
 	}
 }
 
@@ -90,19 +94,22 @@ func TestInvalidCollectionInstructions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			path := filepath.Join(c.Path, InstructionsFilename)
+			path := filepath.Join(c.Path, ConfigFilename)
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
 			switch kind {
 			case "directory":
 				err = os.Mkdir(path, 0o755)
 			case "symlink":
-				err = os.Symlink(filepath.Join(c.Path, SchemaFilename), path)
+				err = os.Symlink(filepath.Join(c.Path, ConfigFilename), path)
 			case "invalid UTF-8":
 				err = os.WriteFile(path, []byte{0xff}, 0o644)
 			}
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := c.Describe(); err == nil || !strings.Contains(err.Error(), InstructionsFilename) {
+			if _, err := Load(c.Path); err == nil || !strings.Contains(err.Error(), ConfigFilename) {
 				t.Fatalf("invalid instructions accepted: %v", err)
 			}
 		})

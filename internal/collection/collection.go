@@ -14,7 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-const SchemaFilename = "means.schema.json"
+const ConfigFilename = "MEANS.md"
 
 //go:embed default.schema.json
 var defaultSchema []byte
@@ -22,11 +22,13 @@ var defaultSchema []byte
 // Collection is a loaded collection with a compiled application data schema.
 type Collection struct {
 	Path      string
-	Schema    json.RawMessage // The exact schema used to compile this collection.
+	Schema    json.RawMessage // The JSON schema compiled for this collection.
 	validator *jsonschema.Schema
+	config    map[string]any
+	body      string
 }
 
-// Validate checks the means envelope and validates only data against means.schema.json.
+// Validate checks the means envelope and data against the embedded schema.
 func (c *Collection) Validate(frontmatter map[string]any) error {
 	if err := validateEnvelope(frontmatter); err != nil {
 		return err
@@ -42,13 +44,30 @@ func (c *Collection) ValidateData(data map[string]any) error {
 	return nil
 }
 
-// Init validates a schema, then creates the directory and writes means.schema.json
+// Init validates a schema, then creates the directory and writes MEANS.md
 // without overwriting an existing file. A nil schema selects the example schema.
 func Init(path string, schema []byte) (*Collection, error) {
 	if schema == nil {
 		schema = defaultSchema
 	}
 	c, err := compile(path, schema)
+	if err != nil {
+		return nil, err
+	}
+	value, err := orderedSchema(schema)
+	if err != nil {
+		return nil, err
+	}
+	content, err := encodeConfig(map[string]any{"title": filepath.Base(c.Path), "schema": value}, "# Collection guidance\n\nDescribe this collection and its workflow here.\n")
+	if err != nil {
+		return nil, err
+	}
+	return InitConfig(path, []byte(content))
+}
+
+// InitConfig validates and installs a complete MEANS.md without overwriting it.
+func InitConfig(path string, content []byte) (*Collection, error) {
+	c, err := parseConfig(path, content)
 	if err != nil {
 		return nil, err
 	}
@@ -76,18 +95,18 @@ func Init(path string, schema []byte) (*Collection, error) {
 			hasRule = true
 		}
 	}
-	filename := filepath.Join(c.Path, SchemaFilename)
+	filename := filepath.Join(c.Path, ConfigFilename)
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if errors.Is(err, os.ErrExist) {
 		return nil, fmt.Errorf("%s already exists; refusing to overwrite it", filename)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("create collection schema: %w", err)
+		return nil, fmt.Errorf("create collection configuration: %w", err)
 	}
-	_, writeErr := f.Write(schema)
+	_, writeErr := f.Write(content)
 	if err := errors.Join(writeErr, f.Close()); err != nil {
 		removeErr := os.Remove(filename)
-		return nil, fmt.Errorf("write collection schema: %w", errors.Join(err, removeErr))
+		return nil, fmt.Errorf("write collection configuration: %w", errors.Join(err, removeErr))
 	}
 	if !hasRule {
 		if len(ignore) > 0 && ignore[len(ignore)-1] != '\n' {
@@ -118,15 +137,22 @@ func Init(path string, schema []byte) (*Collection, error) {
 
 // Load reads the exact directory supplied; it does not search parent directories.
 func Load(path string) (*Collection, error) {
-	filename := filepath.Join(path, SchemaFilename)
-	data, err := os.ReadFile(filename)
+	filename := filepath.Join(path, ConfigFilename)
+	stat, err := os.Lstat(filename)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf("no collection schema at %s; run means init --path %q", filename, path)
+		return nil, fmt.Errorf("no collection configuration at %s; run means init --path %q", filename, path)
 	}
+	if err != nil {
+		return nil, fmt.Errorf("inspect %s: %w", filename, err)
+	}
+	if !stat.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s must be a regular file, not a symlink or directory", filename)
+	}
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", filename, err)
 	}
-	c, err := compile(path, data)
+	c, err := parseConfig(path, data)
 	if err != nil {
 		return nil, fmt.Errorf("load %s: %w", filename, err)
 	}
@@ -148,7 +174,7 @@ func compile(path string, schema []byte) (*Collection, error) {
 	compiler := jsonschema.NewCompiler()
 	compiler.DefaultDraft(jsonschema.Draft2020)
 	compiler.UseLoader(selfContainedLoader{})
-	location := filepath.Join(path, SchemaFilename)
+	location := filepath.Join(path, ConfigFilename)
 	if err := compiler.AddResource(location, doc); err != nil {
 		return nil, fmt.Errorf("register JSON Schema: %w", err)
 	}

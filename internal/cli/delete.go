@@ -23,11 +23,11 @@ filename, and supply {"hash":"<64 lowercase hexadecimal SHA-256 characters>"}
 through --input FILE or --input - for stdin. File paths are relative to the
 working directory. Input must be one JSON object; unknown fields are rejected.
 
-Lookup scans visible subdirectories but stops at means.schema.json boundaries.
+Lookup scans visible subdirectories but stops at MEANS.md boundaries.
 Hidden paths, symlinks, and root MEANS.md are excluded. Missing or duplicate IDs,
 malformed document envelopes, and stale or invalid hashes fail without deletion.
 Existing application data need not match the current schema, but the selected
-collection must have a valid means.schema.json.
+collection must have a valid MEANS.md.
 
 Only the matched document file is removed. Directories, collection configuration,
 and unrelated files remain. There is no trash, undo, force option, or confirmation

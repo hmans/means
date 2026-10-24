@@ -25,7 +25,7 @@ Full-text search refreshes a disposable .means/search/ index on each call, reads
 and hashes all visible documents, and closes the index before returning. There
 is no watcher. Concurrent searches wait up to five seconds for a cache lock.
 IDs are stored values, independent of filenames. Lookup scans visible
-subdirectories, stopping at any directory containing means.schema.json, even if invalid.
+subdirectories, stopping at any directory containing MEANS.md, even if invalid.
 Nested collections have independent IDs, schemas, and MEANS.md guidance.
 Renames within a collection preserve identity. Duplicate IDs are errors. Patches
 may change title and data, never id.
@@ -45,7 +45,7 @@ validate and install a replacement. Document violations block installation unles
 force is true; diagnostics are always returned. Invalid schemas and filesystem
 errors cannot be forced. No documents are rewritten. Checks cover current data,
 not all possible future data, and concurrent edits can race installation.
-The optional MEANS.md supplies collection-specific
+The Markdown body of MEANS.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
 Call info for current guidance; restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
@@ -89,25 +89,25 @@ func New(path, version string) (*mcp.Server, error) {
 		return nil, err
 	}
 	path = c.Path
-	info, err := c.Describe()
-	if err != nil {
-		return nil, err
-	}
+	info := c.Describe()
 	server := mcp.NewServer(&mcp.Implementation{Name: "means", Title: info.Title, Description: info.Description, Version: version},
 		&mcp.ServerOptions{Instructions: collectionStartupInstructions(info)})
 	for _, tool := range []toolDefinition{
 		{
 			name:        "schema_set",
-			description: "Validate and install a JSON Schema for this collection. Pass schema as an object or boolean, not a string. Optional force (default false) permits existing document violations but never invalid schemas or filesystem errors. Returns installed, healthy, checked, and diagnostics. Rejection is a tool error with structured diagnostics and leaves the schema unchanged. Checks current data, not abstract schema compatibility. Does not rewrite documents; concurrent edits can race installation. Can repair an externally invalidated schema while this server remains running. Restart to refresh discovery metadata.",
+			description: "Validate and install a JSON Schema for this collection. Pass schema as an object or boolean, not a string. Optional force (default false) permits existing document violations but never invalid schemas or filesystem errors. Returns installed, healthy, checked, and diagnostics. Rejection is a tool error with structured diagnostics and leaves the schema unchanged. Checks current data, not abstract schema compatibility. Does not rewrite documents; concurrent edits can race installation. Can repair an invalid or missing schema in otherwise valid MEANS.md frontmatter while this server remains running. Malformed YAML requires a direct edit. Preserves identity and Markdown body; frontmatter may be reformatted. Restart to refresh discovery metadata.",
 			schema:      `{"type":"object","properties":{"schema":{"type":["object","boolean"],"description":"Complete self-contained JSON Schema. Draft 2020-12 by default; external references are unsupported."},"force":{"type":"boolean","default":false}},"required":["schema"],"additionalProperties":false}`,
 			destructive: true,
-			runPath: func(path string, args map[string]any) (any, error) {
-				schema, err := json.Marshal(args["schema"])
-				if err != nil {
+			runPath: func(path string, arguments json.RawMessage) (any, error) {
+				// Keep the raw schema bytes so the supplied key order survives.
+				var args struct {
+					Schema json.RawMessage `json:"schema"`
+					Force  bool            `json:"force"`
+				}
+				if err := json.Unmarshal(arguments, &args); err != nil {
 					return nil, err
 				}
-				force, _ := args["force"].(bool)
-				return collection.SetSchema(path, schema, force)
+				return collection.SetSchema(path, args.Schema, args.Force)
 			},
 		},
 		{
@@ -116,10 +116,7 @@ func New(path, version string) (*mcp.Server, error) {
 			schema:      `{"type":"object","additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
-				current, err := c.Describe()
-				if err != nil {
-					return nil, err
-				}
+				current := c.Describe()
 				return map[string]any{"path": c.Path, "schema": c.Schema,
 					"title": current.Title, "description": current.Description,
 					"instructions": collectionInstructions(current)}, nil
@@ -225,7 +222,7 @@ type toolDefinition struct {
 	readOnly                  bool
 	destructive               bool
 	run                       func(*collection.Collection, map[string]any) (any, error)
-	runPath                   func(string, map[string]any) (any, error) // Operations that need no valid current schema.
+	runPath                   func(string, json.RawMessage) (any, error) // Operations that need no valid current schema.
 }
 
 func addTool(server *mcp.Server, path string, tool toolDefinition) error {
@@ -265,7 +262,7 @@ func addTool(server *mcp.Server, path string, tool toolDefinition) error {
 		}
 		var output any
 		if tool.runPath != nil {
-			output, err = tool.runPath(path, value.(map[string]any))
+			output, err = tool.runPath(path, data)
 		} else {
 			var c *collection.Collection
 			c, err = collection.Load(path)
