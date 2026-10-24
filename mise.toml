@@ -9,9 +9,9 @@ run = 'go run "{{ config_root }}"'
 raw_args = true
 
 [tasks.sweet]
-description = "Run Sweet Release 0.2.0 (forwards CLI arguments)"
+description = "Run Sweet Release 0.3.0 (forwards CLI arguments)"
 dir = "{{ config_root }}"
-run = "go run github.com/chattocorp/sweet-release/apps/sweet/cmd/sweet@v0.2.0"
+run = "go run github.com/chattocorp/sweet-release/apps/sweet/cmd/sweet@fc9e0dea13c61edf7bdd0a04a21eca0f68a72e35"
 raw_args = true
 
 [tasks."release:check"]

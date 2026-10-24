@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Each main push has a release range that must reach tagging.
+  group: ci-${{ github.event_name }}-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'latest' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go test -race ./...
+      - run: go vet ./...
+
+  release-plan:
+    if: github.event_name == 'pull_request'
+    uses: chattocorp/sweet-release/.github/workflows/release.yml@ccee4355cc84229bf23b3f6dfd9658dd21672cba
+    with:
+      base: ${{ github.event.pull_request.base.sha }}
+      head: ${{ github.event.pull_request.head.sha }}
+      sweet-version: sweet@0.3.0
+      push-tags: false
+
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    uses: chattocorp/sweet-release/.github/workflows/release.yml@ccee4355cc84229bf23b3f6dfd9658dd21672cba
+    with:
+      base: ${{ github.event.before }}
+      head: ${{ github.sha }}
+      sweet-version: sweet@0.3.0
+    secrets:
+      # A personal/App token lets pushed tags start release.yml.
+      release-token: ${{ secrets.RELEASE_PR_TOKEN }}
+
