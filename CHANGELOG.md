@@ -1,5 +1,11 @@
 # means Changelog
 
+## 0.1.1
+
+### Fixes
+
+- Include Sweet Release notes in GitHub release drafts. ([#5](https://github.com/hmans/means/pull/5))
+
 ## 0.1.0
 
 ### Features
