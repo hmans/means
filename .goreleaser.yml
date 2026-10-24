@@ -38,5 +38,6 @@ snapshot:
 
 release:
   name_template: "means {{ .Version }}"
+  # The workflow publishes only after all asset uploads succeed.
   draft: true
   prerelease: auto

@@ -30,7 +30,8 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install Sweet Release
-        run: go install github.com/chattocorp/sweet-release/apps/sweet/cmd/sweet@v0.2.0
+        # Commit behind sweet@0.3.0 (the release tag is not a Go module tag).
+        run: go install github.com/chattocorp/sweet-release/apps/sweet/cmd/sweet@fc9e0dea13c61edf7bdd0a04a21eca0f68a72e35
       - name: Validate release and extract notes
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
@@ -45,3 +46,8 @@ jobs:
           args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish completed release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: gh release edit "$TAG" --draft=false
