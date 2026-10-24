@@ -33,8 +33,8 @@ checksum:
 snapshot:
   version_template: "0.0.0-SNAPSHOT-{{ .ShortCommit }}"
 
-changelog:
-  disable: true
+# Keep changelog processing enabled: --release-notes supplies the Sweet notes
+# and skips automatic generation. Disabling it also skips loading those notes.
 
 release:
   name_template: "means {{ .Version }}"
