@@ -53,3 +53,4 @@ JSON help.
 means tracks its own work in the [issues collection](issues/), using its
 [schema](issues/means.schema.json) and [workflow](issues/MEANS.md). Contributors
 should read [AGENTS.md](AGENTS.md). Run `mise test` for the Go test suite.
+See [releasing means](docs/releases.md) to record changes and prepare releases.

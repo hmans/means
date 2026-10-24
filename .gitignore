@@ -1,6 +1,7 @@
 # Local builds of the CLI.
 /means
 /means.exe
+/dist/
 
 # Temporary files used by ID allocation and hash-checked updates (including example collections).
 .means-*.tmp
