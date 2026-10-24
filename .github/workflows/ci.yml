@@ -26,7 +26,7 @@ jobs:
 
   release-plan:
     if: github.event_name == 'pull_request'
-    uses: chattocorp/sweet-release/.github/workflows/release.yml@7e3acbc56982d381442bfba2cf9b4e3ac6732c89
+    uses: chattocorp/sweet-release/.github/workflows/release.yml@1c210fb375b8823d385bfb9cfe67ea261a2fbeca
     with:
       base: ${{ github.event.pull_request.base.sha }}
       head: ${{ github.event.pull_request.head.sha }}
@@ -38,7 +38,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: chattocorp/sweet-release/.github/workflows/release.yml@7e3acbc56982d381442bfba2cf9b4e3ac6732c89
+    uses: chattocorp/sweet-release/.github/workflows/release.yml@1c210fb375b8823d385bfb9cfe67ea261a2fbeca
     with:
       base: ${{ github.event.before }}
       head: ${{ github.sha }}

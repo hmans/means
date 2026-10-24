@@ -19,7 +19,7 @@ publication run together through the shared workflow using `GITHUB_TOKEN`;
 there is no separate tag-triggered workflow.
 
 The shared workflows are pinned to Sweet Release commit
-`7e3acbc56982d381442bfba2cf9b4e3ac6732c89`; their CLI input is `sweet@0.3.0`.
+`1c210fb375b8823d385bfb9cfe67ea261a2fbeca`; their CLI input is `sweet@0.3.0`.
 Update the workflow references in `bump.yml` and `ci.yml` together when upgrading.
 
 ## Record a change
