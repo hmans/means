@@ -112,7 +112,7 @@ func TestFullTextReconcilesFilesystem(t *testing.T) {
 		t.Fatal(err)
 	}
 	check("tan", 1, 0)
-	boundary := filepath.Join(c.Path, "nested", SchemaFilename)
+	boundary := filepath.Join(c.Path, "nested", ConfigFilename)
 	if err := os.WriteFile(boundary, []byte("invalid schema"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func TestInitGitignore(t *testing.T) {
 	if _, err := Init(dir, nil); err == nil {
 		t.Fatal("followed gitignore symlink")
 	}
-	if _, err := os.Stat(filepath.Join(dir, SchemaFilename)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, ConfigFilename)); !os.IsNotExist(err) {
 		t.Fatal("failed init created schema")
 	}
 }

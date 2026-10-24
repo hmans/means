@@ -16,7 +16,7 @@ func newListCommand(opts *options) *cobra.Command {
 		Long: `List documents in the collection selected by --path (default: current directory).
 
 Scan regular .md files recursively, ignoring symlinks and hidden paths.
-Stop at subdirectories containing means.schema.json, even if their schema is invalid.
+Stop at subdirectories containing MEANS.md, even if their schema is invalid.
 IDs come from frontmatter.id, not filenames. Results are sorted by relative
 filename, not creation time. Root MEANS.md is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
@@ -35,7 +35,7 @@ Malformed documents and every occurrence of duplicate IDs are excluded from
 documents and reported in diagnostics with id, path, and error. id is empty when
 it cannot be extracted. Limits count valid documents only. Diagnostics cover the
 whole collection regardless of the limit. Listing checks the means envelope but does
-not validate data against means.schema.json; application schema violations remain readable. Per-document errors still produce exit 0. Collection-level failures
+not validate data against MEANS.md; application schema violations remain readable. Per-document errors still produce exit 0. Collection-level failures
 produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 		Example: `  means list --path ./memory --json
   means list --path ./memory --limit 0 --json`,

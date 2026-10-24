@@ -13,22 +13,54 @@ to it; JSON initialization responses include `next_steps: ["means agents"]`.
 
 ## Collections
 
-A collection is one directory with a standalone `means.schema.json`. The schema
-describes only `frontmatter.data`; means owns the document's top-level `id` and
-`title`. Schemas use JSON Schema Draft 2020-12 by default. Internal references
-work; references to other files or remote schemas are not supported.
+A collection is one directory with a `MEANS.md` configuration file:
 
-Initialize with the starter schema or one you wrote:
+```yaml
+---
+title: Project memory
+description: Decisions and facts for this project.
+schema:
+  type: object
+  properties:
+    tags:
+      type: array
+      items:
+        type: string
+  additionalProperties: false
+---
+# Working with project memory
+
+Search for existing knowledge before creating a document.
+```
+
+The schema validates only document `frontmatter.data`; means owns each document's
+`id` and `title`. It remains JSON Schema, expressed as YAML. Draft 2020-12 is the
+default. Internal references work; external files and remote schemas do not.
+
+The required `schema` field accepts an object or boolean. Optional `title` and
+`description` must be strings; unknown configuration fields are rejected.
+Missing or blank title falls back to the directory name; description defaults to
+empty. Schema annotations do not define collection identity. The Markdown body
+provides self-description and workflow and may be empty. Configuration uses the
+same JSON-compatible YAML subset as documents: string keys, exact numbers, no
+aliases, merge keys, custom tags, or non-finite numbers.
+
+Initialize with a starter, complete configuration, or JSON Schema:
 
 ```sh
 mise means init --path ./memory
+mise means init --path ./memory --input ./template/MEANS.md --json
+mise means init --path ./memory --input - --json < ./template/MEANS.md
 mise means init --path ./memory --schema ./memory.schema.json --json
 mise means init --path ./memory --schema - --json < ./memory.schema.json
 ```
 
-The starter schema accepts optional `tags` and rejects other application fields.
-`init` validates a supplied schema before creating files and never overwrites an
-existing `means.schema.json`. It also creates `.gitignore` with `.means/`, or
+The starter includes a directory-derived title, editable guidance, and a schema
+accepting optional `tags` while rejecting other application fields.
+`--input` preserves a complete file's bytes; `--schema` accepts JSON and writes YAML.
+These flags are mutually exclusive. Init JSON returns `path`, `config` (the absolute
+MEANS.md path), and `next_steps`. `init` validates configuration and schema before
+creating files and never overwrites an existing `MEANS.md`. It also creates `.gitignore` with `.means/`, or
 appends that rule while preserving existing content and avoiding duplicates.
 The search cache is created only when first used. Use `schema set` to validate a replacement, or edit
 the file directly to evolve a collection. Means
@@ -36,9 +68,8 @@ loads the selected directory exactly; it does not search parent directories.
 Schema edits take effect on the next command or MCP call. Run `doctor` after a
 schema change to find existing documents that need attention.
 
-An optional root `MEANS.md` provides collection workflow guidance to MCP
-clients. It is configuration, not a document, and is excluded from lists and
-reads. The server does not load `AGENTS.md`.
+The root `MEANS.md` must be a regular UTF-8 file, not a symlink. It is configuration,
+not a document, and is excluded from lists and reads. The server does not load `AGENTS.md`.
 
 ### Changing the schema
 
@@ -53,7 +84,9 @@ mise means doctor --path ./memory --json
 
 Input is the JSON Schema itself. Means parses and compiles it with the same
 rules as `init`; invalid or unsupported schemas always fail. The command requires
-an existing regular `means.schema.json` file, but can replace an invalid schema.
+an existing regular `MEANS.md` file. It can replace an invalid or missing schema
+when the YAML and other configuration fields are valid. Malformed YAML or invalid
+identity fields require direct editing.
 It checks visible documents against the proposal, excluding nested collections.
 This tests existing data, not abstract compatibility with the old schema or
 future callers. A stricter schema can pass on an empty collection.
@@ -66,10 +99,12 @@ bypasses schema validation or filesystem errors. JSON results include `installed
 `healthy`, `checked`, and `diagnostics`; rejected compatibility checks also have
 an `error` field. Other errors use the usual `{"error":"..."}` format.
 
-Only the schema changes. Its supplied bytes and existing permission bits are
-preserved through a same-directory temporary replacement. There are no locks:
-concurrent document edits can invalidate the check, and schema edits can race
-replacement. Observed schema changes abort installation.
+Only the embedded schema changes. It is serialized as YAML with exact numbers.
+Other configuration values, exact Markdown body bytes, and file permission bits
+are preserved. Frontmatter formatting may change. Installation uses a same-directory
+temporary replacement. There are no locks: concurrent document edits can invalidate
+the check, and configuration edits can race replacement. Observed changes to any
+part of MEANS.md abort installation.
 
 After a forced change, the agent or user migrates documents: read each affected
 ID, patch its data using the returned hash, and run `doctor` again. Reads and
@@ -87,28 +122,28 @@ Pass a schema object or boolean, not a JSON string. `force` defaults to false.
 Rejected compatibility checks return a tool error with structured diagnostics;
 forced installations return success with those diagnostics. Error responses
 retain explanatory text. Schema numbers retain
-their precision, but JSON formatting is regenerated. A running server can repair
-an externally invalidated schema; starting a server still requires a valid schema.
+their precision when stored as YAML. A running server can repair an invalid or
+missing embedded schema in otherwise valid configuration; malformed YAML needs
+a direct edit. Starting a server requires valid configuration.
 
 ### Subdirectories and collection boundaries
 
-Use the filenames `means.schema.json` and `MEANS.md` as written. Means uses
-ordinary filesystem lookup; case sensitivity depends on the filesystem. It does
-not search for other case variants. A `MEANS.md` file alone does not start a
-collection, and an unrelated `schema.json` does not establish a boundary.
+Use the filename `MEANS.md` as written. Means uses ordinary filesystem lookup;
+case sensitivity depends on the filesystem. It does not search for other case
+variants. Neither `schema.json` nor the former `means.schema.json` marks a collection.
 
 Ordinary subdirectories belong to the selected collection. A subdirectory with
-its own `means.schema.json` starts a separate collection: all document operations stop
+its own `MEANS.md` starts a separate collection: all document operations stop
 at that directory, including list, search, doctor, ID lookup, updates, deletion, and ID
-allocation. The presence of the schema path establishes the boundary, even if
-the schema is invalid, a directory, or a broken symlink.
+allocation. The presence of the configuration path establishes the boundary, even if
+the configuration is invalid, a directory, or a broken symlink.
 
-For example, with `foo/means.schema.json` and `foo/bar/means.schema.json`, `--path foo`
+For example, with `foo/MEANS.md` and `foo/bar/MEANS.md`, `--path foo`
 excludes everything under `foo/bar`. Use `--path foo/bar` to work with that
 collection. IDs are unique within each collection; parent and child collections
 can reuse an ID. Schemas and `MEANS.md` guidance do not inherit from parents.
 
-Adding or removing a nested `means.schema.json` changes which collection owns that
+Adding or removing a nested `MEANS.md` changes which collection owns that
 subtree on the next operation. Moving a document across a collection boundary
 changes the schema that applies to it and can introduce an ID collision in the
 destination. Moving it within one collection preserves its identity.
@@ -328,7 +363,7 @@ and removal can still be deleted. On conflict, read again and review the changes
 The client starts and owns the subprocess; there is no network listener or
 managed daemon. Register the command once per collection to give one agent
 multiple collections. Each server advertises its collection identity and the
-optional `MEANS.md` workflow at startup. Call `info` for the current
+Markdown workflow from `MEANS.md` at startup. Call `info` for the current
 schema and guidance. Other tools are `list`, `search`, `read`, `create`,
 `update`, `delete`, and `schema_set`; they use the same collection behavior as the CLI. Each document call reloads
 the schema. Restart the server after changing collection title, description, or
@@ -353,15 +388,26 @@ instead of mixing error entries into `documents`. Update CLI JSON and MCP consum
 to inspect both arrays. Limits count valid documents only; diagnostics are never
 limited. `has_more` indicates additional valid documents, not additional errors.
 
-Rename each collection's `schema.json` to `means.schema.json`, including nested
-collections, before using this version. There is no fallback to the old schema
-filename. A nested collection with only the old filename is now an ordinary
-subdirectory of its parent collection.
+This version requires MEANS.md configuration; there is no compatibility fallback
+or migration command. Migrate every collection, including nested collections,
+before running parent operations:
 
-Rename the collection's root `instructions.md` to `MEANS.md` to keep its workflow
-guidance available. Only `MEANS.md` is reserved for this purpose; the old name is
-now treated as a document and must have valid frontmatter if kept. Restart MCP
-servers after the rename to refresh their advertised workflow.
+1. Put the contents of `means.schema.json` (or older `schema.json`) under a
+   `schema:` field in YAML frontmatter at the start of `MEANS.md`.
+2. Move the schema's top-level `title` and `description` annotations to frontmatter
+   fields beside `schema` to preserve collection identity.
+3. Keep existing workflow text as the Markdown body. If it was in `instructions.md`,
+   move it here and remove that obsolete file; it is otherwise treated as a document.
+4. Remove the old schema file. Run `means doctor --path COLLECTION` and restart MCP.
+
+JSON objects are valid YAML values, so the old schema can initially be placed
+inline after `schema:`, then reformatted as YAML. Quote internal references
+such as `'#/$defs/status'` when writing YAML.
+
+A directory containing only an old schema file no longer establishes a boundary.
+Any nested MEANS.md now establishes one, even with invalid or missing frontmatter.
+Update CLI consumers of init JSON: the old `schema` path field is now `config`.
+Schema-set commands still accept JSON, but no longer preserve its formatting.
 
 Earlier versions used filename stems as IDs and flat application frontmatter.
 Migrate those files explicitly: preserve the old filename stem as

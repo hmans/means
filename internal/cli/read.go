@@ -12,7 +12,7 @@ func newReadCommand(opts *options) *cobra.Command {
 		Long: `Read a document by its stored frontmatter.id from --path (default: current directory).
 
 Pass the ID returned by create or list, not a filename or path. Lookup scans
-visible .md files recursively, stopping at subdirectories containing means.schema.json.
+visible .md files recursively, stopping at subdirectories containing MEANS.md.
 Renaming or moving a file within the collection preserves its identity.
 IDs contain 1–128 letters, digits, - and _, starting with a letter or digit.
 Missing and duplicate IDs fail instead of choosing an arbitrary document.
@@ -27,7 +27,7 @@ Success exits 0; missing or malformed documents fail with exit 1 and an error on
 stderr (as {"error":"..."} with --json).
 
 Read checks the means envelope (id, nonempty title, object data), but does not
-enforce the current data schema, so documents remain readable after schema changes. The collection still needs a valid means.schema.json.
+enforce the current data schema, so documents remain readable after schema changes. The collection still needs a valid MEANS.md.
 Frontmatter must be a mapping between --- delimiter lines. LF and CRLF work.
 Use JSON-compatible YAML values; duplicate keys, aliases, merge keys, custom tags,
 and non-finite numbers are rejected. Plain YAML dates are returned as strings.`,

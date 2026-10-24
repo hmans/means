@@ -21,6 +21,10 @@ func TestMCPSchemaSet(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				original, err := os.ReadFile(filepath.Join(c.Path, collection.ConfigFilename))
+				if err != nil {
+					t.Fatal(err)
+				}
 				doc, err := c.Create(map[string]any{"title": "Keep"}, "Body")
 				if err != nil {
 					t.Fatal(err)
@@ -69,9 +73,9 @@ func TestMCPSchemaSet(t *testing.T) {
 				if diagnostic["id"] != doc.ID || diagnostic["path"] == "" {
 					t.Fatalf("diagnostic: %v", diagnostic)
 				}
-				filename := filepath.Join(c.Path, collection.SchemaFilename)
+				filename := filepath.Join(c.Path, collection.ConfigFilename)
 				stored, err := os.ReadFile(filename)
-				if err != nil || string(stored) != string(c.Schema) {
+				if err != nil || string(stored) != string(original) {
 					t.Fatal("rejection changed schema", err)
 				}
 				forced := decode(call(`{"schema":false,"force":true}`, false))
@@ -83,10 +87,10 @@ func TestMCPSchemaSet(t *testing.T) {
 					t.Fatal("document changed", err)
 				}
 				// A running server can repair an external invalid-schema edit.
-				if err := os.WriteFile(filename, []byte("broken"), 0o644); err != nil {
+				if err := os.WriteFile(filename, []byte("---\ntitle: Updated\nschema: {type: invalid}\n---\nUpdated workflow"), 0o644); err != nil {
 					t.Fatal(err)
 				}
-				precise := `{"schema":{"title":"Updated","properties":{"n":{"const":9007199254740993},"ratio":{"const":0.1234567890123456789}}},"force":false}`
+				precise := `{"schema":{"title":"Schema annotation only","properties":{"n":{"const":9007199254740993},"ratio":{"const":0.1234567890123456789}}},"force":false}`
 				installed := decode(call(precise, false))
 				if installed["installed"] != true || installed["healthy"] != true {
 					t.Fatalf("install: %v", installed)
@@ -95,12 +99,22 @@ func TestMCPSchemaSet(t *testing.T) {
 				if err != nil || !strings.Contains(string(stored), "9007199254740993") || !strings.Contains(string(stored), "0.1234567890123456789") {
 					t.Fatalf("precision lost: %s %v", stored, err)
 				}
+				if title, properties := strings.Index(string(stored), "  title: Schema annotation only"), strings.Index(string(stored), "  properties:"); title < 0 || properties < title {
+					t.Fatalf("key order lost: %s", stored)
+				}
 				info, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "info", Arguments: json.RawMessage(`{}`)})
 				if err != nil || info.IsError || decode(info)["title"] != "Updated" {
 					t.Fatalf("stale info: %+v %v", info, err)
 				}
 				if session.InitializeResult().ServerInfo.Title == "Updated" {
 					t.Fatal("startup metadata changed")
+				}
+				if err := os.WriteFile(filename, []byte("---\nschema: [\n---\n"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				call(`{"schema":true,"force":true}`, true)
+				if err := os.WriteFile(filename, []byte("---\ntitle: Repaired\n---\nBody"), 0o644); err != nil {
+					t.Fatal(err)
 				}
 				if decode(call(`{"schema":true}`, false))["healthy"] != true {
 					t.Fatal("boolean schema failed")

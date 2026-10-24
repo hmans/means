@@ -23,6 +23,7 @@ func TestDocumentRoundTrip(t *testing.T) {
 		"exponent": json.Number("1e+30"),
 		"nested":   map[string]any{"enabled": true, "nothing": nil, "empty": map[string]any{}},
 		"date":     "2026-10-20",
+		"<<":       "<<",
 	}
 	for _, body := range []string{"", "No trailing newline", "# Notes\n\nText\n", "---\nbody divider\n", "Line one\r\nLine two\r\n", "こんにちは 🌱\n"} {
 		t.Run(body, func(t *testing.T) {
@@ -60,7 +61,7 @@ func TestCreateValidationDoesNotWrite(t *testing.T) {
 		}
 	}
 	entries, err := os.ReadDir(c.Path)
-	if err != nil || len(entries) != 2 || entries[0].Name() != ".gitignore" || entries[1].Name() != SchemaFilename {
+	if err != nil || len(entries) != 2 || entries[0].Name() != ".gitignore" || entries[1].Name() != ConfigFilename {
 		t.Fatalf("invalid writes changed collection: %v, %v", entries, err)
 	}
 }

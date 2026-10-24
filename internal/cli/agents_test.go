@@ -28,7 +28,7 @@ func TestAgentsGuideWithoutCollection(t *testing.T) {
 	if result.Guide != text.String() || result.Guide == "" || stderr.Len() != 0 {
 		t.Fatal("guide output mismatch")
 	}
-	for _, topic := range []string{"means.schema.json", "MEANS.md", "project instructions", "skill", "means mcp", "info", "doctor", "hash", "--with-body"} {
+	for _, topic := range []string{"MEANS.md", "--input", "project instructions", "skill", "means mcp", "info", "doctor", "hash", "--with-body"} {
 		if !strings.Contains(result.Guide, topic) {
 			t.Errorf("missing topic %q", topic)
 		}

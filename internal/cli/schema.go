@@ -17,21 +17,22 @@ var ErrSchemaRejected = errors.New("schema installation rejected")
 func newSchemaCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "schema", Short: "Manage the collection schema",
-		Long:    "Manage means.schema.json in the collection selected by --path. Use schema set to validate and install a proposed JSON Schema.",
+		Long:    "Manage MEANS.md in the collection selected by --path. Use schema set to validate and install a proposed JSON Schema.",
 		Example: "  means schema set --path ./memory --input new-schema.json --json",
 	}
 	var input string
 	var force bool
 	set := &cobra.Command{
 		Use: "set", Short: "Validate and install a proposed collection schema",
-		Long: `Validate and replace means.schema.json in the existing collection at --path.
+		Long: `Validate and replace the schema field in MEANS.md at --path.
 
 --input FILE reads a proposed JSON Schema; --input - reads stdin until EOF.
 Relative input paths resolve against the working directory, independently of
 --path. Supply the schema itself, not a wrapper. Draft 2020-12 is the default.
 Internal references are supported; external references are not. Invalid or
 unsupported schemas always fail, even with --force. Use init for a new collection.
-An existing invalid schema can be replaced, but it must be a regular file.
+MEANS.md must be a regular file with parseable frontmatter and valid identity fields.
+An invalid or missing schema can be replaced; malformed YAML needs a direct edit.
 
 Check all visible documents against the proposed schema, respecting nested
 collection boundaries. This checks current data, not abstract compatibility with
@@ -40,10 +41,12 @@ Malformed envelopes, duplicate IDs, and data violations block installation.
 --force permits these document diagnostics but still reports them. It does not
 bypass schema validation or collection-level filesystem errors.
 
-No documents are changed. Installation preserves the supplied schema bytes and
-existing permission bits, using a same-directory temporary file and replacement.
+No documents are changed. Installation writes the schema as YAML, preserving key
+order, exact numbers, other configuration values, Markdown body bytes, and file
+permission bits.
+Frontmatter may be reformatted. Use a same-directory temporary file and replacement.
 There are no locks: concurrent document edits can invalidate the check, and a
-concurrent schema edit can race the final replacement. Observed schema changes
+concurrent configuration edit can race the final replacement. Observed configuration changes
 are rejected. Run doctor after installation and let the agent or user fix data.
 
 Success exits 0 and writes stdout. --json returns

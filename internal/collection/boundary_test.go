@@ -21,10 +21,19 @@ func TestNestedCollectionBoundary(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("MEANS.md", "Parent workflow")
+	write("MEANS.md", "---\nschema: {additionalProperties: false}\n---\nParent workflow")
+	parent, err = Load(parent.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Generic schemas must not hide ordinary subdirectories from their owner.
 	write("ordinary/schema.json", "unrelated schema")
-	write("ordinary/child/MEANS.md", "Child workflow")
+	write("ordinary/means.schema.json", "obsolete collection marker")
+	write("ordinary/child/MEANS.md", "---\nschema: {required: [child]}\n---\nChild workflow")
+	child, err = Load(child.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	write("ordinary/child/doc.md", "---\nid: same1\ntitle: Child\ndata:\n  child: true\n---\nChild body")
 	write("ordinary/local.md", "---\nid: local\ntitle: Local\ndata: {}\n---\nLocal body")
 	childDoc, err := child.Read("same1")
@@ -74,9 +83,8 @@ func TestNestedCollectionBoundary(t *testing.T) {
 		if err != nil || !report.Healthy || report.Checked != tt.count {
 			t.Fatalf("doctor: %+v, %v", report, err)
 		}
-		info, err := tt.c.Describe()
-		if err != nil || info.Instructions != tt.workflow {
-			t.Fatalf("guidance: %+v, %v", info, err)
+		if info := tt.c.Describe(); info.Instructions != tt.workflow {
+			t.Fatalf("guidance: %+v", info)
 		}
 	}
 }
@@ -103,7 +111,7 @@ func TestBoundaryPresenceAndRemoval(t *testing.T) {
 				}
 			}
 			check(1)
-			marker := filepath.Join(dir, SchemaFilename)
+			marker := filepath.Join(dir, ConfigFilename)
 			switch kind {
 			case "invalid schema":
 				err = os.WriteFile(marker, []byte("broken JSON"), 0o644)

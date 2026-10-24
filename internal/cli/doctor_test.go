@@ -73,7 +73,7 @@ func TestDoctorHelp(t *testing.T) {
 			}
 			output = help.Description + help.Usage
 		}
-		for _, topic := range []string{"means.schema.json", "--path", "--json", "diagnostic", "exit 1", "never repairs"} {
+		for _, topic := range []string{"MEANS.md", "--path", "--json", "diagnostic", "exit 1", "never repairs"} {
 			if !strings.Contains(output, topic) {
 				t.Errorf("doctor help omits %q", topic)
 			}

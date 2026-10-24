@@ -45,8 +45,8 @@ func TestInitSuppliedSchema(t *testing.T) {
 			if stderr.Len() != 0 || !json.Valid(stdout.Bytes()) {
 				t.Fatalf("unexpected response: stdout=%s stderr=%s", stdout.String(), stderr.String())
 			}
-			stored, err := os.ReadFile(filepath.Join(dir, "means.schema.json"))
-			if err != nil || string(stored) != schema {
+			stored, err := os.ReadFile(filepath.Join(dir, "MEANS.md"))
+			if err != nil || !strings.Contains(string(stored), "schema:") {
 				t.Fatalf("schema was not preserved: %s, %v", stored, err)
 			}
 			c, err := collection.Load(dir)
@@ -63,7 +63,7 @@ func TestInitSuppliedSchema(t *testing.T) {
 			if err := Execute(args, strings.NewReader(`{"type":"object"}`), &stdout, &stderr, "test"); err == nil {
 				t.Fatal("reinitialization overwrote the schema")
 			}
-			after, err := os.ReadFile(filepath.Join(dir, "means.schema.json"))
+			after, err := os.ReadFile(filepath.Join(dir, "MEANS.md"))
 			if err != nil || !bytes.Equal(after, stored) {
 				t.Fatalf("reinitialization changed the schema: %s, %v", after, err)
 			}
@@ -147,7 +147,7 @@ func TestInitHelp(t *testing.T) {
 			}
 			output = help.Description + help.Usage
 		}
-		for _, topic := range []string{"--schema -", "2020-12", "#/$defs/status", "required", "additionalProperties", "Refuse to overwrite", "exit 1", "EOF", "<<'JSON'"} {
+		for _, topic := range []string{"--input -", "mutually exclusive", "config", "Markdown body", "--schema -", "2020-12", "#/$defs/status", "required", "additionalProperties", "Refuse to overwrite", "exit 1", "EOF", "<<'JSON'"} {
 			if !strings.Contains(output, topic) {
 				t.Errorf("help for %q omits %q", args, topic)
 			}
