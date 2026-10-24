@@ -3,7 +3,7 @@
 Means uses [Sweet Release 0.3.0](https://github.com/chattocorp/sweet-release/releases/tag/sweet%400.3.0)
 to manage change notes, release PRs, versions, changelogs, and tags. GoReleaser builds
 binaries and uploads them to a draft GitHub Release when a `v*` tag is pushed.
-Maintainers review and publish the draft on GitHub.
+The workflow publishes the release automatically after all uploads succeed.
 
 Run `mise install` before using these commands. The `mise sweet` task runs the
 pinned Sweet version with Go; it does not require a global `sweet` installation.
@@ -75,8 +75,9 @@ builds Linux, macOS, and Windows binaries for amd64 and arm64. Archives use
 tar.gz on Linux/macOS and ZIP on Windows, with `checksums.txt` for SHA-256 hashes.
 The linker sets the version reported by `means version`.
 
-The workflow uploads a draft named `means <version>`. Review its notes and assets
-on GitHub, then publish it. Versions with prerelease suffixes are marked as
+The workflow uploads a draft named `means <version>`, then publishes it after
+GoReleaser completes successfully. Build or upload failures leave the release
+unpublished. Versions with prerelease suffixes are marked as
 prereleases. The workflow uses the built-in `GITHUB_TOKEN` with `contents: write`;
 the separate PR/tag steps use `RELEASE_PR_TOKEN` as described above.
 
@@ -89,7 +90,9 @@ gh workflow run release.yml --ref main -f tag=v0.1.0
 ```
 
 If a failed upload left a partial draft, delete that draft before retrying. Keep
-the Git tag. Do not rerun publishing for an already published release.
+the Git tag. If only the final publication step failed, publish the complete draft
+with `gh release edit <tag> --draft=false`. Do not rerun the build for an already
+published release. Existing drafts are not published just by merging this setup.
 
 For local checks, use `mise run release:check` to validate the GoReleaser config
 and `mise run release:snapshot` to run tests, vet, and all six builds. Snapshots
