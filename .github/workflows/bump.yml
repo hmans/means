@@ -11,8 +11,7 @@ permissions:
 
 jobs:
   bump:
-    uses: chattocorp/sweet-release/.github/workflows/bump.yml@1c210fb375b8823d385bfb9cfe67ea261a2fbeca
-    with:
-      sweet-version: sweet@0.3.0
+    # Repin to the merged revision before this draft PR is ready.
+    uses: chattocorp/sweet-release/.github/workflows/bump.yml@0283db403e6641e3a1ec02a59951740775e02a91
     secrets:
       release-token: ${{ secrets.RELEASE_PR_TOKEN }}
