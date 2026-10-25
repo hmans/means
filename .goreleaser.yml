@@ -33,6 +33,6 @@ checksum:
 snapshot:
   version_template: '{{ if index .Env "RELEASE_VERSION" }}{{ .Env.RELEASE_VERSION }}{{ else }}0.0.0-SNAPSHOT-{{ .ShortCommit }}{{ end }}'
 
-# The shared GitHub workflow owns release notes and publication.
+# This repository's tag-triggered workflow owns release notes and publication.
 changelog:
   disable: true

@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Read release version and notes
+        run: |
+          version=${TAG#v}
+          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
+          go run github.com/chattocorp/sweet-release/apps/sweet/cmd/sweet@fc9e0dea13c61edf7bdd0a04a21eca0f68a72e35 \
+            changelog --version "$version" -- . > "$RUNNER_TEMP/notes.md"
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.18.2
+          args: release --snapshot --clean
+      - name: Verify archives
+        run: |
+          test "$(dist/means_linux_amd64_v1/means version)" = "means $RELEASE_VERSION"
+          (cd dist && sha256sum --check checksums.txt)
+      - name: Publish GitHub Release
+        run: |
+          state=$(gh release view "$TAG" --json isDraft --jq 'if .isDraft then "draft" else "published" end' 2>/dev/null || echo missing)
+          if [[ "$state" == published ]]; then
+            echo "$TAG is already published." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Recreate a draft left by a failed upload. Keep the tag.
+          if [[ "$state" == draft ]]; then gh release delete "$TAG" --yes; fi
+          options=()
+          if [[ "${RELEASE_VERSION%%+*}" == *-* ]]; then options+=(--prerelease); fi
+          gh release create "$TAG" dist/*.tar.gz dist/*.zip dist/checksums.txt \
+            --verify-tag --title "means $RELEASE_VERSION" --notes-file "$RUNNER_TEMP/notes.md" "${options[@]}"
+          echo "Published $TAG." >> "$GITHUB_STEP_SUMMARY"

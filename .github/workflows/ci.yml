@@ -24,25 +24,12 @@ jobs:
       - run: go test -race ./...
       - run: go vet ./...
 
-  release-plan:
-    if: github.event_name == 'pull_request'
-    uses: chattocorp/sweet-release/.github/workflows/release.yml@1c210fb375b8823d385bfb9cfe67ea261a2fbeca
-    with:
-      base: ${{ github.event.pull_request.base.sha }}
-      head: ${{ github.event.pull_request.head.sha }}
-      sweet-version: sweet@0.3.0
-      push-tags: false
-
-  release:
+  tag:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: chattocorp/sweet-release/.github/workflows/release.yml@1c210fb375b8823d385bfb9cfe67ea261a2fbeca
-    with:
-      base: ${{ github.event.before }}
-      head: ${{ github.sha }}
-      sweet-version: sweet@0.3.0
-      github-release: true
-      goreleaser: v2.18.2
+    uses: chattocorp/sweet-release/.github/workflows/tag.yml@01911da0f43f6147d1918c5b4e776abcdd9b7c3a
+    secrets:
+      release-token: ${{ secrets.RELEASE_PR_TOKEN }}
 
