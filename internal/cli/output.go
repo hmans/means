@@ -3,9 +3,22 @@ package cli
 import (
 	"encoding/json"
 	"io"
+	"log"
 
 	"github.com/spf13/cobra"
 )
+
+func embeddingProgress(cmd *cobra.Command) func(string) {
+	logger := log.New(cmd.ErrOrStderr(), "means: ", 0)
+	return func(message string) { logger.Print(message) }
+}
+
+func (o *options) embeddingProgress(cmd *cobra.Command) func(string) {
+	if o.json {
+		return nil
+	}
+	return embeddingProgress(cmd)
+}
 
 func (o *options) write(w io.Writer, value any, text string) error {
 	if o.json {

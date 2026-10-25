@@ -1,6 +1,10 @@
 ---
 title: means issues
 description: "The means project backlog: bugs, features, design decisions, and planned work on means itself. Use this collection to track priorities, acceptance criteria, and outcomes."
+embeddings:
+  provider: openrouter
+  model: openai/text-embedding-3-small
+  dimensions: 512
 schema:
   $schema: https://json-schema.org/draft/2020-12/schema
   type: object
@@ -45,6 +49,15 @@ mise means update <id> --path ./issues --input - --json
 Read the schema in this file's frontmatter before creating issues. When accessed through MCP, use `info`
 for the current schema and these instructions; the tools are `list`, `search`,
 `read`, `create`, `update`, `delete`, and `schema_set`.
+
+This collection uses OpenRouter embeddings. Set `OPENROUTER_API_KEY` in the CLI
+or MCP host environment, or put `OPENROUTER_API_KEY=...` in the repository-root
+`.env` file. Mise loads this optional, Git-ignored file for CLI tasks and the
+MCP server launched through mise. Restart an existing MCP connection after
+changing the file. Run `mise means embed --path ./issues` to backfill
+existing issues. Use `search --semantic` (MCP: `semantic: true`) for semantic
+search. Create/update maintain title/body embeddings automatically and require
+the key when a new vector is needed; list/read and ordinary search remain offline.
 
 ## Issue content
 

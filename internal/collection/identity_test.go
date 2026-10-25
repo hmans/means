@@ -160,7 +160,7 @@ func TestCandidateCollisionAfterRename(t *testing.T) {
 	}
 	defer root.Close()
 	fm := map[string]any{"title": "First", "data": map[string]any{}}
-	doc, err := createCandidate(root, "samecandidate", fm, "")
+	doc, err := createCandidate(root, "samecandidate", fm, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,13 +168,13 @@ func TestCandidateCollisionAfterRename(t *testing.T) {
 		t.Fatal(err)
 	}
 	fm["title"] = "Different title"
-	if _, err := createCandidate(root, "samecandidate", fm, ""); !errors.Is(err, os.ErrExist) {
+	if _, err := createCandidate(root, "samecandidate", fm, "", nil); !errors.Is(err, os.ErrExist) {
 		t.Fatalf("ID collision not rejected: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(c.Path, ".means-create-reserved.tmp"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := createCandidate(root, "reserved", fm, ""); !errors.Is(err, os.ErrExist) {
+	if _, err := createCandidate(root, "reserved", fm, "", nil); !errors.Is(err, os.ErrExist) {
 		t.Fatalf("allocation collision not rejected: %v", err)
 	}
 	if err := root.Remove(".means-create-reserved.tmp"); err != nil {
@@ -229,7 +229,7 @@ func TestCandidateProcessHelper(t *testing.T) {
 		os.Exit(2)
 	}
 	// Distinct titles ensure filename O_EXCL alone could not prevent duplication.
-	_, err = createCandidate(root, "samecandidate", map[string]any{"title": fmt.Sprint(os.Getpid()), "data": map[string]any{}}, "")
+	_, err = createCandidate(root, "samecandidate", map[string]any{"title": fmt.Sprint(os.Getpid()), "data": map[string]any{}}, "", nil)
 	root.Close()
 	if errors.Is(err, os.ErrExist) {
 		os.Exit(3)

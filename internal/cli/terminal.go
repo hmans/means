@@ -45,7 +45,10 @@ func terminalCell(text string) string {
 	}, ansi.Strip(text))), " ")
 }
 
-func documentTable(w io.Writer, rows [][]string, diagnostics []collection.Diagnostic, more bool, noun string) string {
+func documentTable(w io.Writer, rows [][]string, diagnostics []collection.Diagnostic, more bool, noun string, headers ...string) string {
+	if len(headers) == 0 {
+		headers = []string{"ID", "TITLE"}
+	}
 	var out strings.Builder
 	if len(rows) == 0 {
 		out.WriteString("No " + noun + ".\n")
@@ -55,13 +58,16 @@ func documentTable(w io.Writer, rows [][]string, diagnostics []collection.Diagno
 			idWidth = max(idWidth, ansi.StringWidth(row[0]))
 		}
 		idWidth = min(idWidth, max(2, terminalWidth(w)/3))
-		t := table.New().Headers("ID", "TITLE").Rows(rows...).Width(terminalWidth(w)).
+		t := table.New().Headers(headers...).Rows(rows...).Width(terminalWidth(w)).
 			Border(lipgloss.RoundedBorder()).BorderColumn(false).
 			BorderStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("240"))).
 			StyleFunc(func(row, col int) lipgloss.Style {
 				style := lipgloss.NewStyle().Padding(0, 1)
 				if col == 0 {
 					style = style.Width(idWidth + 2)
+				}
+				if headers[col] == "SCORE" {
+					style = style.Width(8).Align(lipgloss.Right)
 				}
 				if row == table.HeaderRow {
 					return style.Bold(true).Foreground(lipgloss.Color("99"))
