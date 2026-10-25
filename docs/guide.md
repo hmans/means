@@ -461,10 +461,29 @@ no positional arguments or structured input and has no result limit. JSON report
 contain `healthy`, `checked`, and `diagnostics`. `checked` counts inspected files,
 including malformed files and duplicate occurrences. Each diagnostic has `id`
 (empty when unreadable), a collection-relative `path`, and `error`; a file can
-have multiple diagnostics. Text reports show the count and affected paths.
+have multiple diagnostics. Text reports show a status summary, grouped errors
+and warnings with counts, and affected paths with indented messages. Interactive
+terminals use green for healthy status, amber for warnings, and red for errors.
+Pipes and `NO_COLOR` disable colors; JSON is unchanged.
 Healthy collections exit 0; an unhealthy report goes to stdout and exits 1 with
 no stderr response. Collection-level failures, such as an invalid schema, exit 1
 with an error on stderr instead of a report.
+
+For collections with embeddings enabled, doctor also reports documents without
+usable embeddings, stale vectors, and orphaned vectors with no unique valid
+document in the collection. Deleted documents, duplicate IDs, malformed envelopes,
+and documents moved into a nested collection can leave orphaned vectors.
+Schema-invalid data alone does not make a vector orphaned. Cache corruption or
+an incompatible embedding profile is reported as a cache diagnostic; documents
+then have no usable embeddings. These findings are warnings: text labels them
+`WARNING`, and JSON includes a `warnings` array with the same `id`, `path`, and
+`error` fields as diagnostics. The array is omitted when empty. Warnings do not
+change `healthy` or the exit code; warnings alone exit 0. Document validation
+errors still exit 1, as do failures to complete the check, such as an unreadable
+cache. `checked` still counts document files,
+not vectors. Run `means embed --path COLLECTION` to refresh and prune vectors.
+Doctor makes no API calls, requires no API key, takes no cache lock, and does not
+create or modify cache files. Collections without embeddings skip these checks.
 
 CLI success goes to stdout; errors go to stderr. With `--json`, ordinary commands
 return structured responses and errors such as `{"error":"..."}`. `--path`
