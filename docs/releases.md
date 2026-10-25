@@ -20,9 +20,9 @@ the Release workflow. Both shared calls receive it as `release-token`.
 The Release workflow uses `GITHUB_TOKEN` to publish archives and notes.
 
 Update the shared workflow references in `bump.yml` and `ci.yml` together.
-Use a merged commit SHA or an immutable `workflows-vX.Y.Z` tag. This draft
-temporarily pins the reviewed Sweet PR commit; replace that pin after
-chattocorp/sweet-release#47 merges and before merging this integration.
+Use a merged commit SHA or an immutable `workflows-vX.Y.Z` tag. Both calls pin
+`01911da0f43f6147d1918c5b4e776abcdd9b7c3a`, the merged revision of
+chattocorp/sweet-release#47.
 
 ## Record a change
 

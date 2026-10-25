@@ -16,4 +16,6 @@ Implementation: bump creates release PRs; main CI runs race tests and vet before
 
 Validation: workflow lint, Go tests/vet, all six snapshot archives, native binary version, checksums, and changelog extraction. Hosted PR CI verifies the consumer configuration.
 
-Remaining: merge Sweet #47, replace the draft's temporary Sweet commit pin with a merged revision, then merge the Means integration. Confirm the next live release end to end.
+Sweet #47 is merged. Both workflow calls now pin its merged revision 01911da0f43f6147d1918c5b4e776abcdd9b7c3a, whose tree matches the reviewed Sweet commit.
+
+Remaining: merge Means PR #16 and confirm the next live release end to end.

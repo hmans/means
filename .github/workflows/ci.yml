@@ -29,8 +29,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    # Repin to the merged revision before this draft PR is ready.
-    uses: chattocorp/sweet-release/.github/workflows/tag.yml@0283db403e6641e3a1ec02a59951740775e02a91
+    uses: chattocorp/sweet-release/.github/workflows/tag.yml@01911da0f43f6147d1918c5b4e776abcdd9b7c3a
     secrets:
       release-token: ${{ secrets.RELEASE_PR_TOKEN }}
 
