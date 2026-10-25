@@ -18,9 +18,11 @@ read/write. This token lets release PRs trigger CI. Tagging, building, and
 publication run together through the shared workflow using `GITHUB_TOKEN`;
 there is no separate tag-triggered workflow.
 
-The shared workflows are pinned to Sweet Release commit
-`1c210fb375b8823d385bfb9cfe67ea261a2fbeca`; their CLI input is `sweet@0.3.0`.
-Update the workflow references in `bump.yml` and `ci.yml` together when upgrading.
+Both shared workflows use the same pinned automation revision, which includes
+its tested CLI default (currently `sweet@0.3.0`). Update the workflow references
+in `bump.yml` and `ci.yml` together; no separate CLI input is needed in CI.
+Use an immutable `workflows-vX.Y.Z` tag or its merged commit SHA. Never deploy a
+consumer pin to an unmerged Sweet PR commit.
 
 ## Record a change
 
@@ -44,12 +46,12 @@ writes `CHANGELOG.md`, consumes change notes, and opens or updates a release PR.
 Review and merge that PR through the normal review process. With no releasable
 notes, no release PR is needed.
 
-CI runs Go race tests and vet for PRs and `main` pushes. After checks pass on
-`main`, the shared `release.yml` workflow examines that push's commit range and
-creates tags for committed version changes. Main runs are not canceled by newer
-pushes. Root-package tags retain the `v<version>` format.
-PRs also run the shared release planner with read-only permissions and tag pushes
-disabled, so changes to release configuration are checked before merge.
+CI runs Go race tests and vet, then calls the same shared release workflow on PRs
+and main pushes. Its default `mode: auto` derives the commit range from the event.
+On PRs it only previews the release plan, with read-only permissions and no build
+or publication. On `main` it plans without writes, pushes the planned tags in a
+separate job, then runs one release job per package. Main runs are not canceled
+by newer pushes. Root-package tags retain the `v<version>` format.
 
 For a local preview, use a clean checkout with full Git history:
 
@@ -85,6 +87,8 @@ If release PR preparation fails, rerun all jobs in the Bump run. For a failed
 release, rerun the original CI run to preserve its commit range. Retries reuse
 matching tags and drafts, replace partial uploads, and skip already-published
 releases. Existing drafts outside that commit range are untouched.
+Job summaries show previews, publication links, skipped published releases, and
+the failed stage with instructions for retrying.
 
 For local checks, use `mise run release:check` to validate the GoReleaser config
 and `mise run release:snapshot` to run tests, vet, and all six builds. Snapshots

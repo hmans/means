@@ -1,17 +1,15 @@
 ---
 data:
   priority: normal
-  status: in_progress
+  status: done
   tags:
     - releases
   type: task
 id: qbt4w
 title: Use shared Sweet Release workflows
 ---
-Use shared Sweet Release bump and release workflows with a thin consumer configuration. Keep all GitHub lifecycle behavior in the reusable workflows and only binary build configuration in Means.
+Use shared Sweet Release bump and release workflows with a thin consumer configuration. Keep GitHub lifecycle behavior in the reusable workflows and binary build configuration in Means.
 
-The first integration (PR #6) successfully published Means 0.1.1 end to end, including automatic PR checks, tags, and publication. The maintainer configured RELEASE_PR_TOKEN.
+PR #6 first published 0.1.1 through the tag-triggered integration. PRs #8 and #9 removed that local publisher, enabled the shared GitHub lifecycle, and pinned its merged revision. RELEASE_PR_TOKEN is configured for bump PRs; tagging and publication use GITHUB_TOKEN.
 
-Follow-up: remove Means tag-triggered publishing workflow and call the shared GitHub lifecycle with the GoReleaser preset. The shared workflow prepares notes/drafts, builds, verifies/uploads assets, and publishes; retries skip published releases. Means retains .goreleaser.yml, uses GITHUB_TOKEN for tagging/publication, and needs RELEASE_PR_TOKEN only for bump PRs.
-
-Validation: local six-platform snapshot build and native binary version pass; the shared uploader validates all seven assets. Configuration and workflow lint pass. Companion Sweet and Means PR CI and a future live release will verify the simplified path.
+Verified live on 2026-10-25: release PR #11 published Means 0.2.0 entirely through the shared workflow (CI run 40175280724). All six archives, checksums, release notes, correct tag target, and Latest were verified; the downloaded macOS binary passed checksum verification and reported 0.2.0. Further caller-default and builder-interface simplification is separate follow-up work.
