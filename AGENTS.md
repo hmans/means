@@ -149,7 +149,7 @@ following its [workflow](issues/MEANS.md).
   writes/crashes can leave stale derived data; embed reconciles against visible
   documents, including direct edits and nested boundaries. Search embeds only the
   query and never changes the embedding cache; it skips missing/stale vectors and
-  invisible documents. The cache lock is released before the query API call.
+  invisible documents. It reads the atomically replaced cache without taking the lock.
   Data-only edits reuse vectors. Semantic queries use cosine ranking,
   exact data filters before limits, and ID ties. The inclusive minimum cosine score
   defaults to 0.3; --min-score / MCP min_score override it from -1 to 1 and require

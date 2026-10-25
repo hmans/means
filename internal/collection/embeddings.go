@@ -150,6 +150,31 @@ func (s *embeddingStore) close() {
 // Acquire before reading a document for mutation. Only opted-in collections
 // take this lock. External editors remain outside the lock, as with other writes.
 func (c *Collection) openEmbeddings() (*embeddingStore, error) {
+	s, err := c.embeddingStore()
+	if s == nil || err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Dir(s.filename), 0o700); err != nil {
+		return nil, err
+	}
+	lockPath := filepath.Join(filepath.Dir(s.filename), "embeddings.lock")
+	if err := embeddingRegularFile(lockPath); err != nil {
+		return nil, err
+	}
+	s.lock, err = tryLock(s.ctx, lockPath, "embeddings", "embeddings are busy; retry after the current operation finishes")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.load(); err != nil {
+		s.close()
+		return nil, err
+	}
+	return s, nil
+}
+
+// embeddingStore resolves the configured profile without locking or loading the
+// cache. It returns nil when embeddings are disabled.
+func (c *Collection) embeddingStore() (*embeddingStore, error) {
 	cfg := c.Embeddings()
 	if cfg == nil {
 		return nil, nil
@@ -175,35 +200,12 @@ func (c *Collection) openEmbeddings() (*embeddingStore, error) {
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
-	if err := os.MkdirAll(cache, 0o700); err != nil {
-		return nil, err
-	}
-	lockPath := filepath.Join(cache, "embeddings.lock")
-	if err := embeddingRegularFile(lockPath); err != nil {
-		return nil, err
-	}
-	lock := flock.New(lockPath)
-	ctx, cancel := context.WithTimeout(operationContext, 5*time.Second)
-	defer cancel()
-	locked, err := lock.TryLockContext(ctx, 25*time.Millisecond)
-	if err != nil {
-		return nil, fmt.Errorf("lock embeddings: %w", err)
-	}
-	if !locked {
-		return nil, fmt.Errorf("embeddings are busy; retry after the current operation finishes")
-	}
 	profile, _ := json.Marshal(struct {
 		Version  int
 		Config   *EmbeddingConfig
 		Endpoint string
 	}{1, cfg, endpoint})
-	s := &embeddingStore{ctx: operationContext, cfg: cfg, endpoint: endpoint, filename: filepath.Join(cache, "embeddings.jsonl"), profile: contentHash(string(profile)), lock: lock, records: map[string]embeddingRecord{}}
-	s.progress = c.embeddingProgress
-	if err := s.load(); err != nil {
-		s.close()
-		return nil, err
-	}
-	return s, nil
+	return &embeddingStore{ctx: operationContext, cfg: cfg, endpoint: endpoint, filename: filepath.Join(cache, "embeddings.jsonl"), profile: contentHash(string(profile)), records: map[string]embeddingRecord{}, progress: c.embeddingProgress}, nil
 }
 
 func embeddingRegularFile(filename string) error {
@@ -529,16 +531,18 @@ func (c *Collection) reconcileEmbeddings(s *embeddingStore) (*ListResult, error)
 }
 
 func (c *Collection) searchSemantic(opts SearchOptions) (*SearchResult, error) {
-	s, err := c.openEmbeddings()
+	s, err := c.embeddingStore()
 	if err != nil {
 		return nil, err
 	}
 	if s == nil {
 		return nil, fmt.Errorf("semantic search requires embeddings in MEANS.md")
 	}
-	// Loading gives us an independent snapshot. Search never writes the cache,
-	// so release the lock before scanning documents or calling the query API.
-	s.close()
+	// Search never writes the cache, and writers replace it atomically, so read
+	// a snapshot without waiting for the lock held by embed or mutations.
+	if err := s.load(); err != nil {
+		return nil, err
+	}
 	listed, err := c.ListWithOptions(ListOptions{WithBody: true})
 	if err != nil {
 		return nil, err

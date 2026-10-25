@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
@@ -17,7 +16,6 @@ import (
 	"github.com/blevesearch/bleve/v2/analysis/tokenizer/unicode"
 	"github.com/blevesearch/bleve/v2/mapping"
 	"github.com/blevesearch/bleve/v2/search/query"
-	"github.com/gofrs/flock"
 )
 
 const searchIndexVersion = 1
@@ -159,15 +157,9 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 	} else if e != nil && !errors.Is(e, os.ErrNotExist) {
 		return nil, e
 	}
-	lock := flock.New(lockPath)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	locked, err := lock.TryLockContext(ctx, 25*time.Millisecond)
+	lock, err := tryLock(context.Background(), lockPath, "search cache", "search cache is busy; retry after the current search finishes")
 	if err != nil {
-		return nil, fmt.Errorf("lock search cache: %w", err)
-	}
-	if !locked {
-		return nil, fmt.Errorf("search cache is busy; retry after the current search finishes")
+		return nil, err
 	}
 	defer func() { err = errors.Join(err, lock.Unlock()) }()
 	root, err := os.OpenRoot(c.Path)

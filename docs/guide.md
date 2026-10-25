@@ -382,8 +382,9 @@ It uses stored vectors that match the current title/body and embedding configura
 Documents with missing or stale vectors are skipped. A missing, corrupt, or
 incompatible cache produces no semantic hits; run `means embed` to rebuild it.
 Search does not prune vectors or repair the cache. If no eligible vectors exist,
-it returns without a query API call. The cache lock is released before the query
-API call, so that call does not block document writes.
+it returns without a query API call. Search reads the atomically replaced cache
+without taking the lock, so it neither waits for `means embed` or document writes
+nor blocks them.
 It ranks all eligible documents by cosine similarity, descending, with ID order
 for ties. Scores must be at least **0.30** by default. Override this with
 `--min-score NUMBER` (requires `--semantic`); values must be finite and between
@@ -409,7 +410,8 @@ The cache is `.means/embeddings.jsonl`, separate from `.means/documents.jsonl`.
 It contains float vectors, IDs, input hashes, a version/model/dimension/endpoint
 profile, and a record checksum. It is derived local data, excluded by `.means/`
 in `.gitignore`. Atomic file replacements under `.means/embeddings.lock` protect
-concurrent means operations. Lock waits stop after five seconds. Missing, corrupt,
+concurrent means operations. Lock waits stop after five seconds with a "busy"
+error; semantic search does not take the lock. Missing, corrupt,
 or obsolete cache data regenerates on demand, potentially incurring API charges;
 permission errors and symlinked cache paths fail. Do not delete cache files while
 embedding operations run. There is no SQLite dependency. Quantized vectors,

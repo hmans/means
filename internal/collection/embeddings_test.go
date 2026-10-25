@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/gofrs/flock"
 )
 
 type embeddingAPI struct {
@@ -468,6 +470,27 @@ func TestSemanticQueryDoesNotHoldEmbeddingLock(t *testing.T) {
 	}
 	if len(embeddingRecords(t, c)) != 0 {
 		t.Fatal("search overwrote the deletion with its snapshot")
+	}
+}
+
+func TestHeldEmbeddingLockBlocksWritesButNotSemanticSearch(t *testing.T) {
+	fakeEmbeddingAPI(t)
+	c := embeddingCollection(t)
+	if _, err := c.Create(map[string]any{"title": "apple"}, "fruit"); err != nil {
+		t.Fatal(err)
+	}
+	// Simulate a long-running embed or mutation in another process.
+	lock := flock.New(filepath.Join(c.Path, ".means", "embeddings.lock"))
+	if err := lock.Lock(); err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Unlock()
+	result, err := c.Search(SearchOptions{Query: "fruit", Semantic: true})
+	if err != nil || len(result.Documents) != 1 {
+		t.Fatalf("search during held lock: %+v %v", result, err)
+	}
+	if _, err := c.Create(map[string]any{"title": "blocked"}, ""); err == nil || err.Error() != "embeddings are busy; retry after the current operation finishes" {
+		t.Fatalf("create during held lock: %v", err)
 	}
 }
 

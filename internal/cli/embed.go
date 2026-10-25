@@ -56,9 +56,10 @@ the configured endpoint and may incur charges.
 The local .means/embeddings.jsonl cache is separate from parsed-document metadata.
 It stores float vectors, input hashes, a format/model/dimension/endpoint profile,
 and a checksum. Cache replacements are atomic; an embeddings.lock serializes
-embedding work with a 5-second lock wait. Missing/corrupt/obsolete caches regenerate
-on demand and may incur charges. Filesystem errors and symlinked cache paths fail.
-No database, daemon, watcher, or frontmatter changes are required.
+embedding work with a 5-second lock wait; semantic search reads without it.
+Missing/corrupt/obsolete caches regenerate on demand and may incur charges.
+Filesystem errors and symlinked cache paths fail. No database, daemon, watcher,
+or frontmatter changes are required.
 
 Run this command after enabling embeddings for existing documents or after direct
 edits, deletes, and changes to nested collection boundaries. Semantic search uses
