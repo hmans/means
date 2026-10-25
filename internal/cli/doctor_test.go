@@ -80,3 +80,32 @@ func TestDoctorHelp(t *testing.T) {
 		}
 	}
 }
+
+func TestDoctorMissingEmbeddingsOutput(t *testing.T) {
+	c, err := collection.InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: openai}\n---\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(c.Path, "document.md"), []byte("---\nid: doc01\ntitle: Document\ndata: {}\n---\nbody"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, jsonMode := range []bool{false, true} {
+		args := []string{"doctor", "--path", c.Path}
+		if jsonMode {
+			args = append(args, "--json")
+		}
+		var out, stderr bytes.Buffer
+		err := Execute(args, nil, &out, &stderr, "test")
+		if err != nil || stderr.Len() != 0 || !strings.Contains(out.String(), "no usable embedding") {
+			t.Fatalf("report: %s stderr: %s error: %v", out.String(), stderr.String(), err)
+		}
+		if jsonMode {
+			var report collection.DoctorResult
+			if err := json.Unmarshal(out.Bytes(), &report); err != nil || !report.Healthy || len(report.Diagnostics) != 0 || len(report.Warnings) != 1 {
+				t.Fatalf("warning report: %+v %v", report, err)
+			}
+		} else if !strings.Contains(out.String(), "WARNING:") {
+			t.Fatal("warning not labeled")
+		}
+	}
+}

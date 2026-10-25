@@ -158,3 +158,9 @@ following its [workflow](issues/MEANS.md).
   No chunking, quantization, sharing,
   or hybrid search yet. Read/list/full-text/literal operations remain offline.
 - Automatic document repair is deferred.
+- Doctor checks opted-in embedding caches offline without locking or writing.
+  Missing/stale document vectors, orphaned vectors, and corrupt/incompatible caches
+  are warnings that do not change healthy or the exit code; JSON warnings are
+  separate from document diagnostics. Cache read failures still fail the check.
+  Schema-invalid data still owns
+  its vector when the envelope and ID are valid and unique. Checked counts files.
