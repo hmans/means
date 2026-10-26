@@ -253,6 +253,40 @@ Ties prefer the title, then the earliest passage. Passages contain at most 180
 Unicode characters plus ellipses; whitespace is collapsed. One excerpt cannot
 always show terms that occur in different fields or far apart. Literal-mode
 excerpts retain their original behavior.
+Datetime fields are stored as strings. A schema can describe them with
+`type: string` and `format: date-time`; search does not require this annotation.
+Use RFC 3339 timestamps with an explicit timezone, such as
+`2026-10-26T09:00:00Z` or `2026-10-26T10:00:00+01:00`. These represent the same
+instant. Quoted and unquoted YAML timestamps retain their string values.
+
+```sh
+means search --path ./memory \
+  --on-or-after created_at=2026-10-01T00:00:00Z \
+  --before created_at=2026-11-01T00:00:00Z --json
+```
+
+`--before` and `--after` exclude the boundary; `--on-or-before` and
+`--on-or-after` include it. All four accept repeatable `KEY=TIMESTAMP` arguments.
+Keys identify literal fields directly under `data` (not nested paths). Datetime
+comparisons combine with each other and `--filter` using AND, before limits and
+`has_more`, in data-only, literal, full-text, and semantic searches. Ordinary
+`--filter` still compares exact string values, without timezone normalization.
+
+Timestamps support up to nine fractional second digits. Date-only values,
+timezone-free values, leap seconds, and longer fractions are unsupported.
+Invalid filter timestamps fail the request. Missing, non-string, and invalid
+document timestamps do not match; they do not introduce additional diagnostics.
+Search does not rewrite or normalize stored values.
+
+MCP `search` exposes the same comparisons through `datetime`:
+
+```json
+{"datetime":[{"field":"created_at","op":"on_or_after","value":"2026-10-01T00:00:00Z"},{"field":"created_at","op":"before","value":"2026-11-01T00:00:00Z"}]}
+```
+
+Supported operators are `before`, `after`, `on_or_before`, and `on_or_after`.
+Each comparison requires `field`, `op`, and `value`.
+
 Malformed documents and every occurrence of duplicate IDs are excluded and reported
 as diagnostics, regardless of query, filter, or limit. Schema-invalid data remains
 searchable. MCP offers the same behavior with the optional `literal` boolean.

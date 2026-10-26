@@ -158,7 +158,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		{
 			name:        "search",
 			description: "Find documents by ranked full text and/or a partial data filter. All lowercase Unicode query tokens must match across title/body; no stemming, stop-word removal, or query syntax. Title matches are boosted; score ties sort by ID. literal:true uses case-insensitive substring matching in filename order. No query uses filename order. Full-text queries refresh .means/search/ from file hashes, then close it; no daemon. Returns IDs, frontmatter, excerpts, and diagnostics, without bodies or hashes. Filters apply before limit (default 20, 0 for all).",
-			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Text query. Full text requires all terms; semantic search ranks similarity."},"min_score":{"type":"number","minimum":-1,"maximum":1,"default":0.3,"description":"Inclusive cosine similarity threshold, applied before limit. Requires semantic:true. Use -1 for all scores."},"semantic":{"type":"boolean","default":false,"description":"Opt-in semantic search: embed only the query, rank stored document vectors, return cosine scores instead of excerpts. Never changes document vectors; skips missing or stale vectors (refresh with CLI means embed). Requires a nonempty query and API credentials; cannot combine with literal. May incur charges."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
+			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Text query. Full text requires all terms; semantic search ranks similarity."},"min_score":{"type":"number","minimum":-1,"maximum":1,"default":0.3,"description":"Inclusive cosine similarity threshold, applied before limit. Requires semantic:true. Use -1 for all scores."},"semantic":{"type":"boolean","default":false,"description":"Opt-in semantic search: embed only the query, rank stored document vectors, return cosine scores instead of excerpts. Never changes document vectors; skips missing or stale vectors (refresh with CLI means embed). Requires a nonempty query and API credentials; cannot combine with literal. May incur charges."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"datetime":{"type":"array","description":"ANDed datetime comparisons against literal keys directly under data, applied before limits in every mode. Values are RFC 3339 strings with timezone and at most 9 fractional digits (no leap seconds or date-only values). Compare instants across offsets; before/after are exclusive, on_or variants inclusive. Missing, non-string or invalid document values do not match. No schema annotation required; exact filter semantics unchanged.","items":{"type":"object","properties":{"field":{"type":"string","minLength":1},"op":{"type":"string","enum":["before","after","on_or_before","on_or_after"]},"value":{"type":"string"}},"required":["field","op","value"],"additionalProperties":false}},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			openWorld:   true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
@@ -168,6 +168,13 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 				}
 				query, _ := args["query"].(string)
 				filter, _ := args["filter"].(map[string]any)
+				var dateTime []collection.DateTimeFilter
+				if values, ok := args["datetime"].([]any); ok {
+					for _, value := range values {
+						f := value.(map[string]any)
+						dateTime = append(dateTime, collection.DateTimeFilter{Field: f["field"].(string), Op: f["op"].(string), Value: f["value"].(string)})
+					}
+				}
 				literal, _ := args["literal"].(bool)
 				semantic, _ := args["semantic"].(bool)
 				var minScore *float64
@@ -178,7 +185,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 					}
 					minScore = &n
 				}
-				return c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
+				return c.Search(collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
 			},
 		},
 		{
