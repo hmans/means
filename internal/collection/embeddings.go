@@ -554,7 +554,7 @@ func (c *Collection) searchSemantic(opts SearchOptions) (*SearchResult, error) {
 		if !ok || record.Hash != contentHash(embeddingInput(doc.Frontmatter, *doc.Body)) {
 			continue
 		}
-		if matchesFilter(doc.Frontmatter["data"].(map[string]any), opts.Filter) {
+		if opts.matchesData(doc.Frontmatter["data"].(map[string]any)) {
 			candidates = append(candidates, doc)
 		}
 	}

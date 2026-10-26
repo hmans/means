@@ -17,7 +17,7 @@ func TestSearchCommandFiltersAndErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, content := range map[string]string{
-		"a.md": "---\nid: alpha\ntitle: Feature\ndata:\n  type: feature\n  priority: normal\n  count: 42\n---\nSearch the body",
+		"a.md": "---\nid: alpha\ntitle: Feature\ndata:\n  type: feature\n  priority: normal\n  count: 42\n  at: 2026-10-26T10:00:00+01:00\n---\nSearch the body",
 		"b.md": "---\nid: beta\ntitle: Feature\ndata:\n  type: feature\n  priority: high\n---\nOther body",
 		"c.md": "broken",
 	} {
@@ -41,7 +41,26 @@ func TestSearchCommandFiltersAndErrors(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil || len(result.Documents) != 1 || result.Documents[0].Match == nil || result.Documents[0].Match.Field != "body" {
 		t.Fatalf("typed text search = %s, %v", stdout.String(), err)
 	}
+	for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
+		stdout.Reset()
+		boundary := "2026-10-26T09:00:00Z"
+		if flag == "before" {
+			boundary = "2026-10-26T09:00:01Z"
+		}
+		if flag == "after" {
+			boundary = "2026-10-26T08:59:59Z"
+		}
+		if err := Execute([]string{"search", "--path", dir, "--" + flag, "at=" + boundary, "--json"}, nil, &stdout, &stderr, "test"); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(stdout.Bytes(), &result); err != nil || len(result.Documents) != 1 || result.Documents[0].ID != "alpha" {
+			t.Fatalf("datetime %s: %s %v", flag, stdout.String(), err)
+		}
+	}
 	for _, args := range [][]string{
+		{"search", "--before", "at=not-a-date"},
+		{"search", "--after", "at"},
+		{"search", "--on-or-before", "=2026-10-26T09:00:00Z"},
 		{"search", "--filter", "broken"},
 		{"search", "--filter", "=value"},
 		{"search", "--filter", "type=feature", "--filter", "type=task"},

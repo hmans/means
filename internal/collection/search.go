@@ -14,13 +14,15 @@ import (
 )
 
 type SearchOptions struct {
-	MinScore *float64 // Semantic cosine threshold; nil uses DefaultSemanticMinScore.
-	WithBody bool
-	Query    string
-	Filter   map[string]any // Partial match against frontmatter.data.
-	Limit    int            // Zero returns every match.
-	Literal  bool           // Use the original case-insensitive substring search.
-	Semantic bool           // Use opt-in OpenAI embeddings and cosine ranking.
+	DateTime        []DateTimeFilter // ANDed datetime comparisons against data fields.
+	dateTimeFilters []compiledDateTimeFilter
+	MinScore        *float64 // Semantic cosine threshold; nil uses DefaultSemanticMinScore.
+	WithBody        bool
+	Query           string
+	Filter          map[string]any // Partial match against frontmatter.data.
+	Limit           int            // Zero returns every match.
+	Literal         bool           // Use the original case-insensitive substring search.
+	Semantic        bool           // Use opt-in OpenAI embeddings and cosine ranking.
 }
 
 const DefaultSemanticMinScore = 0.3
@@ -49,6 +51,11 @@ type SearchResult struct {
 // application data; arrays must match completely. Schema-invalid data stays
 // searchable, while malformed and duplicate documents become diagnostics.
 func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
+	var err error
+	opts.dateTimeFilters, err = compileDateTimeFilters(opts.DateTime)
+	if err != nil {
+		return nil, err
+	}
 	if opts.MinScore != nil {
 		if !opts.Semantic {
 			return nil, fmt.Errorf("min_score requires semantic search")
@@ -110,7 +117,7 @@ func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
 			continue
 		}
 		data := entry.doc.Frontmatter["data"].(map[string]any)
-		if !matchesFilter(data, opts.Filter) {
+		if !opts.matchesData(data) {
 			continue
 		}
 		var match *SearchMatch

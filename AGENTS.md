@@ -94,6 +94,13 @@ following its [workflow](issues/MEANS.md).
   checksummed records are replaced atomically under search.lock; missing or
   corrupt metadata rebuilds. Invalid documents are reparsed. Bump the metadata
   cache version when parsing rules change. Other operations use direct scans.
+  Datetime search filters compare RFC 3339 string fields directly under data by
+  instant, with before/after and inclusive on_or_before/on_or_after operators.
+  Combine them with exact filters using AND before limits in all search modes.
+  Require timezone offsets and at most nine fractional digits; reject invalid
+  filter inputs and skip missing, non-string, or invalid document values.
+  CLI exposes repeatable --before/--after/--on-or-before/--on-or-after KEY=TIMESTAMP;
+  MCP exposes datetime arrays of {field, op, value}. Exact equality is unchanged.
   Full-text queries AND lowercase Unicode tokens across title/body, boost title
   matches, and sort score ties by ID. No stemming or stop-word removal. Data
   filters keep exact JSON semantics and apply before limits. Init ensures a

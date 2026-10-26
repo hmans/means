@@ -12,6 +12,7 @@ import (
 func newSearchCommand(opts *options) *cobra.Command {
 	var limit int
 	var filters []string
+	dateTimeFlags := map[string]*[]string{}
 	var literal bool
 	var semantic bool
 	var minScore float64
@@ -54,6 +55,18 @@ contains JSON quotes or spaces. Nested objects match recursively by supplied
 keys; arrays must match in full. A missing field never matches, even for null.
 Duplicate filter keys are rejected.
 
+Use --before KEY=TIMESTAMP, --after KEY=TIMESTAMP, --on-or-before KEY=TIMESTAMP,
+or --on-or-after KEY=TIMESTAMP for datetime fields directly under data. Repeat
+flags to bound a range. All datetime and exact-value filters combine with AND,
+in every search mode, before limits. Before/after are exclusive; on-or variants
+include equal instants. Values must be RFC 3339 timestamps with a timezone,
+e.g. 2026-10-26T09:00:00Z or 2026-10-26T10:00:00+01:00 (the same instant).
+Up to 9 fractional second digits are supported; leap seconds, date-only values,
+and timestamps without a timezone are unsupported. Invalid filter values fail;
+missing, non-string, or invalid document values do not match. Field names are
+literal keys, not paths. Datetimes remain strings in stored data and JSON;
+ordinary --filter equality remains exact. No schema annotation is required.
+
 --limit defaults to 20 matching documents; 0 returns all; negative values fail.
 has_more reports whether further matches exist. Malformed documents and duplicate IDs are
 omitted from matches and reported separately in diagnostics, regardless of
@@ -89,6 +102,7 @@ do not use or write an index. Source documents are never changed.`,
   means search openai --semantic --min-score 0.3 --path ./issues
   means search "deployment timeout" --literal --path ./memory --json
   means search --path ./issues --filter priority=normal --filter type=feature --json
+  means search --after created_at=2026-10-01T00:00:00Z --before created_at=2026-11-01T00:00:00Z --json
   means search memory --filter 'tags=["important"]' --limit 0 --json`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -98,6 +112,16 @@ do not use or write an index. Source documents are never changed.`,
 			filter, err := parseSearchFilters(filters)
 			if err != nil {
 				return err
+			}
+			var dateTime []collection.DateTimeFilter
+			for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
+				for _, raw := range *dateTimeFlags[flag] {
+					field, value, ok := strings.Cut(raw, "=")
+					if !ok || field == "" {
+						return fmt.Errorf("--%s must be KEY=TIMESTAMP with a nonempty data field name", flag)
+					}
+					dateTime = append(dateTime, collection.DateTimeFilter{Field: field, Op: strings.ReplaceAll(flag, "-", "_"), Value: value})
+				}
 			}
 			query := ""
 			if len(args) == 1 {
@@ -111,7 +135,7 @@ do not use or write an index. Source documents are never changed.`,
 			if cmd.Flags().Changed("min-score") {
 				threshold = &minScore
 			}
-			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
+			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
 			if err != nil {
 				return err
 			}
@@ -139,6 +163,9 @@ do not use or write an index. Source documents are never changed.`,
 	cmd.Flags().Float64Var(&minScore, "min-score", collection.DefaultSemanticMinScore, "Minimum cosine similarity, inclusive, from -1 to 1 (requires --semantic; -1 includes all scores)")
 	cmd.Flags().BoolVar(&withBody, "with-body", false, "Include Markdown bodies in JSON matches (requires --json)")
 	cmd.Flags().StringArrayVar(&filters, "filter", nil, "Match a frontmatter.data field as KEY=VALUE (repeatable)")
+	for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
+		dateTimeFlags[flag] = cmd.Flags().StringArray(flag, nil, "Compare a data datetime as KEY=TIMESTAMP (RFC 3339; repeatable)")
+	}
 	return cmd
 }
 
