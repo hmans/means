@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/hmans/means/internal/collection"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spf13/cobra"
 )
@@ -65,7 +64,7 @@ JSON`,
 			if err != nil {
 				return err
 			}
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

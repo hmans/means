@@ -29,6 +29,7 @@ type Collection struct {
 	body              string
 	ctx               context.Context
 	embeddingProgress func(string)
+	embeddings        *EmbeddingConfig
 }
 
 // WithEmbeddingProgress returns a copy that reports embedding work to progress.
@@ -89,20 +90,6 @@ func InitConfig(path string, content []byte) (*Collection, error) {
 	c, err := parseConfig(path, content)
 	if err != nil {
 		return nil, err
-	}
-	if cfg := c.Embeddings(); cfg != nil {
-		fields := c.config["embeddings"].(map[string]any)
-		_, modelSet := fields["model"]
-		_, dimensionsSet := fields["dimensions"]
-		if !modelSet || !dimensionsSet {
-			fields["model"] = cfg.Model
-			fields["dimensions"] = json.Number(fmt.Sprint(cfg.Dimensions))
-			encoded, err := encodeConfig(c.config, c.body)
-			if err != nil {
-				return nil, err
-			}
-			content = []byte(encoded)
-		}
 	}
 	if err := os.MkdirAll(c.Path, 0o755); err != nil {
 		return nil, fmt.Errorf("create collection directory: %w", err)

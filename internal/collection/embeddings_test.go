@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/gofrs/flock"
+	"github.com/hmans/means/internal/userconfig"
 )
 
 type embeddingAPI struct {
@@ -60,7 +61,7 @@ func TestEmbeddingProviderDefaults(t *testing.T) {
 		{"openai", "text-embedding-3-small", "https://api.openai.com/v1"},
 		{"openrouter", "openai/text-embedding-3-small", "https://openrouter.ai/api/v1"},
 	} {
-		c, err := InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: "+tt.provider+"}\n---\n"))
+		c, err := initEmbeddingFixture(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: "+tt.provider+"}\n---\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -101,7 +102,7 @@ func TestOpenRouterEndpointOverride(t *testing.T) {
 	}))
 	defer server.Close()
 	t.Setenv("MEANS_EMBEDDING_BASE_URL", server.URL+"/v1/")
-	c, err := InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: openrouter, dimensions: 2}\n---\n"))
+	c, err := initEmbeddingFixture(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: openrouter, dimensions: 2}\n---\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +178,7 @@ func fakeEmbeddingAPI(t *testing.T) *embeddingAPI {
 
 func embeddingCollection(t *testing.T) *Collection {
 	t.Helper()
-	c, err := InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings:\n  provider: openai\n  dimensions: 2\n---\n"))
+	c, err := initEmbeddingFixture(t.TempDir(), []byte("---\nschema: true\nembeddings:\n  provider: openai\n  dimensions: 2\n---\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +239,7 @@ func TestEmbeddingLifecycle(t *testing.T) {
 func TestEmbeddingDisabledIsOffline(t *testing.T) {
 	api := fakeEmbeddingAPI(t)
 	for _, setting := range []string{"", "embeddings: false\n"} {
-		c, err := InitConfig(t.TempDir(), []byte("---\nschema: true\n"+setting+"---\n"))
+		c, err := initEmbeddingFixture(t.TempDir(), []byte("---\nschema: true\n"+setting+"---\n"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -555,7 +556,7 @@ func TestEmbeddingResponseValidation(t *testing.T) {
 
 func TestEmbeddingConfigValidation(t *testing.T) {
 	for _, value := range []string{"true", "null", "[]", "{}", "{provider: wrong}", "{provider: true}", "{provider: openai, model: ''}", "{provider: openai, model: openai/text-embedding-3-small}", "{provider: openrouter, model: text-embedding-3-small}", "{provider: openai, model: wrong}", "{provider: openai, dimensions: 0}", "{provider: openai, dimensions: 1.5}", "{provider: openai, dimensions: 1537}", "{provider: openai, dimensions: '2'}", "{provider: openai, api_key: secret}"} {
-		if _, err := InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: "+value+"\n---\n")); err == nil {
+		if _, err := initEmbeddingFixture(t.TempDir(), []byte("---\nschema: true\nembeddings: "+value+"\n---\n")); err == nil {
 			t.Fatalf("accepted %s", value)
 		}
 	}
@@ -564,7 +565,7 @@ func TestEmbeddingConfigValidation(t *testing.T) {
 		if strings.HasPrefix(model, "openai/") {
 			provider = "openrouter"
 		}
-		c, err := InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: "+provider+", model: "+model+"}\n---\n"))
+		c, err := initEmbeddingFixture(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: "+provider+", model: "+model+"}\n---\n"))
 		if err != nil || c.Embeddings().Model != model {
 			t.Fatalf("model %s: %v", model, err)
 		}
@@ -668,7 +669,11 @@ func TestEmbeddingProfileChangesInvalidateCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	loaded, err := Load(c.Path)
-	if err != nil || loaded.Embeddings() == nil || loaded.Embeddings().Dimensions != 2 {
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded = loaded.WithEmbeddings(c.Embeddings())
+	if loaded.Embeddings() == nil || loaded.Embeddings().Dimensions != 2 {
 		t.Fatalf("schema set lost config: %v", err)
 	}
 	// A profile mismatch must not reuse vectors even if the document input is unchanged.
@@ -689,4 +694,34 @@ func TestEmbeddingProfileChangesInvalidateCache(t *testing.T) {
 	if len(api.inputs) != before+1 {
 		t.Fatal("profile mismatch reused a vector")
 	}
+}
+
+// Embedding tests inject host settings explicitly; collection files remain portable.
+func initEmbeddingFixture(path string, data []byte) (*Collection, error) {
+	fields, body, err := parseMarkdown(data)
+	if err != nil {
+		return nil, err
+	}
+	settings := map[string]any{}
+	if value, ok := fields["embeddings"]; ok {
+		settings["embeddings"] = value
+		delete(fields, "embeddings")
+	}
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := userconfig.Parse(raw)
+	if err != nil {
+		return nil, err
+	}
+	markdown, err := encodeMarkdown(fields, body)
+	if err != nil {
+		return nil, err
+	}
+	c, err := InitConfig(path, []byte(markdown))
+	if err != nil {
+		return nil, err
+	}
+	return c.WithEmbeddings(cfg.Embeddings), nil
 }

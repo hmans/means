@@ -59,7 +59,7 @@ continue to allow schema-invalid application data for retrieval.`,
   means doctor --path ./memory --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

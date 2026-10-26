@@ -32,7 +32,7 @@ Use --semantic for opt-in embedding search: embed only the query and rank stored
 document vectors by cosine similarity (ID breaks ties). Search never refreshes
 or removes document vectors. Missing or stale vectors are skipped; run means embed
 to refresh them. Only the query is sent to the configured embedding endpoint.
-Requires embeddings configuration in MEANS.md and API credentials; see means embed
+Requires embeddings in the machine-local Means user config and API credentials; see means embed
 --help. A nonempty query is required; --literal and --semantic are exclusive.
 Semantic results include score and omit match. --min-score defaults to 0.3 and
 keeps scores at or above the threshold before applying --limit. Values must be
@@ -127,7 +127,7 @@ do not use or write an index. Source documents are never changed.`,
 			if len(args) == 1 {
 				query = args[0]
 			}
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

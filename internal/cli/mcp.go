@@ -99,6 +99,13 @@ tool results always use structuredContent without a redundant text copy.
 Clients must consume structured results. --json only formats CLI help and startup
 errors; it does not change protocol results.
 Tool errors still include explanatory text.
+MCP bootstraps the same user config as CLI: $XDG_CONFIG_HOME/means/config.yaml
+(default ~/.config/means/config.yaml), with a commented example if missing.
+Embedding settings apply to all collections on this machine; MEANS.md cannot
+configure embeddings. Settings are read at startup; restart after editing the
+user config or changing credentials. Collection schemas still reload per call.
+Missing-config bootstrap failures leave embeddings disabled and warn on stderr;
+existing malformed configs fail startup. See means embed --help for migration.
 Embedding progress goes to stderr; stdout remains exclusively MCP messages.
 Tool failures use MCP isError results; the server stays available for later calls.
 Startup failures and diagnostics go to stderr. --json also formats CLI help and

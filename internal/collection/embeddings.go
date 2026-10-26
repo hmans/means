@@ -17,91 +17,29 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/hmans/means/internal/userconfig"
 )
 
-// EmbeddingConfig opts a collection into network-backed embedding maintenance.
-// Credentials and endpoint overrides belong in the process environment.
-type EmbeddingConfig struct {
-	Provider   string `json:"provider"`
-	Model      string `json:"model"`
-	Dimensions int    `json:"dimensions"`
-}
+// EmbeddingConfig describes the host's embedding settings.
+type EmbeddingConfig = userconfig.Embeddings
 
-func embeddingConfig(value any) (*EmbeddingConfig, error) {
-	if value == false {
-		return nil, nil
+// WithEmbeddings attaches host configuration without changing collection files.
+func (c *Collection) WithEmbeddings(cfg *EmbeddingConfig) *Collection {
+	copy := *c
+	copy.embeddings = nil
+	if cfg != nil {
+		settings := *cfg
+		copy.embeddings = &settings
 	}
-	fields, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("embeddings must be an object or false")
-	}
-	cfg := &EmbeddingConfig{}
-	for key, value := range fields {
-		switch key {
-		case "provider":
-			provider, ok := value.(string)
-			if !ok {
-				return nil, fmt.Errorf("embeddings.provider must be openai or openrouter")
-			}
-			cfg.Provider = provider
-		case "model":
-			model, ok := value.(string)
-			if !ok || model == "" {
-				return nil, fmt.Errorf("embeddings.model must be a string")
-			}
-			cfg.Model = model
-		case "dimensions":
-			n, ok := value.(json.Number)
-			if !ok {
-				return nil, fmt.Errorf("embeddings.dimensions must be a positive integer")
-			}
-			i, err := n.Int64()
-			if err != nil || i < 1 || i > 3072 {
-				return nil, fmt.Errorf("embeddings.dimensions must be an integer from 1 to 3072")
-			}
-			cfg.Dimensions = int(i)
-		default:
-			return nil, fmt.Errorf("unknown embeddings configuration field %q", key)
-		}
-	}
-	prefix := ""
-	switch cfg.Provider {
-	case "openai":
-	case "openrouter":
-		prefix = "openai/"
-	default:
-		return nil, fmt.Errorf("embeddings.provider is required and must be openai or openrouter")
-	}
-	if cfg.Model == "" {
-		cfg.Model = prefix + "text-embedding-3-small"
-	}
-	maxDimensions := 1536
-	switch cfg.Model {
-	case prefix + "text-embedding-3-small":
-	case prefix + "text-embedding-3-large":
-		maxDimensions = 3072
-	default:
-		return nil, fmt.Errorf("embeddings.model for %s must be %s or %s", cfg.Provider, prefix+"text-embedding-3-small", prefix+"text-embedding-3-large")
-	}
-	if cfg.Dimensions == 0 {
-		cfg.Dimensions = 512
-	}
-	if cfg.Dimensions > maxDimensions {
-		return nil, fmt.Errorf("embeddings.dimensions exceeds model maximum %d", maxDimensions)
-	}
-	return cfg, nil
+	return &copy
 }
 
 func (c *Collection) Embeddings() *EmbeddingConfig {
-	if c.config == nil {
+	if c.embeddings == nil {
 		return nil
 	}
-	value, exists := c.config["embeddings"]
-	if !exists {
-		return nil
-	}
-	cfg, _ := embeddingConfig(value) // Validated when loading configuration.
-	return cfg
+	cfg := *c.embeddings
+	return &cfg
 }
 
 // The input version is part of the cache identity. Do not include IDs or file
@@ -461,7 +399,7 @@ func (c *Collection) EmbedWithOptions(opts EmbedOptions) (*ListResult, error) {
 		return nil, err
 	}
 	if s == nil {
-		return nil, fmt.Errorf("embeddings are not enabled; add embeddings: {provider: openai} or embeddings: {provider: openrouter} to MEANS.md frontmatter")
+		return nil, fmt.Errorf("embeddings are not enabled; edit the Means user config at $XDG_CONFIG_HOME/means/config.yaml (default ~/.config/means/config.yaml) and enable embeddings with provider openai or openrouter")
 	}
 	defer s.close()
 	if opts.Force {
@@ -536,7 +474,7 @@ func (c *Collection) searchSemantic(opts SearchOptions) (*SearchResult, error) {
 		return nil, err
 	}
 	if s == nil {
-		return nil, fmt.Errorf("semantic search requires embeddings in MEANS.md")
+		return nil, fmt.Errorf("semantic search requires embeddings in the Means user config ($XDG_CONFIG_HOME/means/config.yaml, default ~/.config/means/config.yaml)")
 	}
 	// Search never writes the cache, and writers replace it atomically, so read
 	// a snapshot without waiting for the lock held by embed or mutations.

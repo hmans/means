@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/hmans/means/internal/collection"
 )
 
 func TestEmbeddingFailureKeepsJSONErrorParseable(t *testing.T) {
@@ -16,7 +14,7 @@ func TestEmbeddingFailureKeepsJSONErrorParseable(t *testing.T) {
 	defer api.Close()
 	t.Setenv("MEANS_EMBEDDING_BASE_URL", api.URL)
 	t.Setenv("MEANS_EMBEDDING_API_KEY", "test")
-	c, err := collection.InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: openai}\n---\n"))
+	c, err := embeddingTestCollection(t, t.TempDir(), "{provider: openai}")
 	if err != nil {
 		t.Fatal(err)
 	}

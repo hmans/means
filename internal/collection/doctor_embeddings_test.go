@@ -79,7 +79,7 @@ func TestDoctorMissingAndInvalidEmbeddingCache(t *testing.T) {
 				}
 			}
 			if state == "disabled" {
-				c.config["embeddings"] = false
+				c = c.WithEmbeddings(nil)
 			}
 			report, err := c.Doctor()
 			if err != nil {
@@ -115,10 +115,12 @@ func TestDoctorEmbeddingOwnership(t *testing.T) {
 	if _, err := SetSchema(c.Path, []byte(`{"required":["missing"]}`), true); err != nil {
 		t.Fatal(err)
 	}
+	settings := c.Embeddings()
 	c, err := Load(c.Path)
 	if err != nil {
 		t.Fatal(err)
 	}
+	c = c.WithEmbeddings(settings)
 	content, err := os.ReadFile(filepath.Join(c.Path, "doc000.md"))
 	if err != nil {
 		t.Fatal(err)

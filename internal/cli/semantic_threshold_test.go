@@ -24,7 +24,7 @@ func TestSemanticThresholdCLI(t *testing.T) {
 	defer api.Close()
 	t.Setenv("MEANS_EMBEDDING_BASE_URL", api.URL)
 	t.Setenv("MEANS_EMBEDDING_API_KEY", "test")
-	c, err := collection.InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: openai, dimensions: 2}\n---\n"))
+	c, err := embeddingTestCollection(t, t.TempDir(), "{provider: openai, dimensions: 2}")
 	if err != nil {
 		t.Fatal(err)
 	}

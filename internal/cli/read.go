@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/hmans/means/internal/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +34,7 @@ and non-finite numbers are rejected. Plain YAML dates are returned as strings.`,
   means read <id> --path ./memory --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

@@ -77,4 +77,7 @@ Neither a skill nor MCP is required if project instructions plus the CLI suffice
   relative to the working directory, not the collection.
 
 `means <command> --help` provides full contracts and limitations. `means agents`
-only prints this guide; it creates no files and installs no integrations.
+prints this guide and installs no integrations. Like other CLI commands, it
+bootstraps a missing user config with embeddings disabled. Machine-local embedding
+settings belong in `$XDG_CONFIG_HOME/means/config.yaml` (default
+`~/.config/means/config.yaml`), never in `MEANS.md`. See `means embed --help`.
