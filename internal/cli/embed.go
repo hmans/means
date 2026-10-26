@@ -11,7 +11,7 @@ func newEmbedCommand(opts *options) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "embed",
-		Short: "Refresh embeddings for an opted-in collection",
+		Short: "Refresh embeddings for an collection using this machine's embedding settings",
 		Long: `Refresh missing or stale document embeddings and remove obsolete entries.
 
 Use --force to clear all stored vectors before regenerating every valid document,
@@ -19,9 +19,17 @@ including unchanged documents. Markdown is preserved. If regeneration fails,
 only batches completed during this run remain cached. Run embed without --force
 to resume without discarding that progress. This incurs fresh API charges.
 
-Opt in by adding this field to MEANS.md YAML frontmatter, alongside schema:
+Opt in by manually editing the Means user config:
+  $XDG_CONFIG_HOME/means/config.yaml (default ~/.config/means/config.yaml)
+On first CLI invocation or MCP startup, Means creates a commented example if the
+file is missing; embeddings stay disabled. Existing files are never overwritten.
+Set the following in that file (plain YAML, without Markdown delimiters):
   embeddings:
     provider: openrouter
+Settings apply to every collection used on this machine. CLI reads settings each
+invocation; MCP reads them at startup, so restart it after editing the config.
+Bootstrap failures leave embeddings disabled and warn on successful commands;
+existing malformed/unreadable configs fail rather than silently disabling them.
 Provider is required: openai or openrouter. Omit embeddings or set it to false
 to disable. Model defaults to text-embedding-3-small for openai and
 openai/text-embedding-3-small for openrouter. Both also support the corresponding
@@ -38,7 +46,15 @@ Missing credentials fail; there is no fallback to another provider's key.
 Endpoint overrides and keys are never read from collection documents. Changing
 provider, model, dimensions, or endpoint invalidates the local vector profile.
 
-Opt-in enables automatic maintenance on create/update/delete in CLI and MCP.
+Migration: move any embeddings block from MEANS.md into the user config and
+remove it from MEANS.md, including embeddings: false. Legacy collection settings
+are rejected with migration guidance. There are no per-collection overrides and
+no automatic configuration migration. Collections keep only identity/schema/workflow.
+Compatible existing local vector caches remain reusable. Different host profiles
+invalidate those vectors. Run embed on each configured system to backfill documents.
+
+Opt-in enables automatic maintenance on create/update/delete in CLI and MCP for
+all collections, sending changed title/body input to the configured provider.
 Create/update store the embedding before changing the document; API or cache
 write failures leave the document unchanged. Delete removes its vector locally
 before removing the file and needs no API call. These two files are not one
@@ -84,7 +100,7 @@ the command result. Redirect stderr to suppress progress.`,
 		Example: "  means embed --path ./memory --json\n  means embed --force --path ./memory\n  means search --semantic \"why did we choose Go\" --path ./memory --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

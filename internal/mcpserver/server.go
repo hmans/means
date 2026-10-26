@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/internal/userconfig"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -21,7 +22,7 @@ string). Creation takes title and optional data (default {}); do not supply id.
 List or search documents to find IDs, then read by ID for full bodies. Search
 matches all query tokens in any order across title/body, ranks with a title boost,
 and filters frontmatter.data by value. Set literal:true for substring matching.
-With embeddings configured in MEANS.md, create/update/delete maintain local
+With embeddings configured in the machine-local Means user config, create/update/delete maintain local
 title/body embeddings automatically. API/cache errors prevent document mutations.
 Set semantic:true on search for cosine ranking of stored document vectors; this
 sends only the query to the configured embedding endpoint. Search never changes
@@ -34,6 +35,9 @@ Embedding refresh is CLI-only, via means embed (optionally --force).
 Embeddings use a separate
 .means/embeddings.jsonl cache and lock. No watcher is used. API calls may incur
 charges. Keys and endpoint overrides come from the server process environment.
+User settings come from $XDG_CONFIG_HOME/means/config.yaml (default
+~/.config/means/config.yaml) and apply to all collections. They are read at startup;
+restart after editing them. MEANS.md contains only collection identity/schema/workflow.
 Full-text search refreshes a disposable .means/search/ index on each call, reads
 and hashes all visible documents, and closes the index before returning. There
 is no watcher. Concurrent searches wait up to five seconds for a cache lock.
@@ -103,10 +107,15 @@ func New(path, version string) (*mcp.Server, error) {
 // NewWithEmbeddingProgress reports embedding work through progress. Concurrent
 // calls may invoke progress concurrently; callers must serialize their output.
 func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp.Server, error) {
+	cfg, warning, err := userconfig.Open()
+	if err != nil {
+		return nil, err
+	}
 	c, err := collection.Load(path)
 	if err != nil {
 		return nil, err
 	}
+	c = c.WithEmbeddings(cfg.Embeddings)
 	path = c.Path
 	info := c.Describe()
 	server := mcp.NewServer(&mcp.Implementation{Name: "means", Title: info.Title, Description: info.Description, Version: version},
@@ -234,9 +243,12 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		},
 	} {
 		tool.description = collectionPurpose(info) + "\n\n" + tool.description
-		if err := addTool(server, path, tool, progress); err != nil {
+		if err := addTool(server, path, tool, progress, cfg.Embeddings); err != nil {
 			return nil, err
 		}
+	}
+	if warning != nil && progress != nil {
+		progress("Warning: " + warning.Error())
 	}
 	return server, nil
 }
@@ -265,7 +277,7 @@ type toolDefinition struct {
 	runPath                   func(string, json.RawMessage) (any, error) // Operations that need no valid current schema.
 }
 
-func addTool(server *mcp.Server, path string, tool toolDefinition, progress func(string)) error {
+func addTool(server *mcp.Server, path string, tool toolDefinition, progress func(string), embeddings *collection.EmbeddingConfig) error {
 	schema, err := jsonschema.UnmarshalJSON(bytes.NewBufferString(tool.schema))
 	if err != nil {
 		return err
@@ -306,7 +318,7 @@ func addTool(server *mcp.Server, path string, tool toolDefinition, progress func
 			var c *collection.Collection
 			c, err = collection.Load(path)
 			if err == nil {
-				output, err = tool.run(c.WithContext(ctx).WithEmbeddingProgress(progress), value.(map[string]any))
+				output, err = tool.run(c.WithEmbeddings(embeddings).WithContext(ctx).WithEmbeddingProgress(progress), value.(map[string]any))
 			}
 		}
 		rejected := errors.Is(err, collection.ErrSchemaIncompatible)

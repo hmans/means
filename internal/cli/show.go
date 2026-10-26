@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/hmans/means/internal/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +26,7 @@ data schema violations do not prevent reading. Success exits 0.`,
   means show <id> --path ./issues --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

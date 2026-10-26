@@ -7,13 +7,18 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/internal/userconfig"
 	"github.com/spf13/cobra"
 )
 
 type options struct {
-	path    string
-	json    bool
-	helpErr error
+	path          string
+	json          bool
+	helpErr       error
+	config        *userconfig.Config
+	configErr     error
+	configWarning error
 }
 
 // Execute runs one invocation, writing responses to stdout and errors to stderr.
@@ -40,11 +45,15 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer, version s
 		writeErr := opts.write(stderr, map[string]string{"error": err.Error()}, "Error: "+err.Error()+"\n")
 		return errors.Join(err, writeErr)
 	}
+	if opts.configWarning != nil && command.Name() != "mcp" {
+		return opts.write(stderr, map[string]string{"warning": opts.configWarning.Error()}, "Warning: "+opts.configWarning.Error()+"\n")
+	}
 	return nil
 }
 
 func newRootCommand(version string) (*cobra.Command, *options) {
 	opts := &options{}
+	opts.config, opts.configWarning, opts.configErr = userconfig.Open()
 	root := &cobra.Command{
 		Use:   "means",
 		Short: "Agentic memory built from Markdown files",
@@ -74,6 +83,16 @@ against the current schema, or "means search" to find documents by text/data.
 Use "means embed --help" for opt-in OpenAI embeddings, automatic maintenance,
 and semantic search with "means search --semantic".
 
+Machine configuration:
+  On first invocation, create $XDG_CONFIG_HOME/means/config.yaml (default
+  ~/.config/means/config.yaml) with a commented embedding example. Existing files
+  are never overwritten. Edit it manually to enable embeddings for every collection
+  on this machine; credentials belong in environment variables. No setup command.
+  Failure to create a missing config leaves embeddings disabled and reports a
+  warning on successful commands. Existing invalid configs fail commands; help
+  and version remain available. CLI reloads settings each invocation; restart MCP
+  after editing settings. See "means embed --help" for fields and migration.
+
 Every command accepts --path and --json before or after the command name.
 --path defaults to the current working directory; relative paths resolve there.
 Means works with that exact directory and does not search parent directories.
@@ -94,6 +113,9 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			DisableDefaultCmd: true,
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if opts.configErr != nil && cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "means" {
+				return opts.configErr
+			}
 			if opts.path == "" {
 				return fmt.Errorf("--path must not be empty")
 			}
@@ -131,4 +153,12 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 	root.AddCommand(newAgentsCommand(opts), newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts), newEmbedCommand(opts),
 		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
 	return root, opts
+}
+
+func (opts *options) loadCollection() (*collection.Collection, error) {
+	c, err := collection.Load(opts.path)
+	if err != nil {
+		return nil, err
+	}
+	return c.WithEmbeddings(opts.config.Embeddings), nil
 }

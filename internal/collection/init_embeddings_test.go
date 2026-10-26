@@ -1,53 +1,39 @@
 package collection
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"strconv"
+	"strings"
 	"testing"
 )
 
-func TestInitPersistsEmbeddingDefaults(t *testing.T) {
-	for _, tt := range []struct {
-		config, model string
-		dimensions    int
-		unchanged     bool
-	}{
-		{"{provider: openai}", "text-embedding-3-small", 512, false},
-		{"{provider: openrouter}", "openai/text-embedding-3-small", 512, false},
-		{"{provider: openai, model: text-embedding-3-large}", "text-embedding-3-large", 512, false},
-		{"{provider: openai, dimensions: 256}", "text-embedding-3-small", 256, false},
-		{"{provider: openai, model: text-embedding-3-large, dimensions: 1024}", "text-embedding-3-large", 1024, true},
-		{"false", "", 0, true},
-	} {
-		t.Run(tt.config, func(t *testing.T) {
-			body := "\n# Guidance\r\nKeep exact body bytes."
-			input := "---\nschema: {type: integer, const: 9007199254740993}\nembeddings: " + tt.config + "\n---\n" + body
-			c, err := InitConfig(t.TempDir(), []byte(input))
-			if err != nil {
-				t.Fatal(err)
-			}
-			stored, err := os.ReadFile(filepath.Join(c.Path, ConfigFilename))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tt.unchanged && string(stored) != input {
-				t.Fatal("complete/disabled config changed")
-			}
-			fields, storedBody, err := configFields(stored)
-			if err != nil || storedBody != body {
-				t.Fatalf("body changed: %q %v", storedBody, err)
-			}
-			if fields["schema"].(map[string]any)["const"] != json.Number("9007199254740993") {
-				t.Fatal("schema number lost precision")
-			}
-			if tt.model != "" {
-				cfg := fields["embeddings"].(map[string]any)
-				if cfg["model"] != tt.model || cfg["dimensions"] != json.Number(strconv.Itoa(tt.dimensions)) {
-					t.Fatalf("config: %v", cfg)
-				}
-			}
-		})
+func TestCollectionRejectsLegacyEmbeddings(t *testing.T) {
+	for _, value := range []string{"false", "{provider: openrouter}", "{provider: openai, model: text-embedding-3-small, dimensions: 512}"} {
+		dir := t.TempDir()
+		input := []byte("---\nschema: true\nembeddings: " + value + "\n---\nGuidance\n")
+		if _, err := InitConfig(dir, input); err == nil || !strings.Contains(err.Error(), "user config") {
+			t.Fatalf("missing migration error: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, ConfigFilename)); !os.IsNotExist(err) {
+			t.Fatal("invalid input created file")
+		}
+		if err := os.WriteFile(filepath.Join(dir, ConfigFilename), input, 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Load(dir); err == nil || !strings.Contains(err.Error(), "remove it from MEANS.md") {
+			t.Fatalf("load migration error: %v", err)
+		}
+	}
+}
+
+func TestInitPreservesCompleteConfigBytes(t *testing.T) {
+	input := []byte("---\n# comment\nschema: {type: integer, const: 9007199254740993}\n---\n\n# Guidance\r\nExact body.")
+	c, err := InitConfig(t.TempDir(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := os.ReadFile(filepath.Join(c.Path, ConfigFilename))
+	if err != nil || string(stored) != string(input) {
+		t.Fatal("init changed complete input")
 	}
 }

@@ -89,7 +89,7 @@ JSON`,
 			if err != nil {
 				return err
 			}
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

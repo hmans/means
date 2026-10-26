@@ -1,16 +1,15 @@
 ---
 data:
   priority: normal
-  status: todo
+  status: canceled
   tags:
     - embeddings
     - storage
-    - deferred
   type: feature
 id: 04par
 title: Explore opt-in quantized embeddings in document frontmatter
 ---
-Deferred until explicitly selected for implementation.
+Selected for an experimental implementation on 2026-10-26.
 
 Goal: Make embeddings portable with Markdown documents so a fresh checkout can reuse vectors without regenerating them through the API. Storage in documents must be opt-in; the existing local JSONL storage remains the default.
 
@@ -29,4 +28,18 @@ Acceptance criteria and design questions:
 - Specify safe behavior when enabling/disabling or switching storage modes. Automatic bulk conversion can remain deferred until the format and write behavior are established.
 - Add tests and document opt-in configuration, portability, failure recovery, and file/hash changes.
 
-No implementation is requested now. Related foundation: 9rxzp (opt-in embeddings and semantic search).
+Related foundation: 9rxzp (opt-in embeddings and semantic search).
+
+## Outcome: canceled
+
+We built and tried the frontmatter quantization prototype, then decided to remove
+it. Keeping Means' configuration and document format small is more valuable than
+sharing embeddings between systems: embeddings are cheap enough to regenerate
+on each system configured to use them.
+
+The prototype implementation, storage setting, documentation, tests, and unreleased
+feature note were removed. Generated embedding fields were stripped from the
+issues while preserving their metadata and bodies. Means retains the existing
+opt-in local float cache and semantic search. No portable storage, quantization,
+or migration API is being shipped. Real-model quantization evaluation is no
+longer planned.

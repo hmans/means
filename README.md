@@ -16,6 +16,8 @@ validated schema replacement, creating and reading documents, hash-checked
 updates and deletion, listing, ranked full-text search with data filters,
 literal search, terminal tables, Markdown-rendered document viewing with `show`,
 collection diagnostics, and opt-in OpenAI embeddings with semantic search.
+Means creates a commented user config at `~/.config/means/config.yaml` (or under
+`XDG_CONFIG_HOME`); edit it to enable embeddings on this machine.
 
 ## Try it
 

@@ -47,7 +47,7 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 			if limit < 0 {
 				return fmt.Errorf("--limit must be zero or greater")
 			}
-			c, err := collection.Load(opts.path)
+			c, err := opts.loadCollection()
 			if err != nil {
 				return err
 			}

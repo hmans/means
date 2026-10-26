@@ -82,7 +82,7 @@ func TestDoctorHelp(t *testing.T) {
 }
 
 func TestDoctorMissingEmbeddingsOutput(t *testing.T) {
-	c, err := collection.InitConfig(t.TempDir(), []byte("---\nschema: true\nembeddings: {provider: openai}\n---\n"))
+	c, err := embeddingTestCollection(t, t.TempDir(), "{provider: openai}")
 	if err != nil {
 		t.Fatal(err)
 	}

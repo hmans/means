@@ -38,8 +38,8 @@ The schema validates only document `frontmatter.data`; means owns each document'
 default. Internal references work; external files and remote schemas do not.
 
 The required `schema` field accepts an object or boolean. Optional `title` and
-`description` must be strings. Optional `embeddings` enables automatic embedding
-maintenance, as described below; unknown configuration fields are rejected.
+`description` must be strings. Embedding settings belong in the machine-local
+user config, described below; unknown collection configuration fields are rejected.
 Missing or blank title falls back to the directory name; description defaults to
 empty. Schema annotations do not define collection identity. The Markdown body
 provides self-description and workflow and may be empty. Configuration uses the
@@ -58,10 +58,7 @@ mise means init --path ./memory --schema - --json < ./memory.schema.json
 
 The starter includes a directory-derived title, editable guidance, and a schema
 accepting optional `tags` while rejecting other application fields.
-`--input` preserves a complete file's bytes unless enabled embeddings omit model
-or dimensions. In that case, init writes the provider's default model and 512
-dimensions explicitly, preserves supplied values and exact body bytes, and may
-reformat frontmatter. `--schema` accepts JSON and writes YAML.
+`--input` preserves a complete file's bytes. `--schema` accepts JSON and writes YAML.
 These flags are mutually exclusive. Init JSON returns `path`, `config` (the absolute
 MEANS.md path), and `next_steps`. `init` validates configuration and schema before
 creating files and never overwrites an existing `MEANS.md`. It also creates `.gitignore` with `.means/`, or
@@ -332,7 +329,25 @@ collections, add `.means/` to their `.gitignore` manually.
 
 ### Opt-in semantic search
 
-Add `embeddings` alongside `schema` in `MEANS.md` frontmatter:
+Embedding settings belong to the machine running Means, not the collection.
+On first CLI invocation (including help/version) or MCP startup, Means creates
+`$XDG_CONFIG_HOME/means/config.yaml`, defaulting to `~/.config/means/config.yaml`.
+`XDG_CONFIG_HOME` must be absolute. The starter contains a commented example;
+embeddings remain disabled until you edit it manually. There is no setup command.
+Existing files, including empty or malformed ones, are never overwritten. Concurrent
+first runs publish a complete file without replacing one another. The starter
+file has mode 0600 and newly created configuration directories have mode 0700.
+
+If a missing file cannot be created, Means continues with embeddings disabled.
+Successful CLI commands report a warning on stderr (a JSON warning object with
+`--json`); failed commands retain a single structured error. MCP reports bootstrap
+warnings on stderr after successful startup, never on protocol stdout. Existing
+unreadable or invalid configs fail commands/startup instead of silently changing
+behavior; CLI help and version remain available to aid recovery.
+
+The user config is plain YAML, with an optional `embeddings` field. Unknown or
+duplicate fields, multiple YAML documents, aliases, merge keys, and custom tags
+are rejected. Empty/comment-only files and `{}` disable embeddings. Add:
 
 ```yaml
 embeddings:
@@ -375,7 +390,13 @@ during that run remain cached. Resume with `means embed` without `--force` to
 reuse that progress. Refresh and forced rebuilds are CLI-only; MCP does not
 expose an `embed` tool.
 
-Once enabled, CLI and MCP create/update/delete maintain embeddings automatically.
+Once enabled, CLI and MCP create/update/delete maintain embeddings automatically
+for **every collection** used by that machine, sending changed document title/body
+text to the configured provider. CLI reloads settings each invocation; MCP captures
+them at startup, so restart it after changing settings or credentials. Collection
+schemas and workflow guidance still reload per tool call. Offline collection
+operations never require API credentials. Bootstrap does not generate vectors;
+run `means embed` explicitly to backfill existing or externally edited documents.
 Each document has one vector for `Title: ` plus its title, two newlines, and its
 exact Markdown body. Application data is excluded; data-only edits reuse the
 vector. A title or body change generates a replacement. Inputs are not chunked
@@ -451,10 +472,25 @@ permission errors and symlinked cache paths fail. Do not delete cache files whil
 embedding operations run. There is no SQLite dependency. Quantized vectors,
 frontmatter sharing, chunking, and hybrid ranking are not implemented yet.
 
+#### Migrating collection embedding settings
+
+Move the `embeddings` block from each `MEANS.md` into this machine's user config,
+then remove it from `MEANS.md`. Even legacy `embeddings: false` must be removed.
+Means rejects legacy collection settings with migration guidance; it never copies
+settings automatically or enables external API calls just because a collection
+contains them. Choose one provider/model/dimension profile for this machine.
+There are no collection overrides or named profiles. Keep credentials in the
+process environment, not in either configuration file.
+
+Existing compatible `.means/embeddings.jsonl` caches remain usable: moving the
+settings does not change their profile identity. Other machines generate their
+own vectors after configuration; documents and MEANS.md remain portable. Run
+`means embed --path ./collection` to populate or reconcile each local cache.
+
 #### OpenRouter
 
 [OpenRouter supports embedding requests](https://openrouter.ai/docs/api/api-reference/embeddings/submit-an-embedding-request)
-for OpenAI models. Use `embeddings: {provider: openrouter}` and set
+for OpenAI models. Use `embeddings: {provider: openrouter}` in the user config and set
 `OPENROUTER_API_KEY`. Neither `OPENAI_API_KEY` nor a base URL override is required.
 
 `MEANS_EMBEDDING_BASE_URL` overrides the selected provider's endpoint for proxies
@@ -503,7 +539,7 @@ Healthy collections exit 0; an unhealthy report goes to stdout and exits 1 with
 no stderr response. Collection-level failures, such as an invalid schema, exit 1
 with an error on stderr instead of a report.
 
-For collections with embeddings enabled, doctor also reports documents without
+When this machine has embeddings enabled, doctor also reports documents without
 usable embeddings, stale vectors, and orphaned vectors with no unique valid
 document in the collection. Deleted documents, duplicate IDs, malformed envelopes,
 and documents moved into a nested collection can leave orphaned vectors.
@@ -517,7 +553,7 @@ errors still exit 1, as do failures to complete the check, such as an unreadable
 cache. `checked` still counts document files,
 not vectors. Run `means embed --path COLLECTION` to refresh and prune vectors.
 Doctor makes no API calls, requires no API key, takes no cache lock, and does not
-create or modify cache files. Collections without embeddings skip these checks.
+create or modify cache files. Machines without embeddings configured skip these checks.
 
 CLI success goes to stdout; errors go to stderr. With `--json`, ordinary commands
 return structured responses and errors such as `{"error":"..."}`. `--path`
@@ -561,7 +597,7 @@ schema and guidance. Other tools are `list`, `search`, `read`, `create`,
 `update`, `delete`, and `schema_set`; they use the same collection behavior as the CLI.
 Embedding maintenance on create/update/delete is automatic. Backfills and forced
 rebuilds use CLI `means embed`; they are not exposed as MCP tools.
-`info` includes the current embedding configuration (or null when disabled).
+`info` includes the host embedding configuration loaded at startup (or null when disabled).
 Use `search` with `semantic: true` for embedding similarity. Optional `min_score`
 has the same range and default (0.3) as CLI `--min-score` and requires
 `semantic: true`. Give the MCP server
