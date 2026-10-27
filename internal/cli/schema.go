@@ -24,39 +24,13 @@ func newSchemaCommand(opts *options) *cobra.Command {
 	var force bool
 	set := &cobra.Command{
 		Use: "set", Short: "Validate and install a proposed collection schema",
-		Long: `Validate and replace the schema field in MEANS.md at --path.
-
---input FILE reads a proposed JSON Schema; --input - reads stdin until EOF.
-Relative input paths resolve against the working directory, independently of
---path. Supply the schema itself, not a wrapper. Draft 2020-12 is the default.
-Internal references are supported; external references are not. Invalid or
-unsupported schemas always fail, even with --force. Use init for a new collection.
-MEANS.md must be a regular file with parseable frontmatter and valid identity fields.
-An invalid or missing schema can be replaced; malformed YAML needs a direct edit.
-
-Check all visible documents against the proposed schema, respecting nested
-collection boundaries. This checks current data, not abstract compatibility with
-the old schema or future callers. A stricter schema can pass on an empty collection.
-Malformed envelopes, duplicate IDs, and data violations block installation.
---force permits these document diagnostics but still reports them. It does not
-bypass schema validation or collection-level filesystem errors.
-
-No documents are changed. Installation writes the schema as YAML, preserving key
-order, exact numbers, other configuration values, Markdown body bytes, and file
-permission bits.
-Frontmatter may be reformatted. Use a same-directory temporary file and replacement.
-There are no locks: concurrent document edits can invalidate the check, and a
-concurrent configuration edit can race the final replacement. Observed configuration changes
-are rejected. Run doctor after installation and let the agent or user fix data.
-
-Success exits 0 and writes stdout. --json returns
-{"installed":true,"healthy":true,"checked":0,"diagnostics":[]}.
-Forced installation can return healthy:false with diagnostics (id, path, error).
-Document rejection exits 1, leaves the schema unchanged, and writes stderr:
-{"error":"...","installed":false,"healthy":false,"checked":1,"diagnostics":[...]}.
-Other failures exit 1 with {"error":"..."} on stderr. Text output reports whether
-the schema was installed, the checked count, and every diagnostic.
-MCP calls reload the schema; restart MCP to refresh advertised collection metadata.`,
+		Long: `Validate and install JSON Schema from --input FILE|- into MEANS.md.
+Check existing documents before replacing the schema. --force allows document
+violations, but never invalid schemas or filesystem errors. Documents are not
+migrated. Malformed MEANS.md YAML requires direct editing. Run doctor afterward.
+JSON returns installed, healthy, checked, diagnostics. Rejection exits 1 and reports
+diagnostics on stderr. Observed concurrent MEANS.md edits reject replacement;
+external writes can still race installation.`,
 		Example: `  means schema set --path ./memory --input new-schema.json --json
   means schema set --path ./memory --input - --force --json < new-schema.json
   means doctor --path ./memory --json`,

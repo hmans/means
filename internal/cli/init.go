@@ -16,71 +16,18 @@ func newInitCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a collection with an example or supplied MEANS.md",
-		Long: `Initialize a collection in --path (default: the current working directory).
+		Long: `Create a collection in --path (default: current directory).
+Use the example schema, --schema FILE|- for JSON Schema, or --input FILE|- for
+a complete MEANS.md. The two input flags are exclusive. Existing MEANS.md files
+are never overwritten. JSON returns path, config (the MEANS.md path), and next_steps.
+Invalid input exits 1 without creating collection files. Schema defaults to
+Draft 2020-12; external references are not supported.
 
-For agent setup, run "means agents" first. Init writes MEANS.md; refine its guidance
-and establish discovery through project instructions, a skill, or MCP.
-
-Configuration input:
-  --input FILE reads a complete MEANS.md; --input - reads stdin until EOF.
-  MEANS.md starts with --- delimited YAML frontmatter. The required schema field
-  is a JSON Schema object or boolean expressed in YAML. Optional title and
-  description fields must be strings. Embeddings belong in the machine-local user
-  config, not MEANS.md; see means embed --help. Unknown fields are rejected.
-  Missing or blank title falls back to the directory name; description defaults
-  to empty. The Markdown body supplies collection self-description and workflow.
-  Use JSON-compatible YAML: string keys, exact numbers, no aliases, merge keys,
-  custom tags, or non-finite numbers. The body may be empty.
-  --input and --schema are mutually exclusive. Relative input paths resolve
-  against the working directory, independently of --path.
-
-Without either input flag, write a directory-derived title, editable guidance,
-and an example data schema allowing optional tags (an array of strings),
-rejecting other data fields. An empty data object is valid.
-The schema validates only frontmatter.data. Means separately owns id (generated,
-immutable) and title (required, nonempty string). Do not wrap the schema in data;
-its properties describe fields inside data. Collection title/description come from
-MEANS.md configuration fields, not annotations inside the schema.
-
-For an agent-created collection:
-  1. Choose application data fields and constraints for the user's intended memory.
-  2. Author MEANS.md with title, description, schema, and Markdown guidance.
-  3. Supply it using --input FILE or --input -; alternatively provide only a
-     JSON Schema using --schema FILE or --schema - to generate the rest.
-  4. Inspect the response; correct invalid schemas and retry if needed.
-
-Schema input:
-  Supply one JSON Schema value, not a document or a {"schema": ...} wrapper.
-  Usually use type: "object", properties, required, and additionalProperties.
-  Use enum for fixed choices, items for array entries, and description for meaning.
-  JSON Schema Draft 2020-12 is the default when $schema is omitted.
-  Internal references such as #/$defs/status work. External files, remote
-  references, and custom remote metaschemas are not supported.
-  Relative --schema file paths resolve against the current working directory,
-  independently of --path. Stdin is read only when an input flag is -.
-
-Effects:
-  Validate configuration and schema before creating the target directory or files.
-  Create missing directories and write MEANS.md. --input preserves supplied bytes;
-  --schema serializes the JSON Schema into YAML, keeping key order and exact numbers.
-  Create .gitignore with .means/, or append the rule while preserving existing
-  content. Do not duplicate an existing .means/ or /.means/ rule. Symlinked or
-  non-regular .gitignore files are rejected. Search caches are created lazily.
-  Refuse to overwrite an existing MEANS.md, even if it is invalid.
-  Other existing files are left alone. No documents are created or checked.
-
-Responses:
-  Success: exit 0; stdout describes the initialized collection.
-  With --json: {"path":"/absolute/collection","config":"/absolute/collection/MEANS.md","next_steps":["means agents"]}.
-  Failure: exit 1; stderr explains the error and stdout is empty.
-  With --json: {"error":"..."}; schema errors identify the invalid constraint.
-  JSON responses use two-space indentation and end with a newline.
-
-After initialization, use "means schema set --help" to validate and replace the
-schema, or edit MEANS.md directly. Use create to store documents, list
-to discover IDs, read to retrieve them, and doctor to check their current validity.
-Schemas describe application data nested in YAML frontmatter; the body is free-form.
-Edit MEANS.md to change identity and guidance. See "means mcp --help" for discovery.`,
+Choose a schema for your application data, then write the collection workflow
+in the Markdown body of MEANS.md. Run info to inspect it and doctor to check
+documents. For agent use, make the collection discoverable through project
+instructions, a skill, or MCP (see "means help mcp"). Initializing storage alone
+does not establish that workflow or discovery path.`,
 		Example: `  # Start with the example schema
   means init --path ./memory
 
@@ -162,5 +109,5 @@ func writeInitResult(cmd *cobra.Command, opts *options, c *collection.Collection
 		Path      string   `json:"path"`
 		Config    string   `json:"config"`
 		NextSteps []string `json:"next_steps"`
-	}{c.Path, filepath.Join(c.Path, collection.ConfigFilename), []string{"means agents"}}, "Initialized collection at "+c.Path+"\nNext: run means agents to refine workflow guidance and agent discovery.\n")
+	}{c.Path, filepath.Join(c.Path, collection.ConfigFilename), []string{"means help create"}}, "Initialized collection at "+c.Path+"\nNext: run means help create to add a document.\n")
 }

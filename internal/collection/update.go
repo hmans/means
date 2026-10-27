@@ -29,6 +29,25 @@ type Patch struct {
 // Replacement uses a temporary file in the same directory. Hash checks are
 // optimistic: a simultaneous write can still race the final replacement.
 func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
+	return c.update(id, hash, patch, false)
+}
+
+// ReplaceMarkdown validates an edited document and replaces its content using
+// the same hash checks and embedding maintenance as Update. Metadata is replaced,
+// not merge-patched, so removed keys and literal null values are preserved.
+func (c *Collection) ReplaceMarkdown(id, hash string, markdown []byte) (*Document, error) {
+	doc, err := parseDocumentFile("edited document", markdown, "")
+	if err != nil {
+		return nil, err
+	}
+	if doc.ID != id {
+		return nil, fmt.Errorf("id is immutable; retain %q", id)
+	}
+	delete(doc.Frontmatter, "id")
+	return c.update(id, hash, Patch{Frontmatter: doc.Frontmatter, Body: &doc.Body}, true)
+}
+
+func (c *Collection) update(id, hash string, patch Patch, replace bool) (*Document, error) {
 	if err := validateDocumentID(id); err != nil {
 		return nil, err
 	}
@@ -72,7 +91,12 @@ func (c *Collection) Update(id, hash string, patch Patch) (*Document, error) {
 	}
 	frontmatter := current.Frontmatter
 	if patch.Frontmatter != nil {
-		frontmatter = mergeObject(frontmatter, patch.Frontmatter)
+		if replace {
+			frontmatter = patch.Frontmatter
+			frontmatter["id"] = id
+		} else {
+			frontmatter = mergeObject(frontmatter, patch.Frontmatter)
+		}
 	}
 	if err := c.Validate(frontmatter); err != nil {
 		return nil, err

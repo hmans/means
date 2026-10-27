@@ -130,7 +130,7 @@ func TestInitStdinFailure(t *testing.T) {
 
 func TestInitHelp(t *testing.T) {
 	for _, args := range [][]string{
-		{"init", "--help", "--schema", "-"},
+		{"help", "init"},
 		{"help", "init"},
 		{"init", "--help", "--json", "--schema", "-"},
 		{"help", "init", "--json"},
@@ -147,7 +147,7 @@ func TestInitHelp(t *testing.T) {
 			}
 			output = help.Description + help.Usage
 		}
-		for _, topic := range []string{"--input -", "mutually exclusive", "config", "Markdown body", "--schema -", "2020-12", "#/$defs/status", "required", "additionalProperties", "Refuse to overwrite", "exit 1", "EOF", "<<'JSON'"} {
+		for _, topic := range []string{"--input -", "exclusive", "config", "Markdown body", "--schema -", "2020-12", "required", "additionalProperties", "never overwritten", "exits 1", "<<'JSON'"} {
 			if !strings.Contains(output, topic) {
 				t.Errorf("help for %q omits %q", args, topic)
 			}

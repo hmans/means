@@ -52,7 +52,7 @@ func embeddingTestCollection(t *testing.T, path, settings string) (*collection.C
 }
 
 func TestUserConfigBootstrapAndFailures(t *testing.T) {
-	for _, command := range [][]string{{"--help"}, {"version"}, {"agents"}, {"init", "--path", t.TempDir()}} {
+	for _, command := range [][]string{{"init", "--path", t.TempDir()}} {
 		t.Run(command[0], func(t *testing.T) {
 			dir := t.TempDir()
 			t.Setenv("XDG_CONFIG_HOME", dir)
@@ -103,6 +103,13 @@ func TestUserConfigBootstrapAndFailures(t *testing.T) {
 		stderr.Reset()
 		if err := Execute([]string{"embed", "--help", "--json"}, nil, &out, &stderr, "test"); err != nil || !json.Valid(out.Bytes()) || stderr.Len() != 0 {
 			t.Fatalf("help inaccessible: %v %s", err, stderr.String())
+		}
+		for _, args := range [][]string{{"help"}, {"help", "humans"}, {"help", "agents"}} {
+			out.Reset()
+			stderr.Reset()
+			if err := Execute(append(args, "--json"), nil, &out, &stderr, "test"); err != nil || !json.Valid(out.Bytes()) || stderr.Len() != 0 {
+				t.Fatalf("%v inaccessible: %v %s", args, err, &stderr)
+			}
 		}
 	})
 }

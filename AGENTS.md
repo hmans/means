@@ -1,6 +1,6 @@
 # Working on means
 
-means is a Go tool for agentic memory: collections of Markdown documents with
+means is a general-purpose Go tool for managing collections of Markdown documents with
 typed frontmatter and a collection-local schema. Read [README.md](README.md) for
 the project direction. Track planned work in the [issues](issues/) collection,
 following its [workflow](issues/MEANS.md).
@@ -125,8 +125,21 @@ following its [workflow](issues/MEANS.md).
   relevant documentation when behavior changes, and distinguish available
   features from plans. TODO.md retains historical milestones only.
 - Keep CLI help sufficient for agents to discover workflows, input formats,
-  examples, output formats, errors, and limitations. Include long descriptions
-  and examples in both human-readable and JSON help.
+  examples, output formats, errors, and limitations. Each command owns one concise
+  description and examples, shared by `help <command>`, `<command> --help`, and JSON
+  help. JSON changes presentation only. Do not maintain audience-specific guides
+  or parallel descriptions. Detailed workflows and implementation limits belong
+  in docs/guide.md. Legacy humans/agents help routes are hidden compatibility aliases.
+  Bare invocation, help, and version never load or bootstrap user configuration.
+  `info` exposes collection identity, schema, and exact workflow body. `show --raw`
+  exposes exact document source; the hidden `read` command keeps its old behavior.
+  List accepts the same metadata filters as search. `create --title` with optional
+  `--body-file` uses empty data and is exclusive with structured `--input`.
+  `delete --hash` is an alternative to its structured input, with the same checks.
+  `edit` opens a private temporary copy using VISUAL/EDITOR (executable only),
+  reloads the schema, and saves through the shared hash-checked replacement path.
+  Edited metadata replaces rather than merge-patches; preserve IDs and literal nulls.
+  Failed edits retain the temporary file for recovery.
 - Delete requires the document ID and current content hash. It permanently removes
   only the document file, preserving directories and configuration. Missing and
   duplicate IDs, malformed envelopes, and stale hashes fail. Existing application
@@ -136,7 +149,7 @@ following its [workflow](issues/MEANS.md).
 - Embeddings are opt-in through the machine-local user config embeddings field
   (object, or false to disable), applying to every collection. Config lives at
   $XDG_CONFIG_HOME/means/config.yaml, default ~/.config/means/config.yaml.
-  CLI invocation/MCP startup bootstraps a commented, disabled example if missing;
+  Collection commands/MCP startup bootstrap a commented, disabled example if missing;
   never overwrite existing files. Bootstrap failures warn and allow offline use;
   existing invalid/unreadable configs fail (CLI help/version remain available).
   CLI reads settings per invocation; MCP captures them at startup. Collections

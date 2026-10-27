@@ -20,7 +20,7 @@ func TestExecute(t *testing.T) {
 		jsonKey string
 		wantErr bool
 	}{
-		{name: "root help", want: "--path"},
+		{name: "root banner", want: "Available commands:"},
 		{name: "version", args: []string{"version"}, want: "means test-version\n"},
 		{name: "JSON before command", args: []string{"--json", "version"}, jsonKey: "version", want: "test-version"},
 		{name: "JSON after command", args: []string{"version", "--json"}, jsonKey: "version", want: "test-version"},
@@ -53,11 +53,13 @@ func TestExecute(t *testing.T) {
 				t.Fatalf("unexpected output on the other stream: %q", empty)
 			}
 			if tt.jsonKey != "" {
-				var response map[string]string
+				var response map[string]json.RawMessage
 				if err := json.Unmarshal([]byte(output), &response); err != nil {
 					t.Fatalf("invalid JSON response %q: %v", output, err)
 				}
-				output = response[tt.jsonKey]
+				if err := json.Unmarshal(response[tt.jsonKey], &output); err != nil {
+					t.Fatal(err)
+				}
 			}
 			if !strings.Contains(output, tt.want) {
 				t.Errorf("output = %q, want %q", output, tt.want)

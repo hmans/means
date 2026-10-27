@@ -12,44 +12,20 @@ import (
 
 func newCreateCommand(opts *options) *cobra.Command {
 	var input string
+	var title, bodyFile string
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Validate and store a new Markdown document",
-		Long: `Create one document in the collection selected by --path (default: current directory).
-Initialize the collection first with "means init" and read its MEANS.md.
-
-Input:
-  --input FILE reads a JSON file relative to the current working directory,
-  independently of --path. --input - reads stdin until EOF. Input is required.
-  Supply {"frontmatter":{"title":"A document","data":{...}},"body":"Markdown"}.
-  frontmatter is required. title must be a nonempty string. data must be an object;
-  omit it to use {} if the collection schema permits. body defaults to "".
-  Means owns the top-level frontmatter fields. id is generated; do not supply it.
-  Application fields belong under data, which alone is validated by MEANS.md.
-  Unknown envelope and top-level frontmatter fields are rejected.
-
-Storage:
-  Validate before writing. Generate a collection-scoped 5-character random ID
-  using lowercase letters and digits, and store it in frontmatter.id.
-  Write <id>-<slug-generated-from-title>.md. Slugs are lowercase letters/digits
-  separated by hyphens, bounded to 80 bytes, with "document" as the fallback.
-  IDs remain valid after filename changes or moves into visible subdirectories.
-  Existing files are never overwritten. Generated collisions retry, using a
-  temporary exclusive allocation file to coordinate concurrent means creators.
-  Direct edits or Git merges can introduce duplicates; read/update reject them
-  and list reports them. Hidden paths and symlinks are excluded from discovery.
-  Store frontmatter as YAML between --- lines, followed immediately by the body.
-  Body bytes and trailing newlines are preserved. JSON number precision is retained.
-  When embeddings are enabled, generate and cache the title/body vector before
-  writing the document. API/cache failures leave it uncreated; see means embed --help.
-
-Output:
-  Text: the generated ID followed by a newline, suitable for passing to read.
-  --json: {"id":"...","hash":"...","frontmatter":{...},"body":"..."} on stdout, exit 0.
-  hash is SHA-256 of the exact stored bytes, usable as the precondition for update.
-  Errors: stderr, exit 1; with --json, {"error":"..."}. Schema errors identify the
-  failing field or constraint. JSON output is formatted with two-space indentation.
-  Retrying a successful create generates another document; creation is not idempotent.`,
+		Long: `Create a document with --title TITLE and optional --body-file FILE|-.
+This uses empty application data. If the schema requires data fields, use
+--input FILE|- with {"frontmatter":{"title":"Title","data":{}},"body":"Markdown"}.
+Do not combine these input modes. A dash reads stdin. Means validates the schema
+and generates the ID. Text returns the ID; --json returns the document and hash.
+Enabled embeddings send title/body to the provider; failures prevent creation.
+Creation is not idempotent: retrying a successful create makes another document.
+Custom fields belong under data; never supply an ID. Data must satisfy MEANS.md.
+JSON returns {"id":"...","hash":"...","frontmatter":{...},"body":"..."}.
+Errors exit 1.`,
 		Example: `  # Use the default data schema (optional tags)
   means create --path ./memory --input - --json <<'JSON'
   {
@@ -62,22 +38,39 @@ JSON
   means create --path ./memory --input ./document.json --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if input == "" {
-				return fmt.Errorf("--input is required; supply a file path or - for stdin")
+			if input == "" && !cmd.Flags().Changed("title") {
+				return fmt.Errorf("supply --title TITLE or --input FILE|-; --body-file requires --title")
 			}
 			var data []byte
 			var err error
-			if input == "-" {
-				data, err = io.ReadAll(cmd.InOrStdin())
+			var frontmatter map[string]any
+			var body string
+			if cmd.Flags().Changed("title") {
+				frontmatter = map[string]any{"title": title, "data": map[string]any{}}
+				if cmd.Flags().Changed("body-file") {
+					if bodyFile == "-" {
+						data, err = io.ReadAll(cmd.InOrStdin())
+					} else {
+						data, err = os.ReadFile(bodyFile)
+					}
+					if err != nil {
+						return fmt.Errorf("read body: %w", err)
+					}
+					body = string(data)
+				}
 			} else {
-				data, err = os.ReadFile(input)
-			}
-			if err != nil {
-				return fmt.Errorf("read document input: %w", err)
-			}
-			frontmatter, body, err := parseDocumentInput(data)
-			if err != nil {
-				return err
+				if input == "-" {
+					data, err = io.ReadAll(cmd.InOrStdin())
+				} else {
+					data, err = os.ReadFile(input)
+				}
+				if err != nil {
+					return fmt.Errorf("read document input: %w", err)
+				}
+				frontmatter, body, err = parseDocumentInput(data)
+				if err != nil {
+					return err
+				}
 			}
 			c, err := opts.loadCollection()
 			if err != nil {
@@ -90,7 +83,11 @@ JSON
 			return opts.write(cmd.OutOrStdout(), doc, doc.ID+"\n")
 		},
 	}
-	cmd.Flags().StringVar(&input, "input", "", "Document JSON envelope from FILE, or - for stdin (required)")
+	cmd.Flags().StringVar(&input, "input", "", "Document JSON envelope from FILE, or - for stdin (alternative to --title)")
+	cmd.Flags().StringVar(&title, "title", "", "Create a document with this title and empty application data")
+	cmd.Flags().StringVar(&bodyFile, "body-file", "", "Read the Markdown body from FILE, or - for stdin (requires --title)")
+	cmd.MarkFlagsMutuallyExclusive("input", "title")
+	cmd.MarkFlagsMutuallyExclusive("input", "body-file")
 	return cmd
 }
 

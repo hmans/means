@@ -16,52 +16,15 @@ func newUpdateCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <id>",
 		Short: "Patch a document only if its content hash still matches",
-		Long: `Patch an existing document in --path (default: current directory).
-
-Read first:
-  IDs are local to the selected collection. Lookup stops at subdirectories
-  containing MEANS.md; select a nested collection with its own --path.
-  Run "means read <id> --json" and keep its hash. This is SHA-256 of the exact
-  stored Markdown bytes, including frontmatter, whitespace, and line endings.
-  list omits hashes. A missing or stale hash cannot update a document.
-
-Input:
-  --input FILE reads a JSON file relative to the current working directory;
-  --input - reads stdin until EOF. Supply one object with required hash and
-  at least one of frontmatter or body. Unknown fields are rejected.
-  {"hash":"<64 lowercase hex characters>","frontmatter":{"data":{"status":"done"}}}
-  frontmatter may patch title and/or data. id is immutable: any supplied id,
-  including null or the current value, is rejected. Other top-level fields are
-  reserved. title must remain a nonempty string and data must remain an object.
-  frontmatter uses JSON Merge Patch (RFC 7396): omitted
-  keys stay unchanged, objects merge recursively, null deletes a key, and arrays
-  replace as a whole. Null cannot set a literal null field using this patch format.
-  body is an optional replacement string: omit to retain it, use "" to clear it.
-  body:null and frontmatter:null are rejected. An empty frontmatter object is
-  allowed as a no-op patch; the hash and resulting schema are still checked.
-
-Effects:
-  Preserve the ID and filename, even when the title changes. Check the hash
-  and validate the means envelope and resulting data against MEANS.md
-  before replacing the file. Conflicts and validation errors leave it unchanged.
-  On conflict, read again, review the new content, and recompute your patch.
-  Body-only changes preserve the original frontmatter text. Metadata changes
-  re-encode YAML and can change formatting/comments. An unchanged result retains
-  the original bytes and hash. File permission bits are preserved.
-  Updates recheck the hash before replacement and write a same-directory temporary
-  file, then rename it over the original (atomic on supported filesystems).
-  Opted-in embedding operations share a cache lock; external editors do not.
-  A simultaneous external write between the final check and rename can still
-  be overwritten. With embeddings disabled, updates do not take locks.
-  When enabled, cache the title/body vector before replacement; API/cache errors
-  leave the document unchanged. Unchanged input reuses its vector; see embed --help.
-
-Output:
-  Text: the ID followed by a newline.
-  --json: {"id":"...","hash":"...","frontmatter":{...},"body":"..."}.
-  Errors: stderr, exit 1; --json returns {"error":"..."}. There is no force option.
-  Success returns the new hash. Retrying with the old hash after a content change
-  fails; read again to find out whether a previous attempt succeeded.`,
+		Long: `Read the document with show --json or read --json, then patch it with --input FILE|-:
+{"hash":"<current hash>","frontmatter":{"data":{"status":"done"}}}.
+Omitted fields stay; null deletes metadata keys; arrays replace. A supplied body
+replaces the full body. Stale hashes and invalid data fail without saving.
+Enabled embedding failures also prevent saving. Use edit for an editor workflow.
+IDs are immutable; title changes preserve filenames. Null deletes keys and cannot
+set literal null values (use edit for that). On conflict, read again and reconcile.
+A concurrent external write can still race the final hash check and replacement.
+Text returns the ID; JSON returns id, hash, frontmatter, body. Errors exit 1.`,
 		Example: `  means read <id> --path ./memory --json
   means update <id> --path ./memory --input - --json <<'JSON'
   {
