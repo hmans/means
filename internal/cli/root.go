@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 
 	"github.com/hmans/means/internal/collection"
 	"github.com/hmans/means/internal/userconfig"
@@ -53,58 +54,10 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer, version s
 
 func newRootCommand(version string) (*cobra.Command, *options) {
 	opts := &options{}
-	opts.config, opts.configWarning, opts.configErr = userconfig.Open()
 	root := &cobra.Command{
-		Use:   "means",
-		Short: "Agentic memory built from Markdown files",
-		Long: `means provides typed Markdown collections for agents and applications.
-
-Setting up means for agents? Run "means agents" for the complete onboarding guide:
-design a schema, write MEANS.md, and make the collection discoverable through
-project instructions, a skill, or MCP. Creating storage alone does not finish agent setup.
-
-A collection is a directory containing MEANS.md with YAML configuration (title,
-description, and a JSON Schema under schema) and Markdown workflow guidance. The files are authoritative and can be edited
-directly. Means owns frontmatter.id (generated and immutable) and frontmatter.title
-(required); application fields live under frontmatter.data. Filenames are storage
-details. Read and update use the stored ID, even after file renames or moves.
-
-Start with "means init --help" for the complete schema-authoring workflow,
-file and stdin input examples, validation rules, and response formats.
-Then use "means create --help" to store a validated document, "means list" to
-discover IDs and titles, and "means show <id>" to view rendered Markdown.
-Use "means read <id>" to retrieve the exact stored Markdown.
-Use "means mcp --help" to expose a collection to an MCP client over stdio.
-Use "means update --help" to patch a document using the hash from read --json.
-Use "means delete --help" to permanently remove a document using its content hash.
-Use "means schema set --help" to validate and install a replacement schema.
-Use "means doctor" to check all documents
-against the current schema, or "means search" to find documents by text/data.
-Use "means embed --help" for opt-in OpenAI embeddings, automatic maintenance,
-and semantic search with "means search --semantic".
-
-Machine configuration:
-  On first invocation, create $XDG_CONFIG_HOME/means/config.yaml (default
-  ~/.config/means/config.yaml) with a commented embedding example. Existing files
-  are never overwritten. Edit it manually to enable embeddings for every collection
-  on this machine; credentials belong in environment variables. No setup command.
-  Failure to create a missing config leaves embeddings disabled and reports a
-  warning on successful commands. Existing invalid configs fail commands; help
-  and version remain available. CLI reloads settings each invocation; restart MCP
-  after editing settings. See "means embed --help" for fields and migration.
-
-Every command accepts --path and --json before or after the command name.
---path defaults to the current working directory; relative paths resolve there.
-Means works with that exact directory and does not search parent directories.
---json returns two-space-indented JSON, including help and errors.
-The mcp command always uses MCP message framing and structured JSON tool results;
---json only affects its CLI help and startup errors.
-Successful responses go to stdout (exit 0); errors go to stderr (exit 1) as
-{"error":"..."} in JSON mode. Doctor reports invalid documents on stdout and
-exits 1. Schema set rejects incompatible documents with a diagnostic report on
-stderr (exit 1), including an error field in JSON mode; see "means schema set --help".
-Parse the entire JSON response, not individual lines.
-Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
+		Use:              "means",
+		Short:            "Structured data in Markdown files",
+		Long:             humanHelp,
 		Args:             cobra.NoArgs,
 		SilenceUsage:     true,
 		SilenceErrors:    true,
@@ -113,8 +66,11 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			DisableDefaultCmd: true,
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if opts.configErr != nil && cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "means" {
-				return opts.configErr
+			if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "means" && cmd.Name() != "agents" && !strings.HasPrefix(cmd.CommandPath(), "means help ") {
+				opts.config, opts.configWarning, opts.configErr = userconfig.Open()
+				if opts.configErr != nil {
+					return opts.configErr
+				}
 			}
 			if opts.path == "" {
 				return fmt.Errorf("--path must not be empty")
@@ -127,7 +83,7 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return opts.writeHelp(cmd)
+			return opts.writeBanner(cmd)
 		},
 	}
 	root.PersistentFlags().StringVar(&opts.path, "path", ".", "Directory to work with (defaults to the current working directory)")
@@ -135,10 +91,14 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		opts.helpErr = opts.writeHelp(cmd)
 	})
-	root.SetHelpCommand(&cobra.Command{
-		Use:   "help [command]",
-		Short: "Show help for a command",
+	help := &cobra.Command{
+		Use:   "help [humans|agents|command]",
+		Short: "Show human, agent, or command help",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				root.InitDefaultHelpFlag()
+				return opts.writeHelp(root)
+			}
 			target, remaining, err := root.Find(args)
 			if err != nil {
 				return err
@@ -149,9 +109,31 @@ Use "means help COMMAND" or "means COMMAND --help" to discover each command.`,
 			target.InitDefaultHelpFlag()
 			return opts.writeHelp(target)
 		},
-	})
-	root.AddCommand(newAgentsCommand(opts), newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts), newEmbedCommand(opts),
-		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version))
+	}
+	help.AddCommand(&cobra.Command{
+		Use: "humans", Short: "Learn the basics of means", Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root.InitDefaultHelpFlag()
+			return opts.writeHelp(root)
+		},
+	}, newAgentsCommand(opts))
+	root.SetHelpCommand(help)
+	agentsAlias := newAgentsCommand(opts)
+	agentsAlias.Hidden = true
+	root.AddCommand(agentsAlias, newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts), newEmbedCommand(opts),
+		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version), newInfoCommand(opts), newEditCommand(opts))
+	root.AddGroup(&cobra.Group{ID: "documents", Title: "Documents:"}, &cobra.Group{ID: "collection", Title: "Collection:"}, &cobra.Group{ID: "other", Title: "Help and integrations:"})
+	root.SetHelpCommandGroupID("other")
+	for _, cmd := range root.Commands() {
+		switch cmd.Name() {
+		case "create", "list", "search", "show", "read", "edit", "update", "delete":
+			cmd.GroupID = "documents"
+		case "init", "info", "schema", "doctor", "embed":
+			cmd.GroupID = "collection"
+		default:
+			cmd.GroupID = "other"
+		}
+	}
 	return root, opts
 }
 

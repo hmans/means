@@ -1,7 +1,10 @@
 # means
 
-means is a small Go tool for agentic memory built from Markdown files. A collection
-is a directory of documents and a `MEANS.md` containing collection identity,
+means is a general-purpose tool for managing collections of Markdown documents
+with structured data and schemas. Use it for issue tracking, research notes,
+agent memory, or other document-based workflows.
+
+A collection is a directory of documents and a `MEANS.md` containing collection identity,
 workflow guidance, and a JSON Schema expressed in YAML frontmatter. The files are the source of truth: people and other tools can edit them
 directly.
 
@@ -21,7 +24,7 @@ Means creates a commented user config at `~/.config/means/config.yaml` (or under
 
 ## Try it
 
-Setting up a collection for agents? Run `means agents` (or `mise means agents`
+Setting up a collection for agents? Run `means help agents` (or `mise means help agents`
 from this checkout) for schema design, workflow guidance, and agent discovery
 through project instructions, a skill, or MCP.
 
@@ -47,9 +50,12 @@ the ID returned by `create` to read and update a document; filenames can change
 without changing identity.
 
 See the [usage guide](docs/guide.md) for collection layout, commands, updates,
-search, MCP setup, and migration notes. `mise means --help` and
-`mise means <command> --help` give the complete command contracts, including
-JSON help.
+search, MCP setup, and migration notes. `mise means` shows a banner and available
+commands. `mise means help` (or `mise means help humans`) gives a short introduction.
+`mise means <command> --help` gives focused usage help. Use
+`mise means help agents <command>` or add `--json` for the complete contract.
+Use `means info` to inspect a collection and `means edit <id>` to edit a document
+with `$VISUAL` or `$EDITOR`.
 
 ## This repository
 

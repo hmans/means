@@ -130,7 +130,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 		"delete": {"hash", "--input -", "Permanently", "stale", "no trash", "concurrent write", "exit 1", "<<'JSON'"},
 	} {
 		for _, jsonMode := range []bool{false, true} {
-			args := []string{command, "--help"}
+			args := []string{"help", "agents", command}
 			if jsonMode {
 				args = append(args, "--json")
 			}

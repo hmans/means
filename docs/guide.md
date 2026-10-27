@@ -1,15 +1,21 @@
 # Using means
 
-This guide covers the file format and common workflows. For exact flags, input
-shapes, responses, errors, and limitations, run `means <command> --help` (or add
-`--json` for machine-readable help).
+This guide covers the file format and common workflows. `means <command> --help`
+shows focused human help. For complete input shapes, responses, errors, and
+limitations, run `means help agents <command>` (including nested commands such as
+`schema set`). Adding `--json` to either form returns the complete reference.
 
-For an end-to-end agent setup workflow, run `means agents`. The guide is embedded
+Run `means` for help pointers and a command list grouped into documents,
+collection management, and help/integrations. `means help`, `means help humans`, and
+`means --help` show the same short introduction. `means agents` remains a hidden
+compatibility alias for `means help agents`.
+
+For an end-to-end agent setup workflow, run `means help agents`. The guide is embedded
 in the binary and works before a collection exists. It explains collection design,
 `MEANS.md`, discovery through project instructions, skills or MCP, and routine
-operations. `means agents --json` returns the same Markdown in a `guide` field.
+operations. `means help agents --json` returns the same Markdown in a `guide` field.
 It does not create files or install integrations. Successful `init` output points
-to it; JSON initialization responses include `next_steps: ["means agents"]`.
+to it; JSON initialization responses include `next_steps: ["means help agents"]`.
 
 ## Collections
 
@@ -71,6 +77,11 @@ schema change to find existing documents that need attention.
 
 The root `MEANS.md` must be a regular UTF-8 file, not a symlink. It is configuration,
 not a document, and is excluded from lists and reads. The server does not load `AGENTS.md`.
+
+Run `means info --path ./memory` to inspect collection identity, schema, and
+workflow. `info --json` returns `path`, `title`, `description`, `schema`, and
+`instructions`. Instructions contain the exact Markdown body of `MEANS.md`.
+Info requires a valid collection configuration and schema.
 
 ### Changing the schema
 
@@ -151,7 +162,16 @@ destination. Moving it within one collection preserves its identity.
 
 ## Documents
 
-Create a document by passing a JSON envelope from a file or stdin:
+For a document with empty application data, supply a title and optional body file:
+
+```sh
+means create --path ./memory --title "Deployment notes" --body-file notes.md
+printf 'Notes\n' | means create --path ./memory --title "Notes" --body-file -
+```
+
+The schema must accept `{}` as application data. The body defaults to empty.
+To supply application fields, pass a JSON envelope from a file or stdin instead;
+`--input` cannot be combined with `--title` or `--body-file`:
 
 ```sh
 mise means create --path ./memory --input - --json <<'JSON'
@@ -216,13 +236,18 @@ body. The flag requires `--json` and does not add hashes or change limits or ord
 `show <id>` prints the title, ID, and Markdown-rendered body, including styled
 headings, accented bullet markers, and code blocks. Prose wraps to at most 80
 columns, shrinking to fit narrower terminals. `show --json` returns the same document and
-content hash as `read --json`. Use `read` without `--json` for the exact source,
-including YAML frontmatter. Neither command enforces the current application data
+content hash as `read --json`. Use `show --raw` for the exact source,
+including YAML frontmatter; `--raw` and `--json` are exclusive. The hidden `read`
+compatibility command keeps its exact-source default and existing JSON behavior.
+Neither command enforces the current application data
 schema, so documents remain readable after schema changes.
 
 `list --json` returns `documents`, `diagnostics`, and `has_more`, like search.
 Documents contain IDs and frontmatter; bodies require `--with-body`, and hashes
 are omitted. Its default limit is 20 valid documents; `--limit 0` returns all.
+List accepts the same exact-data and datetime filters as search, combined with AND
+before the limit. For example, `means list --filter status=todo` selects open work.
+List uses filename order and performs no text indexing or embedding API calls.
 Malformed documents and every duplicate occurrence are excluded from documents
 and reported in diagnostics with ID, path, and error, regardless of the limit.
 `search` uses full-text ranking by default: all
@@ -330,7 +355,7 @@ collections, add `.means/` to their `.gitignore` manually.
 ### Opt-in semantic search
 
 Embedding settings belong to the machine running Means, not the collection.
-On first CLI invocation (including help/version) or MCP startup, Means creates
+On the first collection command or MCP startup, Means creates
 `$XDG_CONFIG_HOME/means/config.yaml`, defaulting to `~/.config/means/config.yaml`.
 `XDG_CONFIG_HOME` must be absolute. The starter contains a commented example;
 embeddings remain disabled until you edit it manually. There is no setup command.
@@ -344,6 +369,7 @@ Successful CLI commands report a warning on stderr (a JSON warning object with
 warnings on stderr after successful startup, never on protocol stdout. Existing
 unreadable or invalid configs fail commands/startup instead of silently changing
 behavior; CLI help and version remain available to aid recovery.
+Bare invocation, all help forms, and version do not read or create this file.
 
 The user config is plain YAML, with an optional `embeddings` field. Unknown or
 duplicate fields, multiple YAML documents, aliases, merge keys, and custom tags
@@ -502,6 +528,28 @@ invalidates the local vector profile and causes regeneration on the next refresh
 
 ### Updating documents
 
+For an interactive edit, set an editor executable and run:
+
+```sh
+EDITOR=vi means edit <id> --path ./memory
+```
+
+Means uses `$VISUAL`, falling back to `$EDITOR`. The value must be an executable
+name or path; use a wrapper script for editor arguments. The editor must wait
+until editing is complete. Means opens a private temporary Markdown copy and
+keeps the original file unchanged until the editor exits successfully, the
+document passes validation against the freshly loaded schema, and the original
+hash still matches. Enabled embeddings use the same maintenance as `update`.
+Editor output goes to stderr so JSON results stay on stdout.
+
+Keep the ID unchanged. Edited metadata replaces the old metadata, including
+removing omitted keys and retaining literal null values. Body-only edits preserve
+original frontmatter formatting; metadata changes may reformat YAML. Editor or
+save failures retain the temporary copy and report its path for recovery. Successful
+saves remove it. Hash checks have the same external-write race limitation as update.
+
+For automation, keep using the structured merge-patch interface below.
+
 Read before updating. JSON read/create/update results include an ID, frontmatter,
 body, and a SHA-256 hash of the exact stored file bytes. Supply that hash with
 only the fields to change:
@@ -571,6 +619,9 @@ mise means delete <id> --path ./memory --input - --json <<'JSON'
 {"hash":"<hash from read>"}
 JSON
 ```
+
+Alternatively, pass the hash directly with `means delete <id> --hash <hash>`.
+`--hash` and `--input` are mutually exclusive; both enforce the same checks.
 
 Deletion permanently removes the document file and its optional cached embedding. It preserves directories,
 collection configuration, and unrelated files. There is no trash, undo, force

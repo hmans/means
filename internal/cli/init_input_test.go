@@ -130,8 +130,8 @@ func TestInitStdinFailure(t *testing.T) {
 
 func TestInitHelp(t *testing.T) {
 	for _, args := range [][]string{
-		{"init", "--help", "--schema", "-"},
-		{"help", "init"},
+		{"help", "agents", "init"},
+		{"help", "agents", "init"},
 		{"init", "--help", "--json", "--schema", "-"},
 		{"help", "init", "--json"},
 	} {

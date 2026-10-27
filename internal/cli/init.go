@@ -18,7 +18,7 @@ func newInitCommand(opts *options) *cobra.Command {
 		Short: "Create a collection with an example or supplied MEANS.md",
 		Long: `Initialize a collection in --path (default: the current working directory).
 
-For agent setup, run "means agents" first. Init writes MEANS.md; refine its guidance
+For agent setup, run "means help agents" first. Init writes MEANS.md; refine its guidance
 and establish discovery through project instructions, a skill, or MCP.
 
 Configuration input:
@@ -71,7 +71,7 @@ Effects:
 
 Responses:
   Success: exit 0; stdout describes the initialized collection.
-  With --json: {"path":"/absolute/collection","config":"/absolute/collection/MEANS.md","next_steps":["means agents"]}.
+  With --json: {"path":"/absolute/collection","config":"/absolute/collection/MEANS.md","next_steps":["means help agents"]}.
   Failure: exit 1; stderr explains the error and stdout is empty.
   With --json: {"error":"..."}; schema errors identify the invalid constraint.
   JSON responses use two-space indentation and end with a newline.
@@ -162,5 +162,5 @@ func writeInitResult(cmd *cobra.Command, opts *options, c *collection.Collection
 		Path      string   `json:"path"`
 		Config    string   `json:"config"`
 		NextSteps []string `json:"next_steps"`
-	}{c.Path, filepath.Join(c.Path, collection.ConfigFilename), []string{"means agents"}}, "Initialized collection at "+c.Path+"\nNext: run means agents to refine workflow guidance and agent discovery.\n")
+	}{c.Path, filepath.Join(c.Path, collection.ConfigFilename), []string{"means help agents"}}, "Initialized collection at "+c.Path+"\nNext: run means help agents to refine workflow guidance and agent discovery.\n")
 }

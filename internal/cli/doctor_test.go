@@ -57,7 +57,7 @@ func TestDoctorCommandExitAndOutput(t *testing.T) {
 
 func TestDoctorHelp(t *testing.T) {
 	for _, jsonMode := range []bool{false, true} {
-		args := []string{"doctor", "--help"}
+		args := []string{"help", "agents", "doctor"}
 		if jsonMode {
 			args = append(args, "--json")
 		}

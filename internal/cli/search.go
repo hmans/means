@@ -11,8 +11,7 @@ import (
 
 func newSearchCommand(opts *options) *cobra.Command {
 	var limit int
-	var filters []string
-	dateTimeFlags := map[string]*[]string{}
+	var filters filterFlags
 	var literal bool
 	var semantic bool
 	var minScore float64
@@ -109,19 +108,9 @@ do not use or write an index. Source documents are never changed.`,
 			if withBody && !opts.json {
 				return fmt.Errorf("--with-body requires --json")
 			}
-			filter, err := parseSearchFilters(filters)
+			filter, dateTime, err := filters.parse()
 			if err != nil {
 				return err
-			}
-			var dateTime []collection.DateTimeFilter
-			for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
-				for _, raw := range *dateTimeFlags[flag] {
-					field, value, ok := strings.Cut(raw, "=")
-					if !ok || field == "" {
-						return fmt.Errorf("--%s must be KEY=TIMESTAMP with a nonempty data field name", flag)
-					}
-					dateTime = append(dateTime, collection.DateTimeFilter{Field: field, Op: strings.ReplaceAll(flag, "-", "_"), Value: value})
-				}
 			}
 			query := ""
 			if len(args) == 1 {
@@ -162,10 +151,7 @@ do not use or write an index. Source documents are never changed.`,
 	cmd.Flags().BoolVar(&semantic, "semantic", false, "Rank by embedding similarity (requires opt-in configuration and API credentials)")
 	cmd.Flags().Float64Var(&minScore, "min-score", collection.DefaultSemanticMinScore, "Minimum cosine similarity, inclusive, from -1 to 1 (requires --semantic; -1 includes all scores)")
 	cmd.Flags().BoolVar(&withBody, "with-body", false, "Include Markdown bodies in JSON matches (requires --json)")
-	cmd.Flags().StringArrayVar(&filters, "filter", nil, "Match a frontmatter.data field as KEY=VALUE (repeatable)")
-	for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
-		dateTimeFlags[flag] = cmd.Flags().StringArray(flag, nil, "Compare a data datetime as KEY=TIMESTAMP (RFC 3339; repeatable)")
-	}
+	filters.bind(cmd)
 	return cmd
 }
 

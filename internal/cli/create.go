@@ -12,6 +12,7 @@ import (
 
 func newCreateCommand(opts *options) *cobra.Command {
 	var input string
+	var title, bodyFile string
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Validate and store a new Markdown document",
@@ -19,8 +20,11 @@ func newCreateCommand(opts *options) *cobra.Command {
 Initialize the collection first with "means init" and read its MEANS.md.
 
 Input:
+  Alternatively, use --title TITLE with optional --body-file FILE|-.
+  This creates a document with empty data {}; use --input if the schema requires
+  application fields. These flags cannot be combined with --input.
   --input FILE reads a JSON file relative to the current working directory,
-  independently of --path. --input - reads stdin until EOF. Input is required.
+  independently of --path. --input - reads stdin until EOF. Choose --input or --title.
   Supply {"frontmatter":{"title":"A document","data":{...}},"body":"Markdown"}.
   frontmatter is required. title must be a nonempty string. data must be an object;
   omit it to use {} if the collection schema permits. body defaults to "".
@@ -62,22 +66,39 @@ JSON
   means create --path ./memory --input ./document.json --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if input == "" {
-				return fmt.Errorf("--input is required; supply a file path or - for stdin")
+			if input == "" && !cmd.Flags().Changed("title") {
+				return fmt.Errorf("supply --title TITLE or --input FILE|-; --body-file requires --title")
 			}
 			var data []byte
 			var err error
-			if input == "-" {
-				data, err = io.ReadAll(cmd.InOrStdin())
+			var frontmatter map[string]any
+			var body string
+			if cmd.Flags().Changed("title") {
+				frontmatter = map[string]any{"title": title, "data": map[string]any{}}
+				if cmd.Flags().Changed("body-file") {
+					if bodyFile == "-" {
+						data, err = io.ReadAll(cmd.InOrStdin())
+					} else {
+						data, err = os.ReadFile(bodyFile)
+					}
+					if err != nil {
+						return fmt.Errorf("read body: %w", err)
+					}
+					body = string(data)
+				}
 			} else {
-				data, err = os.ReadFile(input)
-			}
-			if err != nil {
-				return fmt.Errorf("read document input: %w", err)
-			}
-			frontmatter, body, err := parseDocumentInput(data)
-			if err != nil {
-				return err
+				if input == "-" {
+					data, err = io.ReadAll(cmd.InOrStdin())
+				} else {
+					data, err = os.ReadFile(input)
+				}
+				if err != nil {
+					return fmt.Errorf("read document input: %w", err)
+				}
+				frontmatter, body, err = parseDocumentInput(data)
+				if err != nil {
+					return err
+				}
 			}
 			c, err := opts.loadCollection()
 			if err != nil {
@@ -90,7 +111,11 @@ JSON
 			return opts.write(cmd.OutOrStdout(), doc, doc.ID+"\n")
 		},
 	}
-	cmd.Flags().StringVar(&input, "input", "", "Document JSON envelope from FILE, or - for stdin (required)")
+	cmd.Flags().StringVar(&input, "input", "", "Document JSON envelope from FILE, or - for stdin (alternative to --title)")
+	cmd.Flags().StringVar(&title, "title", "", "Create a document with this title and empty application data")
+	cmd.Flags().StringVar(&bodyFile, "body-file", "", "Read the Markdown body from FILE, or - for stdin (requires --title)")
+	cmd.MarkFlagsMutuallyExclusive("input", "title")
+	cmd.MarkFlagsMutuallyExclusive("input", "body-file")
 	return cmd
 }
 

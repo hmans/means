@@ -10,6 +10,7 @@ import (
 func newListCommand(opts *options) *cobra.Command {
 	var limit int
 	var withBody bool
+	var filters filterFlags
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List document IDs and titles, or metadata as JSON",
@@ -20,6 +21,8 @@ Stop at subdirectories containing MEANS.md, even if their schema is invalid.
 IDs come from frontmatter.id, not filenames. Results are sorted by relative
 filename, not creation time. Root MEANS.md is excluded.
 --limit defaults to 20; use 0 for all documents. Negative limits are rejected.
+Use --filter KEY=VALUE and datetime flags to select data before the limit.
+Filters have the same AND, JSON-value, and RFC 3339 rules as search.
 
 --json returns {"documents":[{"id":"...","frontmatter":{...}}],"diagnostics":[],"has_more":false}.
 Bodies and hashes are omitted by default. --with-body requires --json and adds
@@ -51,7 +54,11 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.ListWithOptions(collection.ListOptions{Limit: limit, WithBody: withBody})
+			filter, datetime, err := filters.parse()
+			if err != nil {
+				return err
+			}
+			result, err := c.Search(collection.SearchOptions{Filter: filter, DateTime: datetime, Limit: limit, WithBody: withBody})
 			if err != nil {
 				return err
 			}
@@ -67,5 +74,6 @@ produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
 	}
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum documents to return; 0 returns all")
 	cmd.Flags().BoolVar(&withBody, "with-body", false, "Include Markdown bodies in JSON documents (requires --json)")
+	filters.bind(cmd)
 	return cmd
 }

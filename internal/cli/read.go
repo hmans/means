@@ -6,8 +6,9 @@ import (
 
 func newReadCommand(opts *options) *cobra.Command {
 	return &cobra.Command{
-		Use:   "read <id>",
-		Short: "Read a stored document by its frontmatter ID",
+		Use:    "read <id>",
+		Hidden: true,
+		Short:  "Read a stored document by its frontmatter ID",
 		Long: `Read a document by its stored frontmatter.id from --path (default: current directory).
 
 Pass the ID returned by create or list, not a filename or path. Lookup scans

@@ -11,7 +11,7 @@ func newEmbedCommand(opts *options) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "embed",
-		Short: "Refresh embeddings for an collection using this machine's embedding settings",
+		Short: "Refresh collection embeddings using this machine's settings",
 		Long: `Refresh missing or stale document embeddings and remove obsolete entries.
 
 Use --force to clear all stored vectors before regenerating every valid document,

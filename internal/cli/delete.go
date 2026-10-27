@@ -12,6 +12,7 @@ import (
 
 func newDeleteCommand(opts *options) *cobra.Command {
 	var input string
+	var suppliedHash string
 	cmd := &cobra.Command{
 		Use:   "delete <id>",
 		Short: "Permanently delete a document if its content hash still matches",
@@ -21,6 +22,7 @@ Read the document first with "means read <id> --json". Pass its stored ID, not a
 filename, and supply {"hash":"<64 lowercase hexadecimal SHA-256 characters>"}
 through --input FILE or --input - for stdin. File paths are relative to the
 working directory. Input must be one JSON object; unknown fields are rejected.
+Alternatively, pass --hash HASH directly. --hash and --input are exclusive.
 
 Lookup scans visible subdirectories but stops at MEANS.md boundaries.
 Hidden paths, symlinks, and root MEANS.md are excluded. Missing or duplicate IDs,
@@ -47,22 +49,25 @@ Success exits 0. Text output is the deleted ID followed by a newline.
 JSON`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if input == "" {
-				return fmt.Errorf("--input is required; supply a file path or - for stdin")
+			if input == "" && !cmd.Flags().Changed("hash") {
+				return fmt.Errorf("supply --hash HASH or --input FILE|-")
 			}
 			var data []byte
 			var err error
-			if input == "-" {
-				data, err = io.ReadAll(cmd.InOrStdin())
-			} else {
-				data, err = os.ReadFile(input)
-			}
-			if err != nil {
-				return fmt.Errorf("read delete input: %w", err)
-			}
-			hash, err := parseDeleteInput(data)
-			if err != nil {
-				return err
+			hash := suppliedHash
+			if !cmd.Flags().Changed("hash") {
+				if input == "-" {
+					data, err = io.ReadAll(cmd.InOrStdin())
+				} else {
+					data, err = os.ReadFile(input)
+				}
+				if err != nil {
+					return fmt.Errorf("read delete input: %w", err)
+				}
+				hash, err = parseDeleteInput(data)
+				if err != nil {
+					return err
+				}
 			}
 			c, err := opts.loadCollection()
 			if err != nil {
@@ -75,7 +80,9 @@ JSON`,
 			return opts.write(cmd.OutOrStdout(), result, result.ID+"\n")
 		},
 	}
-	cmd.Flags().StringVar(&input, "input", "", "Delete JSON with content hash from FILE, or - for stdin (required)")
+	cmd.Flags().StringVar(&input, "input", "", "Delete JSON with content hash from FILE, or - for stdin (alternative to --hash)")
+	cmd.Flags().StringVar(&suppliedHash, "hash", "", "Current content hash from show --json or read --json")
+	cmd.MarkFlagsMutuallyExclusive("input", "hash")
 	return cmd
 }
 
