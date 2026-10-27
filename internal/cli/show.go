@@ -10,21 +10,11 @@ func newShowCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show <id>",
 		Short: "Show a document with rendered Markdown",
-		Long: `Show a document by its stored ID from --path (default: current directory).
-
-Print the title, ID, and Markdown-rendered body using terminal styling.
-Application metadata and the content hash are available with --json. Output wraps
-to at most 80 columns, shrinking to fit narrower terminals. Pipes and NO_COLOR
-disable styling. Bullet markers have a separate accent color.
-Use --raw for the exact stored Markdown, including YAML frontmatter.
---raw and --json are mutually exclusive. The read command retains its raw default.
-
---json returns {"id":"...","hash":"...","frontmatter":{...},"body":"..."},
-exactly as read --json does. The hash can be used for update or delete.
-Lookup ignores hidden paths and symlinks and stops at nested collection schemas.
-Missing IDs, duplicate IDs, malformed documents, and invalid collection schemas
-fail with exit 1 and an error on stderr (JSON with --json). Current application
-data schema violations do not prevent reading. Success exits 0.`,
+		Long: `Display a document by ID with a rendered Markdown body.
+Use --raw for exact source, including YAML frontmatter, or --json for metadata,
+body, and the hash required for updates/deletion. --raw and --json are exclusive.
+Missing/duplicate IDs and malformed documents fail. Current data-schema violations
+do not prevent reading. read --json returns the same structured document.`,
 		Example: `  means show <id> --path ./issues
   means show <id> --path ./issues --json`,
 		Args: cobra.ExactArgs(1),

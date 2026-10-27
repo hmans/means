@@ -1,5 +1,6 @@
 ---
 type: feature
+breaking: true
 ---
 
-Split CLI help into concise human help (the default) and detailed means help agents guidance. Bare means shows a banner, explicit pointers to means help and means help agents, and available commands; means agents remains a hidden compatibility alias.
+Use one command help reference for people and agents, with the same content in text and JSON. Bare means shows a banner, pointers to means help and means help mcp, and grouped commands. Legacy audience-specific help routes remain hidden aliases; their JSON uses the standard command/description/usage response instead of guide.

@@ -9,28 +9,11 @@ func newReadCommand(opts *options) *cobra.Command {
 		Use:    "read <id>",
 		Hidden: true,
 		Short:  "Read a stored document by its frontmatter ID",
-		Long: `Read a document by its stored frontmatter.id from --path (default: current directory).
-
-Pass the ID returned by create or list, not a filename or path. Lookup scans
-visible .md files recursively, stopping at subdirectories containing MEANS.md.
-Renaming or moving a file within the collection preserves its identity.
-IDs contain 1–128 letters, digits, - and _, starting with a letter or digit.
-Missing and duplicate IDs fail instead of choosing an arbitrary document.
-Symlinks and hidden paths are ignored. The root MEANS.md is collection
-configuration, not a document; read it directly or use MCP info.
-
-Text output is the exact stored Markdown, including YAML frontmatter.
---json returns {"id":"...","hash":"...","frontmatter":{...},"body":"..."} on stdout.
-hash is lowercase SHA-256 of the exact stored file bytes, including frontmatter,
-whitespace, and line endings. Supply it to update to prevent stale writes.
-Success exits 0; missing or malformed documents fail with exit 1 and an error on
-stderr (as {"error":"..."} with --json).
-
-Read checks the means envelope (id, nonempty title, object data), but does not
-enforce the current data schema, so documents remain readable after schema changes. The collection still needs a valid MEANS.md.
-Frontmatter must be a mapping between --- delimiter lines. LF and CRLF work.
-Use JSON-compatible YAML values; duplicate keys, aliases, merge keys, custom tags,
-and non-finite numbers are rejected. Plain YAML dates are returned as strings.`,
+		Long: `Read exact stored Markdown by ID, including YAML frontmatter.
+Use --json for the structured document and content hash. Use show for rendered
+Markdown or show --raw for the same raw output. Missing/duplicate IDs and malformed
+documents fail; current data-schema violations do not prevent reading.
+Use stored IDs, not filenames. JSON returns id, hash, frontmatter, body. Errors exit 1.`,
 		Example: `  means read <id> --path ./memory
   means read <id> --path ./memory --json`,
 		Args: cobra.ExactArgs(1),

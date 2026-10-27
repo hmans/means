@@ -57,7 +57,7 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 	root := &cobra.Command{
 		Use:              "means",
 		Short:            "Structured data in Markdown files",
-		Long:             humanHelp,
+		Long:             overviewHelp,
 		Args:             cobra.NoArgs,
 		SilenceUsage:     true,
 		SilenceErrors:    true,
@@ -92,8 +92,8 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		opts.helpErr = opts.writeHelp(cmd)
 	})
 	help := &cobra.Command{
-		Use:   "help [humans|agents|command]",
-		Short: "Show human, agent, or command help",
+		Use:   "help [command]",
+		Short: "Show usage and command help",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				root.InitDefaultHelpFlag()
@@ -111,7 +111,7 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		},
 	}
 	help.AddCommand(&cobra.Command{
-		Use: "humans", Short: "Learn the basics of means", Args: cobra.NoArgs,
+		Use: "humans", Short: "Compatibility alias for help", Hidden: true, Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root.InitDefaultHelpFlag()
 			return opts.writeHelp(root)

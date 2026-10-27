@@ -73,7 +73,7 @@ func TestSchemaSetCLIValidationAndHelp(t *testing.T) {
 		}
 	}
 	for _, jsonMode := range []bool{false, true} {
-		args := []string{"help", "agents", "schema", "set"}
+		args := []string{"help", "schema", "set"}
 		if jsonMode {
 			args = append(args, "--json")
 		}

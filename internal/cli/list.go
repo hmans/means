@@ -14,32 +14,15 @@ func newListCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List document IDs and titles, or metadata as JSON",
-		Long: `List documents in the collection selected by --path (default: current directory).
-
-Scan regular .md files recursively, ignoring symlinks and hidden paths.
-Stop at subdirectories containing MEANS.md, even if their schema is invalid.
-IDs come from frontmatter.id, not filenames. Results are sorted by relative
-filename, not creation time. Root MEANS.md is excluded.
---limit defaults to 20; use 0 for all documents. Negative limits are rejected.
-Use --filter KEY=VALUE and datetime flags to select data before the limit.
-Filters have the same AND, JSON-value, and RFC 3339 rules as search.
-
---json returns {"documents":[{"id":"...","frontmatter":{...}}],"diagnostics":[],"has_more":false}.
-Bodies and hashes are omitted by default. --with-body requires --json and adds
-the Markdown body to each valid document, including empty bodies as "".
-Diagnostic entries have no body. Use read --json before updating a document.
-An empty collection returns an empty documents array.
-If more results exist, has_more is true; increase --limit or use 0 to retrieve all.
-Text output is a colored ID/title table, followed by diagnostics and a notice when
-the limit hides results. Pipes and NO_COLOR disable styling. Use --json for metadata.
-View a full document with "means show <id>" or its source with "means read <id>".
-
-Malformed documents and every occurrence of duplicate IDs are excluded from
-documents and reported in diagnostics with id, path, and error. id is empty when
-it cannot be extracted. Limits count valid documents only. Diagnostics cover the
-whole collection regardless of the limit. Listing checks the means envelope but does
-not validate data against MEANS.md; application schema violations remain readable. Per-document errors still produce exit 0. Collection-level failures
-produce exit 1 and stderr, formatted as {"error":"..."} when --json is set.`,
+		Long: `List documents in filename order. Use --filter KEY=VALUE to select application
+data, or datetime flags to compare RFC 3339 timestamps. Filters combine with AND
+before --limit (default 20; 0 means all). Values can be strings or JSON; quote
+shell arguments containing JSON. --json includes metadata; --with-body adds bodies.
+Malformed documents and duplicate IDs appear in diagnostics, even past the limit.
+Use doctor for schema validation. View a result with show <id>.
+JSON returns documents, diagnostics, has_more; hashes are omitted. Per-document
+diagnostics still exit 0; collection-level errors exit 1. Nested MEANS.md directories
+are separate collections; hidden paths and symlinks are ignored.`,
 		Example: `  means list --path ./memory --json
   means list --path ./memory --limit 0 --json`,
 		Args: cobra.NoArgs,

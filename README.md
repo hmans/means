@@ -24,9 +24,8 @@ Means creates a commented user config at `~/.config/means/config.yaml` (or under
 
 ## Try it
 
-Setting up a collection for agents? Run `means help agents` (or `mise means help agents`
-from this checkout) for schema design, workflow guidance, and agent discovery
-through project instructions, a skill, or MCP.
+Run `means help init` for collection setup and `means help mcp` for MCP integration.
+The same command help serves people, scripts, and agents.
 
 From this checkout, use the Go toolchain configured by [mise](https://mise.jdx.dev/):
 
@@ -51,9 +50,9 @@ without changing identity.
 
 See the [usage guide](docs/guide.md) for collection layout, commands, updates,
 search, MCP setup, and migration notes. `mise means` shows a banner and available
-commands. `mise means help` (or `mise means help humans`) gives a short introduction.
-`mise means <command> --help` gives focused usage help. Use
-`mise means help agents <command>` or add `--json` for the complete contract.
+commands. `mise means help` gives a short introduction.
+`mise means help <command>` and `mise means <command> --help` give the same usage
+help; `--json` changes the format, not the content.
 Use `means info` to inspect a collection and `means edit <id>` to edit a document
 with `$VISUAL` or `$EDITOR`.
 

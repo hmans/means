@@ -125,8 +125,11 @@ following its [workflow](issues/MEANS.md).
   relevant documentation when behavior changes, and distinguish available
   features from plans. TODO.md retains historical milestones only.
 - Keep CLI help sufficient for agents to discover workflows, input formats,
-  examples, output formats, errors, and limitations. Ordinary command help is
-  concise; `help agents <command>` and JSON help include full contracts and examples.
+  examples, output formats, errors, and limitations. Each command owns one concise
+  description and examples, shared by `help <command>`, `<command> --help`, and JSON
+  help. JSON changes presentation only. Do not maintain audience-specific guides
+  or parallel descriptions. Detailed workflows and implementation limits belong
+  in docs/guide.md. Legacy humans/agents help routes are hidden compatibility aliases.
   Bare invocation, help, and version never load or bootstrap user configuration.
   `info` exposes collection identity, schema, and exact workflow body. `show --raw`
   exposes exact document source; the hidden `read` command keeps its old behavior.

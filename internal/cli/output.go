@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const humanHelp = `means manages collections of Markdown documents with structured data and schemas.
+const overviewHelp = `means manages collections of Markdown documents with structured data and schemas.
 
 Get started:
   means init --path ./memory      Create a collection
@@ -19,7 +19,12 @@ Get started:
 
 Use --path to select a collection (default: the current directory).
 Use "means <command> --help" for command details and examples.
-Use "means help agents" for agent setup and automation guidance.`
+Use "means help mcp" for MCP integration guidance.
+
+--json returns the same information as structured JSON. Successful command results
+go to stdout; errors go to stderr as {"error":"..."} with exit 1. Diagnostic
+commands explain exceptions in their help. Paths resolve from the working directory;
+means does not search parent directories. See docs/guide.md for detailed workflows.`
 
 func (o *options) writeBanner(cmd *cobra.Command) error {
 	type entry struct {
@@ -29,7 +34,7 @@ func (o *options) writeBanner(cmd *cobra.Command) error {
 	}
 	commands := []entry{}
 	var text strings.Builder
-	fmt.Fprintf(&text, "means — %s\n\nRun \"means help\" for human guidance.\nRun \"means help agents\" for agent guidance.\n\nAvailable commands:\n", cmd.Short)
+	fmt.Fprintf(&text, "means — %s\n\nRun \"means help\" for usage guidance.\nRun \"means help mcp\" for MCP integration guidance.\n\nAvailable commands:\n", cmd.Short)
 	for _, group := range cmd.Groups() {
 		fmt.Fprintf(&text, "\n%s\n", group.Title)
 		for _, child := range cmd.Commands() {
@@ -48,7 +53,7 @@ func (o *options) writeBanner(cmd *cobra.Command) error {
 		Description string   `json:"description"`
 		Commands    []entry  `json:"commands"`
 		NextSteps   []string `json:"next_steps"`
-	}{cmd.Name(), cmd.Short, commands, []string{"means help", "means help agents"}}, text.String())
+	}{cmd.Name(), cmd.Short, commands, []string{"means help", "means help mcp"}}, text.String())
 }
 
 func embeddingProgress(cmd *cobra.Command) func(string) {
@@ -74,26 +79,10 @@ func (o *options) write(w io.Writer, value any, text string) error {
 }
 
 func (o *options) writeHelp(cmd *cobra.Command) error {
-	return o.writeCommandHelp(cmd, o.json)
-}
-
-func (o *options) writeCommandHelp(cmd *cobra.Command, detailed bool) error {
-	if !detailed {
-		if example, ok := humanCommandExamples[cmd.CommandPath()]; ok {
-			original := cmd.Example
-			defer func() { cmd.Example = original }()
-			cmd.Example = example
-		}
-	}
 	usage := cmd.UsageString()
 	description := cmd.Long
 	if description == "" {
 		description = cmd.Short
-	}
-	if !detailed {
-		if concise, ok := humanCommandHelp[cmd.CommandPath()]; ok {
-			description = concise + "\n\nFull reference: means help agents " + strings.TrimPrefix(cmd.CommandPath(), "means ")
-		}
 	}
 	return o.write(cmd.OutOrStdout(), struct {
 		Command     string `json:"command"`

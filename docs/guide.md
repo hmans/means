@@ -1,21 +1,19 @@
 # Using means
 
-This guide covers the file format and common workflows. `means <command> --help`
-shows focused human help. For complete input shapes, responses, errors, and
-limitations, run `means help agents <command>` (including nested commands such as
-`schema set`). Adding `--json` to either form returns the complete reference.
+This guide covers the file format, detailed workflows, and implementation limits.
+`means <command> --help` and `means help <command>` show the same command help,
+including nested commands such as `schema set`. Adding `--json` returns the same
+description and usage in structured form; there is no separate audience-specific guide.
 
 Run `means` for help pointers and a command list grouped into documents,
-collection management, and help/integrations. `means help`, `means help humans`, and
-`means --help` show the same short introduction. `means agents` remains a hidden
-compatibility alias for `means help agents`.
+collection management, and help/integrations. `means help` and `means --help` show
+the same short introduction. `means help init` covers setup; `means help mcp`
+covers MCP integration. Successful initialization points to `means help create`.
 
-For an end-to-end agent setup workflow, run `means help agents`. The guide is embedded
-in the binary and works before a collection exists. It explains collection design,
-`MEANS.md`, discovery through project instructions, skills or MCP, and routine
-operations. `means help agents --json` returns the same Markdown in a `guide` field.
-It does not create files or install integrations. Successful `init` output points
-to it; JSON initialization responses include `next_steps: ["means help agents"]`.
+The old `means help humans`, `means help agents`, and `means agents` routes are
+hidden compatibility aliases for the overview. The agents aliases also accept
+a command and show its canonical help. Their JSON now uses `command`, `description`,
+and `usage`, like all other help, instead of the former `guide` field.
 
 ## Collections
 
@@ -82,6 +80,12 @@ Run `means info --path ./memory` to inspect collection identity, schema, and
 workflow. `info --json` returns `path`, `title`, `description`, `schema`, and
 `instructions`. Instructions contain the exact Markdown body of `MEANS.md`.
 Info requires a valid collection configuration and schema.
+
+For agent use, put collection purpose, path, and when-to-use guidance in project
+instructions or a discoverable skill, or register the collection with an MCP client.
+Write schema-specific rules and workflow in MEANS.md. Creating that file alone does
+not make a CLI-based agent discover it; means does not load project instructions.
+Verify the intended collection with `info` and check representative data with `doctor`.
 
 ### Changing the schema
 

@@ -147,8 +147,8 @@ func TestHumanAndAgentCommandHelp(t *testing.T) {
 	if agent.String() != detail.Description+"\n\n"+detail.Usage {
 		t.Fatal("agent/JSON reference mismatch")
 	}
-	if human.Len() >= agent.Len()/2 || strings.Contains(human.String(), ".means/documents.jsonl") || !strings.Contains(human.String(), "means help agents search") {
-		t.Fatalf("human help not focused: %s", &human)
+	if human.String() != agent.String() || strings.Contains(human.String(), ".means/documents.jsonl") {
+		t.Fatalf("help differs or exposes cache implementation: %s", &human)
 	}
 }
 
