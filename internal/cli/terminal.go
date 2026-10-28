@@ -95,9 +95,38 @@ func renderDocument(w io.Writer, doc *collection.Document) (string, error) {
 	return renderDocumentWidth(terminalWidth(w), doc)
 }
 
+func renderPreviewData(width int, data []byte) string {
+	width = max(1, width)
+	theme := styles.DarkStyleConfig
+	margin := uint(0)
+	theme.Document.Margin = &margin
+	theme.Document.BlockPrefix = ""
+	theme.Document.BlockSuffix = ""
+	theme.CodeBlock.Margin = &margin
+	rendered := string(data)
+	renderer, err := glamour.NewTermRenderer(glamour.WithStyles(theme), glamour.WithWordWrap(width))
+	if err == nil {
+		if highlighted, err := renderer.Render("```json\n" + string(data) + "\n```\n"); err == nil {
+			rendered = strings.Trim(highlighted, "\n")
+		}
+	}
+	separator := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(strings.Repeat("─", width))
+	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("37")).Render("Data")
+	return separator + "\n" + label + "\n" + rendered
+}
+
 func renderDocumentWidth(width int, doc *collection.Document) (string, error) {
 	width = max(1, min(80, width))
+	return renderDocumentLayout(width, doc, false)
+}
+
+func renderDocumentLayout(width int, doc *collection.Document, preview bool) (string, error) {
+	width = max(1, width)
 	theme := styles.DarkStyleConfig
+	if preview {
+		margin := uint(0)
+		theme.Document.Margin = &margin
+	}
 	// BlockPrefix inherits the paragraph color. Prefix uses the item's own
 	// style, so the bullet can be colored without coloring the whole list.
 	accent := "37"
@@ -114,5 +143,16 @@ func renderDocumentWidth(width int, doc *collection.Document) (string, error) {
 	}
 	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99")).Width(width).Render(terminalCell(doc.Frontmatter["title"].(string)))
 	id := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(doc.ID)
+	if preview {
+		id = ansi.Truncate(tuiAccent.Render(doc.ID), width, "")
+		titleWidth := width - ansi.StringWidth(id) - 1
+		text := terminalCell(doc.Frontmatter["title"].(string))
+		if titleWidth < 1 {
+			return strings.Repeat(" ", width-ansi.StringWidth(id)) + id + "\n" + tuiTitle.Width(width).Render(text) + "\n" + body, nil
+		}
+		lines := strings.Split(tuiTitle.Width(titleWidth).Render(text), "\n")
+		lines[0] += strings.Repeat(" ", width-ansi.StringWidth(lines[0])-ansi.StringWidth(id)) + id
+		return strings.Join(lines, "\n") + "\n" + body, nil
+	}
 	return title + "\n" + id + "\n" + body, nil
 }

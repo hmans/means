@@ -144,7 +144,10 @@ func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
 	return result, nil
 }
 
-func matchesFilter(data, filter map[string]any) bool {
+// MatchesFilter reports whether data matches a partial metadata filter using the
+// same rules as List and Search. Inputs must use JSON-compatible values, with
+// json.Number for numbers.
+func MatchesFilter(data, filter map[string]any) bool {
 	for key, expected := range filter {
 		actual, exists := data[key]
 		if !exists || !matchesValue(actual, expected) {
@@ -158,7 +161,7 @@ func matchesValue(actual, expected any) bool {
 	switch expected := expected.(type) {
 	case map[string]any:
 		object, ok := actual.(map[string]any)
-		return ok && matchesFilter(object, expected)
+		return ok && MatchesFilter(object, expected)
 	case []any:
 		array, ok := actual.([]any)
 		if !ok || len(array) != len(expected) {

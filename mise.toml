@@ -10,6 +10,7 @@ description = "Run the means CLI from source"
 dir = "{{ cwd }}"
 run = 'go run "{{ config_root }}"'
 raw_args = true
+raw = true
 
 [tasks.sweet]
 description = "Run Sweet Release 0.3.0 (forwards CLI arguments)"
