@@ -21,3 +21,5 @@ Separate preview data from the body with a horizontal rule and highlight its JSO
 Match document list colors to the preview: teal IDs and bright white titles, with a dark selection background.
 
 Display active filters on subtle backgrounds with teal field names, dim operators, and purple values.
+
+Wrap long preview titles, filter one loaded snapshot consistently, and reuse unchanged previews while searching.

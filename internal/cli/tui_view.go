@@ -209,6 +209,7 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 
 var (
 	tuiAccent      = lipgloss.NewStyle().Foreground(lipgloss.Color("37"))
+	tuiTitle       = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("231"))
 	tuiMuted       = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 	tuiSelected    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("231")).Background(lipgloss.Color("24"))
 	tuiButtonStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Background(lipgloss.Color("238"))
@@ -237,7 +238,7 @@ func tuiSelectedRow(text string, selected bool, width int) string {
 func tuiDocumentRow(id, title string, selected bool, width int) string {
 	prefix := "  "
 	idStyle := tuiAccent
-	titleStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("231"))
+	titleStyle := tuiTitle
 	rowStyle := lipgloss.NewStyle()
 	if selected {
 		prefix = "> "

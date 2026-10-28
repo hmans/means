@@ -35,7 +35,7 @@ func tuiCreate(t *testing.T, c *collection.Collection, title string, data map[st
 func tuiRun(t *testing.T, m *tuiModel, cmd tea.Cmd) {
 	t.Helper()
 	if cmd == nil {
-		t.Fatal("expected load command")
+		return // Snapshot filtering is synchronous; refresh still returns a command.
 	}
 	m.Update(cmd())
 	if m.err != nil {
@@ -50,6 +50,66 @@ func tuiPress(m *tuiModel, code rune) tea.Cmd {
 	}
 	_, cmd := m.Update(key)
 	return cmd
+}
+
+func TestTUISnapshotFiltersAndPreviewCache(t *testing.T) {
+	c := tuiTestCollection(t)
+	doc := tuiCreate(t, c, "Alpha", map[string]any{"status": "open", "tags": []any{"cli"}})
+	m := newTUIModel(c.Path)
+	tuiRun(t, m, m.Init())
+	cached := &m.preview[0]
+	m.filterText("Alpha")
+	if &m.preview[0] != cached {
+		t.Fatal("search rerendered an unchanged preview")
+	}
+	m.offset = len(m.preview) - m.pageHeight()
+	m.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height + 10})
+	if &m.preview[0] != cached || m.offset > max(0, len(m.preview)-m.pageHeight()) {
+		t.Fatal("height-only resize must reuse the preview and clamp scrolling")
+	}
+	m.Update(tea.WindowSizeMsg{Width: m.width + 1, Height: m.height})
+	if &m.preview[0] == cached {
+		t.Fatal("width resize did not rerender the preview")
+	}
+	newBody := "Changed body after refresh."
+	if _, err := c.Update(doc.ID, doc.Hash, collection.Patch{Body: &newBody}); err != nil {
+		t.Fatal(err)
+	}
+	tuiCreate(t, c, "Beta", map[string]any{"status": "open", "tags": []any{"cli"}})
+	m.field = "status"
+	m.openValues()
+	m.choice = 1
+	if cmd := m.choose(); cmd != nil || m.loading || len(m.docs) != 1 {
+		t.Fatal("choosing a filter must use the loaded snapshot synchronously")
+	}
+	if strings.Contains(ansi.Strip(strings.Join(m.preview, "\n")), newBody) {
+		t.Fatal("filtering read external content changes")
+	}
+	m.field = "tags"
+	m.openValues()
+	if m.choices[1].count == nil || *m.choices[1].count != 1 {
+		t.Fatal("counts did not use the same snapshot as results")
+	}
+	m.choice = 1
+	m.choose()
+	if len(m.docs) != 1 {
+		t.Fatal("array membership lost snapshot consistency")
+	}
+	if cmd := m.action("c"); cmd != nil || len(m.docs) != 1 {
+		t.Fatal("clearing filters read external changes")
+	}
+	tuiRun(t, m, m.load())
+	if len(m.docs) != 2 || !strings.Contains(ansi.Strip(strings.Join(m.preview, "\n")), newBody) {
+		t.Fatal("refresh did not load new documents and invalidate cached content")
+	}
+	m.filterText("no matching document")
+	if len(m.preview) != 0 {
+		t.Fatal("empty results retained a cached preview")
+	}
+	m.filterText("Alpha")
+	if !strings.Contains(ansi.Strip(strings.Join(m.preview, "\n")), newBody) {
+		t.Fatal("restored selection did not render its preview")
+	}
 }
 
 func TestTUIBrowseRefreshAndBoundaries(t *testing.T) {

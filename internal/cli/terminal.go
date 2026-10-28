@@ -144,11 +144,15 @@ func renderDocumentLayout(width int, doc *collection.Document, preview bool) (st
 	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99")).Width(width).Render(terminalCell(doc.Frontmatter["title"].(string)))
 	id := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(doc.ID)
 	if preview {
-		id = ansi.Truncate(id, width, "")
-		titleWidth := max(0, width-ansi.StringWidth(id)-1)
-		title = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("231")).Render(
-			ansi.Truncate(terminalCell(doc.Frontmatter["title"].(string)), titleWidth, "…"))
-		return title + strings.Repeat(" ", max(0, width-ansi.StringWidth(title)-ansi.StringWidth(id))) + id + "\n" + body, nil
+		id = ansi.Truncate(tuiAccent.Render(doc.ID), width, "")
+		titleWidth := width - ansi.StringWidth(id) - 1
+		text := terminalCell(doc.Frontmatter["title"].(string))
+		if titleWidth < 1 {
+			return strings.Repeat(" ", width-ansi.StringWidth(id)) + id + "\n" + tuiTitle.Width(width).Render(text) + "\n" + body, nil
+		}
+		lines := strings.Split(tuiTitle.Width(titleWidth).Render(text), "\n")
+		lines[0] += strings.Repeat(" ", width-ansi.StringWidth(lines[0])-ansi.StringWidth(id)) + id
+		return strings.Join(lines, "\n") + "\n" + body, nil
 	}
 	return title + "\n" + id + "\n" + body, nil
 }

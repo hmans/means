@@ -232,7 +232,7 @@ The selected row is highlighted, the focused pane has an accent border, and pane
 footers show the visible range. Wide terminals show both panes side by side;
 below 90 columns, the View button or Tab switches panes. The preview includes
 syntax-highlighted JSON application data below a separator after the body, with
-the ID at the upper right beside the title.
+the ID at the upper right beside the wrapping title.
 Body text has no extra outer margin. Wrapped list items currently follow Glamour's
 default alignment. Smaller terminals use compact toolbar labels;
 below 32 columns or 12 rows, resize the terminal to browse.
@@ -264,7 +264,8 @@ empty collection, plus fields found in stored documents. Property `title` and
 `enum` choices in schema order, or a `const` value, followed by additional stored
 values in sorted order. Additional values are marked `(stored)` when the schema
 supplies choices. It uses all valid documents, including those outside the current
-results. Ordinary string labels appear without quotes. JSON notation is retained
+results. Data filters use the same loaded snapshot as choices and counts; only
+Refresh reads external changes. Ordinary string labels appear without quotes. JSON notation is retained
 for other types and ambiguous strings such as `"true"`, `"42"`, or `"null"`, as
 well as empty strings and strings with significant whitespace. Select
 the first value option to remove that field's filter. Filters on different fields

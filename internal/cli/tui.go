@@ -64,7 +64,6 @@ for help and errors only; use list/search --json for structured document results
 				return err
 			}
 			m := newTUIModel(c.Path)
-			m.title = c.Describe().Title
 			programOpts := []tea.ProgramOption{tea.WithInput(cmd.InOrStdin()), tea.WithOutput(cmd.OutOrStdout()), tea.WithContext(cmd.Context())}
 			if os.Getenv("NO_COLOR") != "" {
 				programOpts = append(programOpts, tea.WithColorProfile(colorprofile.Ascii))
@@ -76,10 +75,9 @@ for help and errors only; use list/search --json for structured document results
 }
 
 type tuiLoaded struct {
-	title       string
-	fields      map[string]tuiField
-	all, result *collection.SearchResult
-	err         error
+	fields map[string]tuiField
+	all    *collection.SearchResult
+	err    error
 }
 
 type tuiField struct {
@@ -136,7 +134,7 @@ type tuiChoice struct {
 }
 
 type tuiModel struct {
-	path, title        string
+	path               string
 	width, height      int
 	all, docs          []collection.SearchHit
 	base               []collection.SearchHit // Loaded documents matching the data filters.
@@ -148,6 +146,8 @@ type tuiModel struct {
 	selected, offset   int
 	listTop, choiceTop int
 	preview            []string
+	previewID          string
+	previewColumns     int
 	mode               string // documents, search, fields, values, diagnostics
 	previewFocus       bool
 	choices            []tuiChoice
@@ -165,20 +165,10 @@ func newTUIModel(path string) *tuiModel {
 
 func (m *tuiModel) Init() tea.Cmd { return m.load() }
 
-// Queries run outside the event loop. While loading, only resize and quit are
-// accepted, so a result cannot overwrite a newer query or read a mutated filter.
+// Refresh runs outside the event loop. Filters use this single loaded snapshot.
 func (m *tuiModel) load() tea.Cmd {
 	m.loading = true
 	path := m.path
-	filters := make(map[string]any, len(m.filters))
-	contains := map[string]any{}
-	for key, value := range m.filters {
-		if m.contains[key] {
-			contains[key] = value
-		} else {
-			filters[key] = value
-		}
-	}
 	return func() tea.Msg {
 		c, err := collection.Load(path)
 		if err != nil {
@@ -188,21 +178,7 @@ func (m *tuiModel) load() tea.Cmd {
 		if err != nil {
 			return tuiLoaded{err: err}
 		}
-		result := all
-		if len(filters) > 0 {
-			result, err = c.Search(collection.SearchOptions{Filter: filters, WithBody: true})
-		}
-		if err == nil && len(contains) > 0 {
-			filtered := *result
-			filtered.Documents = nil
-			for _, doc := range result.Documents {
-				if tuiContainsMatches(doc.Frontmatter["data"].(map[string]any), contains) {
-					filtered.Documents = append(filtered.Documents, doc)
-				}
-			}
-			result = &filtered
-		}
-		return tuiLoaded{title: c.Describe().Title, fields: tuiSchemaFields(c.Schema), all: all, result: result, err: err}
+		return tuiLoaded{fields: tuiSchemaFields(c.Schema), all: all}
 	}
 }
 
@@ -221,9 +197,10 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, nil
 		}
-		m.title, m.all, m.base, m.diagnostics = msg.title, msg.all.Documents, msg.result.Documents, msg.result.Diagnostics
+		m.all, m.diagnostics = msg.all.Documents, msg.all.Diagnostics
 		m.fields = msg.fields
-		m.filterText(m.query)
+		m.previewID = "" // Refresh may change content without changing its ID.
+		m.filterData()
 		pickerQuery := m.pickerQuery
 		if m.mode == "fields" {
 			m.openFields()
@@ -324,7 +301,7 @@ func (m *tuiModel) action(key string) tea.Cmd {
 	case "c":
 		m.filters, m.query, m.mode = map[string]any{}, "", "documents"
 		m.contains = map[string]bool{}
-		return m.load()
+		m.filterData()
 	case "d":
 		if m.mode == "diagnostics" {
 			m.mode = "documents"
@@ -368,7 +345,27 @@ func (m *tuiModel) choose() tea.Cmd {
 		m.contains[m.field] = m.choices[m.choice].contains
 	}
 	m.mode, m.previewFocus = "documents", false
-	return m.load()
+	m.filterData()
+	return nil
+}
+
+func (m *tuiModel) filterData() {
+	filters, contains := map[string]any{}, map[string]any{}
+	for key, value := range m.filters {
+		if m.contains[key] {
+			contains[key] = value
+		} else {
+			filters[key] = value
+		}
+	}
+	m.base = nil
+	for _, doc := range m.all {
+		data := doc.Frontmatter["data"].(map[string]any)
+		if collection.MatchesFilter(data, filters) && tuiContainsMatches(data, contains) {
+			m.base = append(m.base, doc)
+		}
+	}
+	m.filterText(m.query)
 }
 
 // Search the loaded snapshot so typing never waits for a scan or loses keys to
@@ -627,23 +624,30 @@ func (m *tuiModel) previewWidth() int {
 }
 
 func (m *tuiModel) renderPreview() {
-	m.preview = nil
+	defer func() {
+		if m.mode != "diagnostics" {
+			m.offset = min(m.offset, max(0, len(m.preview)-m.pageHeight()))
+		}
+	}()
 	if len(m.docs) == 0 {
+		m.preview, m.previewID = nil, ""
 		return
 	}
 	hit := m.docs[m.selected]
+	width := m.previewWidth()
+	if m.previewID == hit.ID && m.previewColumns == width {
+		return
+	}
+	m.previewID, m.previewColumns = hit.ID, width
 	body := ""
 	if hit.Body != nil {
 		body = *hit.Body
 	}
-	text, err := renderDocumentLayout(m.previewWidth(), &collection.Document{ID: hit.ID, Frontmatter: hit.Frontmatter, Body: body}, true)
+	text, err := renderDocumentLayout(width, &collection.Document{ID: hit.ID, Frontmatter: hit.Frontmatter, Body: body}, true)
 	if err != nil {
 		text = "Preview error: " + terminalCell(err.Error())
 	}
 	metadata, _ := json.MarshalIndent(hit.Frontmatter["data"], "", "  ")
-	text += "\n" + renderPreviewData(m.previewWidth(), metadata)
+	text += "\n" + renderPreviewData(width, metadata)
 	m.preview = strings.Split(text, "\n")
-	if m.mode != "diagnostics" {
-		m.offset = min(m.offset, max(0, len(m.preview)-m.pageHeight()))
-	}
 }

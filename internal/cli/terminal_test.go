@@ -26,6 +26,13 @@ func TestPreviewDocumentLayout(t *testing.T) {
 		if width >= 24 && !strings.Contains("\n"+ansi.Strip(rendered), "\nParagraph starts here.") {
 			t.Errorf("width %d: paragraph retains an outer margin: %q", width, rendered)
 		}
+		if width >= 24 {
+			header := strings.SplitN(ansi.Strip(rendered), "Paragraph starts here.", 2)[0]
+			header = strings.ReplaceAll(header, doc.ID, "")
+			if strings.Join(strings.Fields(header), " ") != doc.Frontmatter["title"] {
+				t.Errorf("width %d: full title was lost: %q", width, header)
+			}
+		}
 	}
 }
 
