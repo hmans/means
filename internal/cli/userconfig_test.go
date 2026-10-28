@@ -157,3 +157,21 @@ func TestUserConfigAppliesAcrossCollections(t *testing.T) {
 		t.Fatal("CLI did not reload disabled config")
 	}
 }
+
+func TestDotenvStartupAndHelp(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("BROKEN='secret"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"--help"}, {"help", "embed"}, {"version"}, {}} {
+		var out, stderr bytes.Buffer
+		if err := Execute(args, nil, &out, &stderr, "test"); err != nil {
+			t.Fatalf("%v: %v", args, err)
+		}
+	}
+	var out, stderr bytes.Buffer
+	if err := Execute([]string{"list", "--json"}, nil, &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) || strings.Contains(stderr.String(), "secret") {
+		t.Fatalf("startup error: %v %s", err, stderr.String())
+	}
+}

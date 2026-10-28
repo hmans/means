@@ -107,6 +107,9 @@ func New(path, version string) (*mcp.Server, error) {
 // NewWithEmbeddingProgress reports embedding work through progress. Concurrent
 // calls may invoke progress concurrently; callers must serialize their output.
 func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp.Server, error) {
+	if err := userconfig.LoadEnvironment(path); err != nil {
+		return nil, err
+	}
 	cfg, warning, err := userconfig.Open()
 	if err != nil {
 		return nil, err

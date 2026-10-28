@@ -67,6 +67,9 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "means" && cmd.Name() != "agents" && !strings.HasPrefix(cmd.CommandPath(), "means help ") {
+				if err := userconfig.LoadEnvironment(opts.path); err != nil {
+					return err
+				}
 				opts.config, opts.configWarning, opts.configErr = userconfig.Open()
 				if opts.configErr != nil {
 					return opts.configErr

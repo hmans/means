@@ -49,7 +49,9 @@ for the current schema and these instructions; the tools are `list`, `search`,
 Embedding settings belong to the local Means user config, not this collection.
 To enable them on this machine, edit `$XDG_CONFIG_HOME/means/config.yaml` (default
 `~/.config/means/config.yaml`) and set the provider's API key in the CLI or MCP
-host environment. Mise also loads the optional, Git-ignored repository `.env`.
+host environment. Means loads optional `.env` files from the collection directory
+first, then the working directory, preserving existing environment variables.
+Keep credential files Git-ignored.
 Restart MCP after changing user configuration or credentials. Use
 `mise means embed --path ./issues` to populate this machine's disposable cache.
 Read/list and ordinary search remain offline.

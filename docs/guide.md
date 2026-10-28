@@ -707,3 +707,21 @@ and remove `title` from the application's schema properties and required list.
 An application field named `id` belongs under `data.id`; it does not replace
 the document ID. Bodies can stay unchanged. There is no automatic migration or
 legacy fallback.
+
+## Environment files
+
+Collection commands and MCP startup load optional `.env` files before user
+configuration and credentials. Existing process environment variables win, even
+when empty. Means reads the collection directory selected by `--path` first, then
+the current working directory for variables still unset. When these directories
+are the same, the file is read once. It does not search parent directories.
+
+Use `KEY=value`, optional `export`, comments, and single or double quotes, for example:
+
+```dotenv
+OPENROUTER_API_KEY=your-key
+```
+
+Missing files are ignored; unreadable or malformed files fail startup without
+printing their contents. Help, version, and bare invocation do not load `.env`.
+Restart MCP after editing credentials. Keep `.env` files out of version control.
