@@ -264,8 +264,9 @@ empty collection, plus fields found in stored documents. Property `title` and
 `enum` choices in schema order, or a `const` value, followed by additional stored
 values in sorted order. Additional values are marked `(stored)` when the schema
 supplies choices. It uses all valid documents, including those outside the current
-results. Data filters use the same loaded snapshot as choices and counts; only
-Refresh reads external changes. Ordinary string labels appear without quotes. JSON notation is retained
+results. Data filters use the same loaded snapshot as choices and counts.
+Filesystem notifications and Refresh load external changes. Ordinary string labels appear
+without quotes. JSON notation is retained
 for other types and ambiguous strings such as `"true"`, `"42"`, or `"null"`, as
 well as empty strings and strings with significant whitespace. Select
 the first value option to remove that field's filter. Filters on different fields
@@ -307,8 +308,23 @@ Esc restores the search that was active when `/` was pressed.
 Malformed documents and duplicate IDs are excluded and reported in diagnostics,
 even when filters yield no results. Normal collection boundaries apply. The
 browser loads document bodies into memory without a limit; it is intended for
-collections that fit in memory. Press `r` to see external edits. There is no file
-watcher, editing UI, scripting, or collection-specific view configuration.
+collections that fit in memory. While the browser is open, a filesystem watcher
+refreshes the collection after 200 ms without further change events. Added,
+changed, removed, and renamed files, schema changes, diagnostics, and nested
+collection boundaries update automatically. Write bursts share one refresh;
+changes during a scan queue a follow-up. Directories are watched to support atomic
+editor saves. Hidden paths and nested collection contents are ignored. Watches
+are closed when the TUI exits; no daemon is installed. Press `r` to check immediately.
+
+Background checks do not block typing. Search input, filters, picker input and
+selection, and document selection are retained where possible. Scroll positions
+are retained and clamped to the available content. Unchanged snapshots leave the
+preview alone. A failed collection load keeps the last usable snapshot, shows the
+error, and retries on the next filesystem change or manual refresh. Watcher errors
+are shown; filesystems without notification support may require manual refresh.
+Individual malformed files follow the usual
+diagnostics rules and are excluded until repaired. There is no editing UI,
+scripting, or collection-specific view configuration.
 
 Both input and output must be terminals. `NO_COLOR` disables content styling;
 terminal controls are still required for navigation. `tui --json` returns an error;

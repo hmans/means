@@ -44,7 +44,8 @@ Choose one item per field; filters on different fields combine with AND. Other d
 filters use list/search semantics, including partial object matches.
 Missing fields do not match null. Malformed files and duplicate IDs are reported
 in diagnostics and excluded. Nested collections, hidden paths, and symlinks are
-excluded. Refresh explicitly to see external edits; there is no file watcher.
+excluded. Filesystem changes trigger a background refresh after a short debounce.
+Refresh checks immediately. Active input, filters, and selection are preserved.
 No document writes, embeddings, or search index are needed. --json is supported
 for help and errors only; use list/search --json for structured document results.`,
 		Example: "  means tui\n  means tui --path ./issues",
@@ -64,6 +65,12 @@ for help and errors only; use list/search --json for structured document results
 				return err
 			}
 			m := newTUIModel(c.Path)
+			watcher, err := newTUIWatcher(c.Path)
+			if err != nil {
+				return fmt.Errorf("watch collection: %w", err)
+			}
+			defer watcher.close()
+			m.watch = watcher.messages
 			programOpts := []tea.ProgramOption{tea.WithInput(cmd.InOrStdin()), tea.WithOutput(cmd.OutOrStdout()), tea.WithContext(cmd.Context())}
 			if os.Getenv("NO_COLOR") != "" {
 				programOpts = append(programOpts, tea.WithColorProfile(colorprofile.Ascii))
@@ -75,9 +82,10 @@ for help and errors only; use list/search --json for structured document results
 }
 
 type tuiLoaded struct {
-	fields map[string]tuiField
-	all    *collection.SearchResult
-	err    error
+	background bool
+	fields     map[string]tuiField
+	all        *collection.SearchResult
+	err        error
 }
 
 type tuiField struct {
@@ -156,6 +164,9 @@ type tuiModel struct {
 	choice             int
 	field              string
 	loading            bool
+	refreshing         bool
+	watch              <-chan tea.Msg
+	refreshPending     bool
 	err                error
 }
 
@@ -163,27 +174,56 @@ func newTUIModel(path string) *tuiModel {
 	return &tuiModel{path: path, width: 80, height: 24, filters: map[string]any{}, contains: map[string]bool{}, mode: "documents", loading: true}
 }
 
-func (m *tuiModel) Init() tea.Cmd { return m.load() }
+func (m *tuiModel) Init() tea.Cmd {
+	if m.watch == nil {
+		return m.load()
+	}
+	return tea.Batch(m.load(), m.waitForChange())
+}
+
+type tuiChanged struct{}
+
+func (m *tuiModel) waitForChange() tea.Cmd {
+	if m.watch == nil {
+		return nil
+	}
+	ch := m.watch
+	return func() tea.Msg { return <-ch }
+}
 
 // Refresh runs outside the event loop. Filters use this single loaded snapshot.
 func (m *tuiModel) load() tea.Cmd {
 	m.loading = true
+	return m.readSnapshot(false)
+}
+
+func (m *tuiModel) readSnapshot(background bool) tea.Cmd {
 	path := m.path
 	return func() tea.Msg {
 		c, err := collection.Load(path)
 		if err != nil {
-			return tuiLoaded{err: err}
+			return tuiLoaded{background: background, err: err}
 		}
 		all, err := c.Search(collection.SearchOptions{WithBody: true})
 		if err != nil {
-			return tuiLoaded{err: err}
+			return tuiLoaded{background: background, err: err}
 		}
-		return tuiLoaded{fields: tuiSchemaFields(c.Schema), all: all}
+		return tuiLoaded{background: background, fields: tuiSchemaFields(c.Schema), all: all}
 	}
 }
 
 func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tuiChanged:
+		if m.loading || m.refreshing {
+			m.refreshPending = true
+			return m, m.waitForChange()
+		}
+		m.refreshing = true
+		return m, tea.Batch(m.readSnapshot(true), m.waitForChange())
+	case tuiWatchError:
+		m.err = fmt.Errorf("filesystem watch: %w; r refreshes manually", msg.err)
+		return m, m.waitForChange()
 	case tea.WindowSizeMsg:
 		m.width, m.height = max(1, msg.Width), max(1, msg.Height)
 		m.renderPreview()
@@ -193,14 +233,41 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.offset = min(m.offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
 		}
 	case tuiLoaded:
+		var next tea.Cmd
+		m.refreshing = false
 		m.loading, m.err = false, msg.err
+		if m.refreshPending {
+			m.refreshPending, m.refreshing = false, true
+			next = m.readSnapshot(true)
+		}
 		if msg.err != nil {
-			return m, nil
+			return m, next
+		}
+		if msg.background && reflect.DeepEqual(m.all, msg.all.Documents) && reflect.DeepEqual(m.diagnostics, msg.all.Diagnostics) && reflect.DeepEqual(m.fields, msg.fields) {
+			return m, next
+		}
+		id, offset, listTop := "", m.offset, m.listTop
+		if len(m.docs) > 0 {
+			id = m.docs[m.selected].ID
+		}
+		var chosen *tuiChoice
+		choiceTop := m.choiceTop
+		if m.picking() && len(m.choices) > 0 {
+			value := m.choices[m.choice]
+			chosen = &value
 		}
 		m.all, m.diagnostics = msg.all.Documents, msg.all.Diagnostics
 		m.fields = msg.fields
 		m.previewID = "" // Refresh may change content without changing its ID.
 		m.filterData()
+		if m.mode == "diagnostics" {
+			m.offset = min(offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
+		} else if len(m.docs) > 0 && m.docs[m.selected].ID == id {
+			m.offset = min(offset, max(0, len(m.preview)-m.pageHeight()))
+		}
+		if len(m.docs) > 0 && m.docs[m.selected].ID == id {
+			m.listTop = min(listTop, max(0, len(m.docs)-m.pageHeight()))
+		}
 		pickerQuery := m.pickerQuery
 		if m.mode == "fields" {
 			m.openFields()
@@ -209,6 +276,16 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.openValues()
 			m.filterChoices(pickerQuery)
 		}
+		if m.picking() && chosen != nil {
+			for i, choice := range m.choices {
+				if choice.remove == chosen.remove && choice.contains == chosen.contains && tuiEqual(choice.value, chosen.value) {
+					m.choice = i
+					m.choiceTop = min(choiceTop, max(0, len(m.choices)-m.pageHeight()))
+					break
+				}
+			}
+		}
+		return m, next
 	case tea.PasteMsg:
 		if m.mode == "search" && !m.loading {
 			m.input += terminalCell(msg.Content)
@@ -292,6 +369,9 @@ func (m *tuiModel) action(key string) tea.Cmd {
 	case "q":
 		return tea.Quit
 	case "r":
+		if m.refreshing || m.loading {
+			return nil
+		}
 		return m.load()
 	case "/":
 		m.mode, m.input = "search", m.query
@@ -365,7 +445,11 @@ func (m *tuiModel) filterData() {
 			m.base = append(m.base, doc)
 		}
 	}
-	m.filterText(m.query)
+	query := m.query
+	if m.mode == "search" {
+		query = m.input
+	}
+	m.filterText(query)
 }
 
 // Search the loaded snapshot so typing never waits for a scan or loses keys to
