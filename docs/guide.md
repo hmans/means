@@ -219,6 +219,103 @@ retrieved after schema changes.
 
 Creation is not idempotent: retrying a successful call creates another document.
 
+## Interactive browser
+
+Run `means tui --path ./issues` to browse a collection in your terminal. The browser
+is read-only and shows all valid documents in filename order. Single-row Search,
+Filter, and Refresh buttons sit above the search field and framed document and
+preview panes. Idle buttons have a subdued fill; active controls use the accent
+color. Labels precede dimmed keyboard shortcuts. Clear appears beside the filter
+summary when a search or data filter is active. View, Diagnostics, Back, and Quit
+are clickable footer controls.
+The selected row is highlighted, the focused pane has an accent border, and pane
+footers show the visible range. Wide terminals show both panes side by side;
+below 90 columns, the View button or Tab switches panes. The preview includes
+syntax-highlighted JSON application data below a separator after the body, with
+the ID at the upper right beside the title.
+Body text has no extra outer margin. Wrapped list items currently follow Glamour's
+default alignment. Smaller terminals use compact toolbar labels;
+below 32 columns or 12 rows, resize the terminal to browse.
+
+In terminals that support mouse reporting, click toolbar buttons or the search
+field, click a document to select it, and click the preview to focus it. The wheel
+scrolls the pane under the pointer without changing the selected document or
+keyboard focus. Click a filter field and then a value to apply it; the first value
+removes that field's filter. The wheel also scrolls filter choices and diagnostics.
+Clicking a document or another toolbar action while searching keeps the live query;
+Back restores the previous query. All actions remain available from the keyboard.
+
+| Key | Action |
+| --- | --- |
+| Up/Down or j/k | Select a document, or scroll the focused preview |
+| Tab or Enter | Switch between list selection and preview scrolling |
+| Page Up/Page Down, Home/End | Move within the list or preview |
+| / | Filter title/body text immediately while typing; Enter keeps the search |
+| f | Choose a top-level data field, then a schema or stored value |
+| c | Clear all data filters and the text search |
+| r | Reload documents and collection configuration from disk |
+| d | Open or close diagnostics; Up/Down scrolls them |
+| Esc | Restore the previous search, cancel a picker, or return to the list |
+| q or Ctrl+C | Quit (q is ordinary text in search and filter pickers) |
+
+The field picker includes the schema's direct top-level `properties`, even in an
+empty collection, plus fields found in stored documents. Property `title` and
+`description` annotations supply labels and guidance. The value picker shows
+`enum` choices in schema order, or a `const` value, followed by additional stored
+values in sorted order. Additional values are marked `(stored)` when the schema
+supplies choices. It uses all valid documents, including those outside the current
+results. Ordinary string labels appear without quotes. JSON notation is retained
+for other types and ambiguous strings such as `"true"`, `"42"`, or `"null"`, as
+well as empty strings and strings with significant whitespace. Select
+the first value option to remove that field's filter. Filters on different fields
+combine with AND. Scalar filters use the same matching rules as `list` and
+`search`, including partial object matches and distinguishing missing fields from null.
+For arrays, the picker offers deduplicated individual items rather than complete
+combinations. Selecting `cli` for `tags` matches any document whose tags contain
+that item, regardless of order or other tags. The summary shows `tags contains cli`.
+String items display a document count, such as `cli (15)`, across all valid documents
+in the loaded collection, independent of active filters. Repeated strings within
+one array count once. Unused schema choices show zero, and refresh updates the counts.
+Type-ahead searches item labels, not their displayed counts.
+Select one item per field; selecting another replaces it. Empty arrays and missing
+fields do not match. Item matching uses exact JSON equality, including types and
+complete objects or nested arrays. If a field also stores scalar values, those
+choices are marked `(value)` and use ordinary field equality. CLI and MCP exact
+array filters retain their existing whole-array behavior.
+Existing data that no longer matches the schema remains readable and filterable.
+Both picker steps support immediate, case-insensitive type-ahead over their labels:
+type a field name or title, then type a value to narrow its choices. Paste works too.
+Use arrow keys or Page Up/Page Down to navigate, Enter or a click to choose,
+Backspace to edit, and Ctrl+U to clear the picker query. Letters including `j`, `k`,
+and `q` are text in the picker; Ctrl+C or the Quit footer control still exits.
+Each new picker step starts with an empty query. Esc cancels the picker without
+applying its highlighted choice. Picker searches do not change the document text
+search or data filters until a value is chosen. Refresh preserves the picker query.
+Refresh reloads schema hints as well as documents. This first version reads direct
+property definitions; it does not derive choices through `$ref`, schema composition,
+conditions, numeric ranges, or string patterns. Direct `items.enum` and `items.const`
+supply array item choices even before those items are stored. Whole-array enum/const
+values also supply their individual items. Other open-ended fields use observed values.
+
+Text search is a case-insensitive literal match against the loaded title and body.
+Typing, pasting, Backspace, and Ctrl+U (clear input) update the list immediately,
+within the active data filters. Search does not rescan files per keystroke; `r`
+refreshes the snapshot from disk. Enter keeps the search and returns to navigation;
+Esc restores the search that was active when `/` was pressed.
+
+Malformed documents and duplicate IDs are excluded and reported in diagnostics,
+even when filters yield no results. Normal collection boundaries apply. The
+browser loads document bodies into memory without a limit; it is intended for
+collections that fit in memory. Press `r` to see external edits. There is no file
+watcher, editing UI, scripting, or collection-specific view configuration.
+
+Both input and output must be terminals. `NO_COLOR` disables content styling;
+terminal controls are still required for navigation. `tui --json` returns an error;
+JSON help remains available through `tui --help --json`. Use `list` or `search` for
+pipes and structured output. Browsing stays offline and does not build a search
+index or request embeddings. Collection startup follows the normal user-config
+loading and bootstrap rules.
+
 ## Finding and updating documents
 
 ```sh

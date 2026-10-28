@@ -12,6 +12,44 @@ import (
 	"github.com/hmans/means/internal/collection"
 )
 
+func TestPreviewDocumentLayout(t *testing.T) {
+	doc := &collection.Document{ID: "abc12", Frontmatter: map[string]any{"title": "A long document title with Unicode 日本語"}, Body: "Paragraph starts here.\n\n- First item\n  - Nested item\n"}
+	for _, width := range []int{1, 5, 24, 80, 120} {
+		rendered, err := renderDocumentLayout(width, doc, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(ansi.Strip(rendered), "\n")
+		if ansi.StringWidth(lines[0]) != width || !strings.HasSuffix(lines[0], ansi.Truncate(doc.ID, width, "")) {
+			t.Errorf("width %d: header does not place ID at right edge: %q", width, lines[0])
+		}
+		if width >= 24 && !strings.Contains("\n"+ansi.Strip(rendered), "\nParagraph starts here.") {
+			t.Errorf("width %d: paragraph retains an outer margin: %q", width, rendered)
+		}
+	}
+}
+
+func TestPreviewData(t *testing.T) {
+	data := []byte("{\n  \"tags\": [\"cli\"],\n  \"count\": 3,\n  \"active\": true,\n  \"empty\": null\n}")
+	rendered := renderPreviewData(60, data)
+	plain := ansi.Strip(rendered)
+	parts := strings.SplitN(plain, "\n", 3)
+	if len(parts) != 3 || parts[0] != strings.Repeat("─", 60) || parts[1] != "Data" {
+		t.Fatalf("missing separator or label: %q", plain)
+	}
+	lines := strings.Split(parts[2], "\n")
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], " ")
+	}
+	if strings.TrimSpace(strings.Join(lines, "\n")) != string(data) {
+		t.Fatalf("highlighting changed JSON: %q", parts[2])
+	}
+	styledData := strings.SplitN(rendered, "\n", 3)[2]
+	if styledData == ansi.Strip(styledData) {
+		t.Fatal("JSON has no syntax highlighting")
+	}
+}
+
 func TestDocumentTables(t *testing.T) {
 	c, err := collection.Init(t.TempDir(), []byte(`true`))
 	if err != nil {
