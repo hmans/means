@@ -43,6 +43,12 @@ homebrew_casks:
     url:
       template: "https://github.com/hmans/means/releases/download/v{{ .Version }}/{{ .ArtifactName }}"
     binaries: [means]
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/means"]
+          end
 
 snapshot:
   version_template: '{{ if index .Env "RELEASE_VERSION" }}{{ .Env.RELEASE_VERSION }}{{ else }}0.0.0-SNAPSHOT-{{ .ShortCommit }}{{ end }}'

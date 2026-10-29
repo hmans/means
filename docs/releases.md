@@ -98,6 +98,8 @@ The linker sets the version reported by `means version`.
 GoReleaser also generates `dist/homebrew/Casks/means.rb` with download URLs and
 checksums for macOS and Linux on amd64 and arm64. Its direct tap upload is disabled;
 the workflow publishes the cask as a release asset alongside the archives.
+On macOS, the cask's post-install hook removes `com.apple.quarantine` from the
+staged `means` binary, matching the Beans tap's installation behavior.
 
 The workflow verifies the Linux binary version and all archive checksums, then
 uses `gh release create --verify-tag` to upload the assets and publish a release
