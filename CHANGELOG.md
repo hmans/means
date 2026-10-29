@@ -1,5 +1,11 @@
 # means Changelog
 
+## 0.4.2
+
+### Fixes
+
+- Move the TUI Clear button into the top toolbar and remove the empty status row during text search. ([#35](https://github.com/hmans/means/pull/35))
+
 ## 0.4.1
 
 ### Fixes
