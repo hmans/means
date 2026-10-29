@@ -16,8 +16,10 @@ following its [workflow](issues/MEANS.md).
   can establish and evolve that schema through means.
 - Each collection contains one `MEANS.md`: YAML frontmatter with optional string
   title/description and required schema (JSON Schema object or boolean expressed
-  as YAML, Draft 2020-12 by default), followed by Markdown guidance. Unknown
-  configuration fields are rejected. Embedding settings belong in the user config, not MEANS.md (see docs/guide.md). Missing/blank title defaults to the directory
+  as YAML, Draft 2020-12 by default), and optional app.views for experimental TUI
+  views, followed by Markdown guidance. App structure is validated on collection
+  load; Expr filters are compiled only by the TUI. Schema replacement preserves app.
+  Unknown configuration fields are rejected. Embedding settings belong in the user config, not MEANS.md (see docs/guide.md). Missing/blank title defaults to the directory
   name. Schema annotations do not define collection identity.
   `init` generates an example, accepts a complete file through `--input FILE|-`,
   or accepts JSON Schema through `--schema FILE|-`; these flags are exclusive.

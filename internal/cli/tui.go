@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
@@ -36,6 +38,8 @@ Letters including j, k, and q are search text in the picker; Ctrl+C still quits.
 Fields and enum/const choices come from the schema's direct properties,
 including fields with no documents yet. Schema titles and descriptions guide the
 picker. Stored fields and values remain available, including schema-invalid data.
+v opens collection views from MEANS.md app.views (Expr filters and columns).
+Views combine with search/data filters; All documents leaves the selected view.
 The first value option removes that field's filter. c clears all filters and search.
 r reloads the collection; d shows diagnostics; q or Ctrl+C quits. Esc closes a view.
 All documents are loaded in filename order, without a limit. Array fields offer
@@ -65,6 +69,11 @@ for help and errors only; use list/search --json for structured document results
 				return err
 			}
 			m := newTUIModel(c.Path)
+			defer func() {
+				if m.cancelEvaluation != nil {
+					m.cancelEvaluation()
+				}
+			}()
 			watcher, err := newTUIWatcher(c.Path)
 			if err != nil {
 				return fmt.Errorf("watch collection: %w", err)
@@ -82,6 +91,7 @@ for help and errors only; use list/search --json for structured document results
 }
 
 type tuiLoaded struct {
+	app        *tuiApp
 	background bool
 	fields     map[string]tuiField
 	all        *collection.SearchResult
@@ -142,6 +152,12 @@ type tuiChoice struct {
 }
 
 type tuiModel struct {
+	evaluation         uint64
+	evaluating         bool
+	cancelEvaluation   context.CancelFunc
+	app                *tuiApp
+	view               string
+	viewErrors         []collection.Diagnostic
 	path               string
 	width, height      int
 	all, docs          []collection.SearchHit
@@ -199,6 +215,7 @@ func (m *tuiModel) load() tea.Cmd {
 
 func (m *tuiModel) readSnapshot(background bool) tea.Cmd {
 	path := m.path
+	previousApp := m.app // Compiled apps are immutable and safe to reuse.
 	return func() tea.Msg {
 		c, err := collection.Load(path)
 		if err != nil {
@@ -208,12 +225,38 @@ func (m *tuiModel) readSnapshot(background bool) tea.Cmd {
 		if err != nil {
 			return tuiLoaded{background: background, err: err}
 		}
-		return tuiLoaded{background: background, fields: tuiSchemaFields(c.Schema), all: all}
+		app := compileTUIApp(c.App, previousApp)
+		all.Diagnostics = append(all.Diagnostics, app.errors...)
+		return tuiLoaded{background: background, fields: tuiSchemaFields(c.Schema), all: all, app: app}
 	}
 }
 
 func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tuiEvaluated:
+		if msg.generation != m.evaluation {
+			return m, nil
+		}
+		m.evaluating = false
+		id, offset, top := "", m.offset, m.listTop
+		if len(m.docs) > 0 {
+			id = m.docs[m.selected].ID
+		}
+		m.base, m.viewErrors = msg.docs, msg.errors
+		query := m.query
+		if m.mode == "search" {
+			query = m.input
+		}
+		m.filterText(query)
+		if m.mode == "diagnostics" {
+			m.offset = min(offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
+		} else if len(m.docs) > 0 && m.docs[m.selected].ID == id {
+			m.offset = min(offset, max(0, len(m.preview)-m.pageHeight()))
+		}
+		if len(m.docs) > 0 && m.docs[m.selected].ID == id {
+			m.listTop = min(top, max(0, len(m.docs)-m.pageHeight()))
+		}
+		return m, nil
 	case tuiChanged:
 		if m.loading || m.refreshing {
 			m.refreshPending = true
@@ -228,7 +271,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = max(1, msg.Width), max(1, msg.Height)
 		m.renderPreview()
 		m.listTop = tuiKeepVisible(m.selected, m.listTop, m.pageHeight(), len(m.docs))
-		m.choiceTop = tuiKeepVisible(m.choice, m.choiceTop, m.pageHeight(), len(m.choices))
+		m.choiceTop = tuiKeepVisible(m.choice, m.choiceTop, m.pickerHeight(), len(m.choices))
 		if m.mode == "diagnostics" {
 			m.offset = min(m.offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
 		}
@@ -243,7 +286,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return m, next
 		}
-		if msg.background && reflect.DeepEqual(m.all, msg.all.Documents) && reflect.DeepEqual(m.diagnostics, msg.all.Diagnostics) && reflect.DeepEqual(m.fields, msg.fields) {
+		if msg.background && m.app != nil && msg.app != nil && m.app.source == msg.app.source && reflect.DeepEqual(m.all, msg.all.Documents) && reflect.DeepEqual(m.diagnostics, msg.all.Diagnostics) && reflect.DeepEqual(m.fields, msg.fields) {
 			return m, next
 		}
 		id, offset, listTop := "", m.offset, m.listTop
@@ -258,8 +301,12 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.all, m.diagnostics = msg.all.Documents, msg.all.Diagnostics
 		m.fields = msg.fields
+		m.app = msg.app
+		if view := m.currentView(); view == nil || view.compileErr != nil {
+			m.view = ""
+		}
 		m.previewID = "" // Refresh may change content without changing its ID.
-		m.filterData()
+		evaluate := m.filterData()
 		if m.mode == "diagnostics" {
 			m.offset = min(offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
 		} else if len(m.docs) > 0 && m.docs[m.selected].ID == id {
@@ -275,17 +322,20 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if m.mode == "values" {
 			m.openValues()
 			m.filterChoices(pickerQuery)
+		} else if m.mode == "views" {
+			m.openViews()
+			m.filterChoices(pickerQuery)
 		}
 		if m.picking() && chosen != nil {
 			for i, choice := range m.choices {
 				if choice.remove == chosen.remove && choice.contains == chosen.contains && tuiEqual(choice.value, chosen.value) {
 					m.choice = i
-					m.choiceTop = min(choiceTop, max(0, len(m.choices)-m.pageHeight()))
+					m.choiceTop = min(choiceTop, max(0, len(m.choices)-m.pickerHeight()))
 					break
 				}
 			}
 		}
-		return m, next
+		return m, tea.Batch(next, evaluate)
 	case tea.PasteMsg:
 		if m.mode == "search" && !m.loading {
 			m.input += terminalCell(msg.Content)
@@ -328,6 +378,10 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if key == "esc" {
+			if m.mode == "views" {
+				m.mode = "documents"
+				return m, nil
+			}
 			m.mode, m.previewFocus, m.offset = "documents", false, 0
 			return m, nil
 		}
@@ -338,9 +392,9 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "down":
 				m.choice = min(max(0, len(m.choices)-1), m.choice+1)
 			case "pgup":
-				m.choice = max(0, m.choice-m.pageHeight())
+				m.choice = max(0, m.choice-m.pickerHeight())
 			case "pgdown":
-				m.choice = min(max(0, len(m.choices)-1), m.choice+m.pageHeight())
+				m.choice = min(max(0, len(m.choices)-1), m.choice+m.pickerHeight())
 			case "enter":
 				return m, m.choose()
 			case "backspace":
@@ -355,7 +409,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.filterChoices(m.pickerQuery + msg.Text)
 				}
 			}
-			m.choiceTop = tuiKeepVisible(m.choice, m.choiceTop, m.pageHeight(), len(m.choices))
+			m.choiceTop = tuiKeepVisible(m.choice, m.choiceTop, m.pickerHeight(), len(m.choices))
 			return m, nil
 		}
 		return m, m.action(key)
@@ -378,10 +432,12 @@ func (m *tuiModel) action(key string) tea.Cmd {
 		m.previewFocus = false
 	case "f":
 		m.openFields()
+	case "v":
+		m.openViews()
 	case "c":
 		m.filters, m.query, m.mode = map[string]any{}, "", "documents"
 		m.contains = map[string]bool{}
-		m.filterData()
+		return m.filterData()
 	case "d":
 		if m.mode == "diagnostics" {
 			m.mode = "documents"
@@ -412,6 +468,19 @@ func (m *tuiModel) choose() tea.Cmd {
 	if len(m.choices) == 0 {
 		return nil
 	}
+	if m.mode == "views" {
+		chosen := m.choices[m.choice].value.(string)
+		if m.app != nil {
+			for _, view := range m.app.Views {
+				if view.Title == chosen && view.compileErr != nil {
+					return nil
+				}
+			}
+		}
+		m.view = chosen
+		m.mode, m.previewFocus = "documents", false
+		return m.filterData()
+	}
 	if m.mode == "fields" {
 		m.field = m.choices[m.choice].value.(string)
 		m.openValues()
@@ -425,17 +494,54 @@ func (m *tuiModel) choose() tea.Cmd {
 		m.contains[m.field] = m.choices[m.choice].contains
 	}
 	m.mode, m.previewFocus = "documents", false
-	m.filterData()
-	return nil
+	return m.filterData()
 }
 
-func (m *tuiModel) filterData() {
+type tuiEvaluated struct {
+	generation uint64
+	docs       []collection.SearchHit
+	errors     []collection.Diagnostic
+}
+
+func (m *tuiModel) filterData() tea.Cmd {
+	m.evaluation++
+	if m.cancelEvaluation != nil {
+		m.cancelEvaluation()
+		m.cancelEvaluation = nil
+	}
+	m.evaluating = false
+	m.viewErrors = nil
+	view, now := m.currentView(), time.Now()
 	filters, contains := map[string]any{}, map[string]any{}
 	for key, value := range m.filters {
 		if m.contains[key] {
 			contains[key] = value
 		} else {
 			filters[key] = value
+		}
+	}
+	if view != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		m.cancelEvaluation, m.evaluating = cancel, true
+		generation, docs := m.evaluation, m.all
+		return func() tea.Msg {
+			defer cancel()
+			result := tuiEvaluated{generation: generation}
+			for _, doc := range docs {
+				if ctx.Err() != nil {
+					return nil
+				}
+				matches, err := view.matches(doc, now)
+				if err != nil {
+					result.errors = append(result.errors, collection.Diagnostic{Path: tuiAppLocation, Error: fmt.Sprintf("view %q, document %s: %v", view.Title, doc.ID, err)})
+					continue
+				}
+				data := doc.Frontmatter["data"].(map[string]any)
+				if matches && collection.MatchesFilter(data, filters) && tuiContainsMatches(data, contains) {
+					result.docs = append(result.docs, doc)
+				}
+			}
+			return result
 		}
 	}
 	m.base = nil
@@ -450,6 +556,7 @@ func (m *tuiModel) filterData() {
 		query = m.input
 	}
 	m.filterText(query)
+	return nil
 }
 
 // Search the loaded snapshot so typing never waits for a scan or loses keys to
@@ -660,7 +767,9 @@ func tuiEqual(a, b any) bool {
 	}
 }
 
-func (m *tuiModel) picking() bool { return m.mode == "fields" || m.mode == "values" }
+func (m *tuiModel) picking() bool {
+	return m.mode == "fields" || m.mode == "values" || m.mode == "views"
+}
 
 func (m *tuiModel) filterChoices(query string) {
 	m.pickerQuery, m.choice, m.choiceTop = query, 0, 0
@@ -697,6 +806,10 @@ func tuiValueLabel(value any) string {
 func (m *tuiModel) diagnosticLines() []string {
 	var lines []string
 	for _, diagnostic := range m.diagnostics {
+		text := terminalCell(diagnostic.Path + ": " + diagnostic.Error)
+		lines = append(lines, strings.Split(ansi.Hardwrap(text, max(1, m.width-4), true), "\n")...)
+	}
+	for _, diagnostic := range m.viewErrors {
 		text := terminalCell(diagnostic.Path + ": " + diagnostic.Error)
 		lines = append(lines, strings.Split(ansi.Hardwrap(text, max(1, m.width-4), true), "\n")...)
 	}

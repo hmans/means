@@ -16,29 +16,34 @@ type Description struct {
 
 // configFields validates configuration independently of the application schema.
 // Schema replacement uses this to repair an invalid or missing schema.
-func configFields(data []byte) (map[string]any, string, error) {
+func configFields(data []byte) (map[string]any, string, AppConfig, error) {
+	var app AppConfig
 	fields, body, err := parseMarkdown(data)
 	if err != nil {
-		return nil, "", err
+		return nil, "", app, err
 	}
 	for key, value := range fields {
 		switch key {
 		case "schema":
+		case "app":
+			if app, err = parseApp(value); err != nil {
+				return nil, "", app, err
+			}
 		case "embeddings":
-			return nil, "", fmt.Errorf("embeddings settings have moved to the Means user config ($XDG_CONFIG_HOME/means/config.yaml, default ~/.config/means/config.yaml); move this block there and remove it from MEANS.md")
+			return nil, "", app, fmt.Errorf("embeddings settings have moved to the Means user config ($XDG_CONFIG_HOME/means/config.yaml, default ~/.config/means/config.yaml); move this block there and remove it from MEANS.md")
 		case "title", "description":
 			if _, ok := value.(string); !ok {
-				return nil, "", fmt.Errorf("%s must be a string", key)
+				return nil, "", app, fmt.Errorf("%s must be a string", key)
 			}
 		default:
-			return nil, "", fmt.Errorf("unknown collection configuration field %q", key)
+			return nil, "", app, fmt.Errorf("unknown collection configuration field %q", key)
 		}
 	}
-	return fields, body, nil
+	return fields, body, app, nil
 }
 
 func parseConfig(path string, data []byte) (*Collection, error) {
-	fields, body, err := configFields(data)
+	fields, body, app, err := configFields(data)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", ConfigFilename, err)
 	}
@@ -55,13 +60,13 @@ func parseConfig(path string, data []byte) (*Collection, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.config, c.body = fields, body
+	c.config, c.body, c.App = fields, body, app
 	return c, nil
 }
 
 // encodeConfig writes identity fields before the schema so MEANS.md reads top-down.
 func encodeConfig(fields map[string]any, body string) (string, error) {
-	return encodeMarkdown(fields, body, "title", "description", "schema")
+	return encodeMarkdown(fields, body, "title", "description", "schema", "app")
 }
 
 // Describe returns identity and guidance from the loaded configuration snapshot.

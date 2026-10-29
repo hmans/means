@@ -18,9 +18,10 @@ func tuiPollNow(t *testing.T, m *tuiModel) {
 		t.Fatal("poll did not start a nonblocking refresh")
 	}
 	_, next := m.Update(cmd())
-	if next != nil || m.refreshing {
+	if m.refreshing {
 		t.Fatal("refresh scheduled an unnecessary check")
 	}
+	tuiRun(t, m, next)
 }
 
 func TestTUIAutomaticRefresh(t *testing.T) {

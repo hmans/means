@@ -42,7 +42,8 @@ The schema validates only document `frontmatter.data`; means owns each document'
 default. Internal references work; external files and remote schemas do not.
 
 The required `schema` field accepts an object or boolean. Optional `title` and
-`description` must be strings. Embedding settings belong in the machine-local
+`description` must be strings. Optional `app.views` defines experimental TUI views
+(see below). Embedding settings belong in the machine-local
 user config, described below; unknown collection configuration fields are rejected.
 Missing or blank title falls back to the directory name; description defaults to
 empty. Schema annotations do not define collection identity. The Markdown body
@@ -252,6 +253,7 @@ Back restores the previous query. All actions remain available from the keyboard
 | Page Up/Page Down, Home/End | Move within the list or preview |
 | / | Filter title/body text immediately while typing; Enter keeps the search |
 | f | Choose a top-level data field, then a schema or stored value |
+| v | Choose a collection-defined view (type to find, Enter to select) |
 | c | Clear all data filters and the text search |
 | r | Reload documents and collection configuration from disk |
 | d | Open or close diagnostics; Up/Down scrolls them |
@@ -323,8 +325,8 @@ preview alone. A failed collection load keeps the last usable snapshot, shows th
 error, and retries on the next filesystem change or manual refresh. Watcher errors
 are shown; filesystems without notification support may require manual refresh.
 Individual malformed files follow the usual
-diagnostics rules and are excluded until repaired. There is no editing UI,
-scripting, or collection-specific view configuration.
+diagnostics rules and are excluded until repaired. There is no editing UI or
+action execution.
 
 Both input and output must be terminals. `NO_COLOR` disables content styling;
 terminal controls are still required for navigation. `tui --json` returns an error;
@@ -332,6 +334,74 @@ JSON help remains available through `tui --help --json`. Use `list` or `search` 
 pipes and structured output. Browsing stays offline and does not build a search
 index or request embeddings. Collection startup follows the normal user-config
 loading and bootstrap rules.
+
+### Experimental collection views
+
+Add an optional `app.views` block to the frontmatter of `MEANS.md` to define TUI
+views without writing Go. Keep the existing `schema` and workflow body in that
+same file. Collection commands and MCP validate the app structure; only the TUI
+compiles and evaluates filters. This prototype format may change as the app model evolves.
+
+```yaml
+app:
+  views:
+    - title: Open bugs
+      filter: data.type == "bug" and data.status in ["todo", "in_progress"]
+      columns: [title, data.priority]
+
+    - title: CLI work
+      filter: '"cli" in (data.tags ?? [])'
+      columns: [title, data.status]
+
+    - title: Recently created
+      filter: data.created_at != nil and date(data.created_at) > now() - duration("168h")
+      columns: [title, data.created_at]
+```
+
+Click **Views** or press `v`, type a view name, and press Enter or click to select.
+The dropdown opens below the toolbar button while documents remain visible.
+The active view has a check mark. Arrow keys and the mouse wheel navigate the
+menu; Escape or clicking outside dismisses it without changing the view.
+The browser starts in **All documents**; select that entry to leave a custom view.
+Search and metadata filters combine with the view. Clear removes those extra
+filters, keeping the view. The active view name appears above the document list.
+Columns appear in their configured order, with extra space for titles; narrow
+columns truncate their displayed text. The preview still shows the full document.
+The issues collection includes example views in `issues/MEANS.md` to edit and try.
+
+Filters use [Expr](https://expr-lang.org/docs/language-definition) and must return
+a boolean. Available variables are `id`, `title`, `body`, and `data`; missing data
+keys evaluate to `nil`. Guard optional dates as shown above and use `?? []` for
+optional arrays. `now()` returns one shared instant per view evaluation. Relative
+dates are reevaluated when the view is selected, filters change, or the collection
+refreshes; time passing alone does not trigger a refresh. Date strings must be
+accepted by Expr's `date()` function. No shell commands or document writes are exposed.
+
+Omitted filters match all documents. Omitted columns default to `[title]`.
+Columns accept `id`, `title`, or `data.FIELD` for a direct data key, with missing
+or null values shown as a dash. View names must be unique; **All documents** is
+reserved. The prototype accepts up to 32 views and six columns per view, limits
+the JSON-encoded `app` object to 64 KiB, and rejects unknown configuration keys.
+
+Config edits reload through the filesystem watcher. Invalid YAML or app structure
+shows an error and retains the previous snapshot and app; fix the file to recover.
+Invalid filter expressions disable only their own views, which are marked invalid
+in the dropdown and explained in Diagnostics. All documents and valid views remain
+usable. If the selected view becomes invalid, the browser returns to All documents.
+Compiled expressions are reused until app configuration changes.
+
+View evaluation runs in the background while navigation and typing remain available.
+The previous results remain visible with an Updating view indicator until evaluation
+finishes. Results superseded by another view, metadata filter, or snapshot are
+discarded; superseded work stops between documents. The latest text search is
+applied when results arrive. Removing `app` or the selected view returns to All documents. Runtime errors,
+such as malformed dates, exclude the affected documents from that view and appear
+in Diagnostics. Expr receives integers as signed 64-bit values and fractional or
+exponent-form numbers as float64; oversized integer literals in document data are
+reported as errors. Existing metadata filters retain their exact JSON semantics.
+Schema replacement preserves `app` and the workflow body. If you used the earlier
+`MEANS.app.yaml` prototype, move its `views` block under `app` in `MEANS.md` and
+remove the separate file; it is no longer read.
 
 ## Finding and updating documents
 
