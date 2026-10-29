@@ -39,7 +39,7 @@ func (m *tuiModel) geometry() tuiGeometry {
 	x, y := 1, 0
 	const buttonHeight = 1
 	buttons := []struct{ label, hint, key string }{
-		{"Search", "/", "/"}, {"Filter", "f", "f"}, {"Refresh", "r", "r"},
+		{"Search", "/", "/"}, {"Filter", "f", "f"},
 	}
 	if m.app != nil && len(m.app.Views) > 0 {
 		buttons = append(buttons, struct{ label, hint, key string }{"Views ▾", "v", "v"})

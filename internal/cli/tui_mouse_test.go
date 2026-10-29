@@ -135,7 +135,7 @@ func TestTUIMouseToolbarSearchAndFilters(t *testing.T) {
 	}
 	tuiClickButton(t, m, "f")
 	tuiCreate(t, c, "New field", map[string]any{"priority": "high"})
-	tuiRun(t, m, tuiClickButton(t, m, "r"))
+	tuiPollNow(t, m)
 	if m.mode != "fields" || len(m.choices) != 2 {
 		t.Fatal("refresh left stale choices in the open picker")
 	}
@@ -147,7 +147,7 @@ func TestTUIMouseToolbarSearchAndFilters(t *testing.T) {
 	if m.mode != "documents" {
 		t.Fatal("back button failed")
 	}
-	tuiRun(t, m, tuiClickButton(t, m, "r"))
+	tuiRun(t, m, tuiPress(m, 'r'))
 	if cmd := tuiClickButton(t, m, "q"); cmd == nil {
 		t.Fatal("quit button failed")
 	} else if _, ok := cmd().(tea.QuitMsg); !ok {
