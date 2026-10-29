@@ -1,5 +1,38 @@
 # means Changelog
 
+## 0.4.0
+
+### Features
+
+- ⚠️ **BREAKING CHANGE:** Use one command help reference for people and agents, with the same content in text and JSON. Bare means shows a banner, pointers to means help and means help mcp, and grouped commands. Legacy audience-specific help routes remain hidden aliases; their JSON uses the standard command/description/usage response instead of guide. ([#20](https://github.com/hmans/means/pull/20))
+- ⚠️ **BREAKING CHANGE:** Move embedding settings from MEANS.md to the machine-local Means user config.
+  On first use, create a commented, disabled config at
+  $XDG_CONFIG_HOME/means/config.yaml (default ~/.config/means/config.yaml) without
+  overwriting existing files. Settings apply to all collections; CLI reloads them
+  per invocation and MCP loads them at startup. Move legacy collection embedding
+  blocks into the user config and remove them from MEANS.md. ([#19](https://github.com/hmans/means/pull/19))
+- Install means with Homebrew using `brew install --cask hmans/tap/means`. ([#29](https://github.com/hmans/means/pull/29))
+- Add `means help agents` with an embedded, version-matched guide to collection
+  structure, MEANS.md authoring, schemas, workflows, and agent discovery. The guide
+  works without a collection or user configuration and supports text and JSON help. ([#26](https://github.com/hmans/means/pull/26))
+- Add timezone-aware datetime range filters to CLI and MCP search, including exclusive and inclusive before/after comparisons in every search mode. ([#17](https://github.com/hmans/means/pull/17))
+- Use `:` in the TUI to open a command pane with help, visible errors, and Tab
+  completion for commands and view names. Quit with `:quit`, `:q`, or Ctrl+C;
+  bare `q` no longer exits accidentally. Use `:home` or Esc while browsing to
+  leave a view without clearing search and filters, and `:clear` or the `x`
+  keyboard shortcut to clear them without leaving the view. Active views now
+  use their name as the document pane title, without an extra heading row. ([#32](https://github.com/hmans/means/pull/32))
+- Browse collections with `means tui`: Markdown previews, live text search,
+  metadata filters, and document diagnostics. Use the keyboard or mouse, resize
+  the panes, and filter array fields by individual items with document counts.
+  External file and schema changes refresh the browser automatically while
+  preserving the current search, selection, and scroll position. ([#21](https://github.com/hmans/means/pull/21))
+- Load optional collection and working-directory .env files for CLI and MCP startup, preserving existing environment variables. ([8031312](https://github.com/hmans/means/commit/8031312d3624d20588599c2feb6ca1c923bd94a0))
+- Add collection info, editor-based document updates, title/body creation, direct delete hashes, raw viewing, list filters, grouped commands, and focused command help. Informational commands no longer read or create user configuration; existing structured document inputs remain supported. ([#20](https://github.com/hmans/means/pull/20))
+- Define experimental TUI views in `MEANS.md` under `app.views`, with Expr filters
+  and configurable columns. Switch views with a searchable picker; edits reload
+  automatically, and an invalid view does not prevent other views from working. ([#23](https://github.com/hmans/means/pull/23))
+
 ## 0.3.0
 
 ### Features
