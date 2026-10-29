@@ -34,6 +34,60 @@ func tuiWheel(m *tuiModel, x, y int, down bool) {
 	m.Update(tea.MouseWheelMsg{X: x, Y: y, Button: button})
 }
 
+func TestTUIDividerDrag(t *testing.T) {
+	c := tuiTestCollection(t)
+	tuiCreate(t, c, "A document", map[string]any{})
+	m := newTUIModel(c.Path)
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 26})
+	tuiRun(t, m, m.Init())
+	for _, grabOffset := range []int{-1, 0, 1} {
+		g := m.geometry()
+		tuiClick(m, g.list.w+grabOffset, g.body.y+2)
+		if !m.draggingDivider {
+			t.Fatal("divider did not capture drag")
+		}
+		m.Update(tea.MouseMotionMsg{X: 70 + grabOffset, Y: 0, Button: tea.MouseLeft})
+		if m.geometry().list.w != 70 || m.previewColumns != m.previewWidth() {
+			t.Fatal("drag did not resize panes and reflow preview")
+		}
+		m.Update(tea.MouseReleaseMsg{X: 75 + grabOffset, Y: 0, Button: tea.MouseLeft})
+		m.Update(tea.MouseMotionMsg{X: 80, Y: 0, Button: tea.MouseLeft})
+		if m.draggingDivider || m.geometry().list.w != 75 || m.selected != 0 || m.previewFocus {
+			t.Fatal("release did not stop drag or drag changed selection/focus")
+		}
+	}
+	g := m.geometry()
+	tuiClick(m, g.list.w, g.body.y)
+	m.Update(tea.MouseMotionMsg{X: -100, Button: tea.MouseLeft})
+	if m.geometry().list.w != 32 {
+		t.Fatal("list minimum width was not enforced")
+	}
+	m.Update(tea.MouseMotionMsg{X: 1000, Button: tea.MouseLeft})
+	if m.geometry().preview.w != 32 {
+		t.Fatal("preview minimum width was not enforced")
+	}
+	m.Update(tea.WindowSizeMsg{Width: 90, Height: 26})
+	if m.draggingDivider || m.geometry().preview.w != 32 {
+		t.Fatal("terminal resize did not cancel drag and clamp panes")
+	}
+	m.Update(tea.WindowSizeMsg{Width: 70, Height: 26})
+	if m.geometry().split {
+		t.Fatal("narrow terminal should use one pane")
+	}
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 26})
+	if m.geometry().list.w != 107 {
+		t.Fatal("terminal resize lost preferred width")
+	}
+	for _, mode := range []string{"fields", "values", "diagnostics", "views"} {
+		m.mode = mode
+		g := m.geometry()
+		tuiClick(m, g.list.w, g.body.y)
+		if m.draggingDivider {
+			t.Fatalf("divider active in %s overlay", mode)
+		}
+	}
+}
+
 func TestTUIMouseSelectionScrollAndFocus(t *testing.T) {
 	c := tuiTestCollection(t)
 	for i := 0; i < 30; i++ {

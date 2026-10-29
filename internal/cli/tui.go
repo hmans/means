@@ -27,7 +27,8 @@ func newTUICommand(opts *options) *cobra.Command {
 		Long: `Open a read-only document browser with a Markdown preview. Requires terminal
 input and output. Up/down or j/k select documents; Tab switches to preview scrolling.
 Click toolbar buttons, documents, or filter choices. Click a pane to focus it;
-scroll the mouse wheel over a pane to scroll its content. Narrow terminals use
+scroll the mouse wheel over a pane to scroll its content. Drag the divider between
+panes to resize them for this session. Narrow terminals use
 the View button or Tab to switch panes. Mouse support requires a compatible terminal.
 / enters a live case-insensitive literal title/body search; Enter keeps it,
 Esc restores the previous search. Typing filters the loaded documents immediately.
@@ -160,6 +161,9 @@ type tuiModel struct {
 	viewErrors         []collection.Diagnostic
 	path               string
 	width, height      int
+	listWidth          int // Preferred width in columns; zero uses the default.
+	draggingDivider    bool
+	dividerGrabOffset  int
 	all, docs          []collection.SearchHit
 	base               []collection.SearchHit // Loaded documents matching the data filters.
 	diagnostics        []collection.Diagnostic
@@ -268,6 +272,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = fmt.Errorf("filesystem watch: %w; r refreshes manually", msg.err)
 		return m, m.waitForChange()
 	case tea.WindowSizeMsg:
+		m.draggingDivider = false
 		m.width, m.height = max(1, msg.Width), max(1, msg.Height)
 		m.renderPreview()
 		m.listTop = tuiKeepVisible(m.selected, m.listTop, m.pageHeight(), len(m.docs))
@@ -344,10 +349,21 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filterChoices(m.pickerQuery + terminalCell(msg.Content))
 		}
 	case tea.MouseClickMsg:
+		m.draggingDivider = false
 		return m, m.mouse(msg.Mouse(), false)
+	case tea.MouseMotionMsg:
+		if m.draggingDivider && msg.Button == tea.MouseLeft {
+			m.resizeDivider(msg.X)
+		}
+	case tea.MouseReleaseMsg:
+		if m.draggingDivider {
+			m.resizeDivider(msg.X)
+			m.draggingDivider = false
+		}
 	case tea.MouseWheelMsg:
 		return m, m.mouse(msg.Mouse(), true)
 	case tea.KeyPressMsg:
+		m.draggingDivider = false
 		key := msg.String()
 		if key == "ctrl+c" || (key == "q" && m.mode != "search" && !m.picking()) {
 			return m, tea.Quit

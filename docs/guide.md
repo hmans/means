@@ -241,10 +241,13 @@ below 32 columns or 12 rows, resize the terminal to browse.
 In terminals that support mouse reporting, click toolbar buttons or the search
 field, click a document to select it, and click the preview to focus it. The wheel
 scrolls the pane under the pointer without changing the selected document or
-keyboard focus. Click a filter field and then a value to apply it; the first value
+keyboard focus. Drag the gap or adjacent borders between the document list and
+preview to resize the panes. Each pane stays at least 32 columns wide; the chosen
+list width is kept for the session, including after a terminal resize.
+Click a filter field and then a value to apply it; the first value
 removes that field's filter. The wheel also scrolls filter choices and diagnostics.
 Clicking a document or another toolbar action while searching keeps the live query;
-Back restores the previous query. All actions remain available from the keyboard.
+Back restores the previous query. Browsing actions remain available from the keyboard.
 
 | Key | Action |
 | --- | --- |
