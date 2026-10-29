@@ -46,6 +46,9 @@ func (m *tuiModel) geometry() tuiGeometry {
 	if m.app != nil && len(m.app.Views) > 0 {
 		buttons = append(buttons, struct{ label, hint, key string }{"Views", "v", "v"})
 	}
+	if len(m.filters) > 0 || m.query != "" || (m.mode == "search" && m.input != "") {
+		buttons = append(buttons, struct{ label, hint, key string }{"Clear", "x", "x"})
+	}
 	for _, item := range buttons {
 		b := tuiControl(item.label, item.hint, item.key, m.width >= 60)
 		width := b.w
@@ -60,7 +63,7 @@ func (m *tuiModel) geometry() tuiGeometry {
 	if m.commandBar.active && m.commandBar.failed {
 		g.search.h += min(3, max(1, m.height-g.search.y-8), len(m.commandErrorLines()))
 	}
-	g.status = len(m.filters) > 0 || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.query != "" || (m.mode == "search" && m.input != "") || m.mode == "fields" || m.mode == "values"
+	g.status = len(m.filters) > 0 || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.mode == "fields" || m.mode == "values"
 	bodyY := g.search.y + g.search.h
 	if g.status {
 		bodyY++
@@ -90,11 +93,6 @@ func (m *tuiModel) geometry() tuiGeometry {
 		footer[i].x, footer[i].y = x, m.height-1
 		g.buttons = append(g.buttons, footer[i])
 		x--
-	}
-	if len(m.filters) > 0 || m.query != "" || (m.mode == "search" && m.input != "") {
-		b := tuiControl("Clear", "x", "x", m.width >= 60)
-		b.x, b.y = m.width-b.w, g.body.y-1
-		g.buttons = append(g.buttons, b)
 	}
 	return g
 }
@@ -534,17 +532,12 @@ func (m *tuiModel) View() tea.View {
 		}
 		copy(frame[g.body.y:], body)
 		footerStart := m.width
-		statusEnd := m.width
 		for _, b := range g.buttons {
 			if b.y == m.height-1 {
 				footerStart = min(footerStart, b.x)
 			}
-			if b.key == "x" {
-				statusEnd = b.x - 1
-			}
 		}
 		frame[m.height-1] = tuiMuted.Render(tuiFit(help, max(0, footerStart-1)))
-		frame[g.body.y-1] = tuiFit(frame[g.body.y-1], max(0, statusEnd))
 		for _, b := range g.buttons {
 			style := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
 			if b.toolbar {

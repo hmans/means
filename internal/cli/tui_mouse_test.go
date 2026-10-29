@@ -334,13 +334,13 @@ func TestTUIContextualControls(t *testing.T) {
 		g := m.geometry()
 		clear := false
 		for _, b := range g.buttons {
-			if b.toolbar && b.key != "/" && b.key != "f" && b.key != "r" {
+			if b.toolbar && b.key != "/" && b.key != "f" && b.key != "x" {
 				t.Fatalf("unexpected toolbar action: %s", b.key)
 			}
 			if b.key == "x" {
 				clear = true
-				if b.y != g.body.y-1 {
-					t.Fatal("Clear is not beside filters")
+				if !b.toolbar || b.y != 0 {
+					t.Fatal("Clear is not in the top toolbar")
 				}
 			}
 			if b.key == "esc" || b.key == "q" || b.key == "tab" || b.key == "d" {
@@ -356,6 +356,15 @@ func TestTUIContextualControls(t *testing.T) {
 	check(false)
 	m.mode, m.input = "search", "example"
 	check(true)
+	if g := m.geometry(); g.status || g.body.y != g.search.y+g.search.h {
+		t.Fatal("search alone reserves an empty status row")
+	}
+	m.query, m.input, m.mode = "example", "", "documents"
+	check(true)
+	if m.geometry().status {
+		t.Fatal("applied search reserves an empty status row")
+	}
+	m.query = ""
 	m.input, m.mode = "", "documents"
 	m.filters["status"] = "open"
 	check(true)
