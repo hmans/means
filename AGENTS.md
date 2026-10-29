@@ -129,9 +129,13 @@ following its [workflow](issues/MEANS.md).
 - Keep CLI help sufficient for agents to discover workflows, input formats,
   examples, output formats, errors, and limitations. Each command owns one concise
   description and examples, shared by `help <command>`, `<command> --help`, and JSON
-  help. JSON changes presentation only. Do not maintain audience-specific guides
-  or parallel descriptions. Detailed workflows and implementation limits belong
-  in docs/guide.md. Legacy humans/agents help routes are hidden compatibility aliases.
+  help. JSON changes presentation only. Do not maintain audience-specific command
+  references or parallel command descriptions. Detailed workflows and implementation limits belong
+  in docs/guide.md. Keep `means help agents` up to date with concise instructions
+  for agents about collection structure, MEANS.md, schema design, workflow, and
+  discovery. Embed this guide in the binary so it matches the installed version;
+  keep command syntax in canonical command help. The legacy humans help route
+  and top-level agents command remain hidden compatibility aliases.
   Bare invocation, help, and version never load or bootstrap user configuration.
   `info` exposes collection identity, schema, and exact workflow body. `show --raw`
   exposes exact document source; the hidden `read` command keeps its old behavior.

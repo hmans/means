@@ -27,7 +27,8 @@ Choose a schema for your application data, then write the collection workflow
 in the Markdown body of MEANS.md. Run info to inspect it and doctor to check
 documents. For agent use, make the collection discoverable through project
 instructions, a skill, or MCP (see "means help mcp"). Initializing storage alone
-does not establish that workflow or discovery path.`,
+does not establish that workflow or discovery path. Read "means help agents" for
+collection structure, schema design, and MEANS.md authoring.`,
 		Example: `  # Start with the example schema
   means init --path ./memory
 

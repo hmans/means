@@ -27,6 +27,8 @@ Means creates a commented user config at `~/.config/means/config.yaml` (or under
 
 Run `means help init` for collection setup and `means help mcp` for MCP integration.
 The same command help serves people, scripts, and agents.
+Run `means help agents` for a built-in guide to collection structure and writing
+`MEANS.md`, matched to the installed version.
 
 From this checkout, use the Go toolchain configured by [mise](https://mise.jdx.dev/):
 
