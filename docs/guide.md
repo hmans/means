@@ -227,10 +227,11 @@ Creation is not idempotent: retrying a successful call creates another document.
 
 Run `means tui --path ./issues` to browse a collection in your terminal. The browser
 is read-only and shows all valid documents in filename order. Single-row Search,
-Filter, and Refresh buttons sit above the search field and framed document and
+Filter, and optional Views buttons sit above the search field and framed document and
 preview panes. Idle buttons have a subdued fill; active controls use the accent
-color. Labels precede dimmed keyboard shortcuts. Clear appears beside the filter
-summary when a search or data filter is active. View, Diagnostics, Back, and Quit
+color. Labels precede dimmed keyboard shortcuts. Clear appears in the top button
+row when a search or data filter is active. Search alone adds no status row.
+View, Diagnostics, Back, and Quit
 are clickable footer controls.
 The selected row is highlighted, the focused pane has an accent border, and pane
 footers show the visible range. Wide terminals show both panes side by side;

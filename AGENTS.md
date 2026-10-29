@@ -115,6 +115,10 @@ following its [workflow](issues/MEANS.md).
   or a compatibility change that requires user action. Use `mise sweet change .`
   and commit the generated `.sweet/` note with the code. Describe the user impact,
   not the implementation steps, and consolidate related changes into one note.
+  Read the generated note before committing it. Confirm that its frontmatter
+  has the intended type and its body describes the user impact. A successful
+  command does not prove that piped input reached Sweet. If the body is empty,
+  use `apply_patch` to add the release text; never commit an empty note.
   Repository chores do not need release notes. Do not add notes for instruction
   updates, README cleanup, issue bookkeeping, test-only changes, internal
   refactors, or CI/release maintenance without a meaningful user-facing effect.
