@@ -25,6 +25,10 @@ Means creates a commented user config at `~/.config/means/config.yaml` (or under
 
 ## Try it
 
+Homebrew publishing is configured for `hmans/homebrew-tap`. After the first
+release through this workflow, install with `brew install --cask hmans/tap/means`.
+See [release setup](docs/releases.md) for publishing requirements.
+
 Run `means help init` for collection setup and `means help mcp` for MCP integration.
 The same command help serves people, scripts, and agents.
 Run `means help agents` for a built-in guide to collection structure and writing
