@@ -35,12 +35,20 @@ func tuiCreate(t *testing.T, c *collection.Collection, title string, data map[st
 func tuiRun(t *testing.T, m *tuiModel, cmd tea.Cmd) {
 	t.Helper()
 	if cmd == nil {
-		return // Snapshot filtering is synchronous; refresh still returns a command.
+		return
 	}
-	m.Update(cmd())
+	msg := cmd()
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, child := range batch {
+			tuiRun(t, m, child)
+		}
+		return
+	}
+	_, next := m.Update(msg)
 	if m.err != nil {
 		t.Fatal(m.err)
 	}
+	tuiRun(t, m, next)
 }
 
 func tuiPress(m *tuiModel, code rune) tea.Cmd {

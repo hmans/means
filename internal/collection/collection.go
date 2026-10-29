@@ -23,6 +23,7 @@ var defaultSchema []byte
 // Collection is a loaded collection with a compiled application data schema.
 type Collection struct {
 	Path              string
+	App               AppConfig       // Optional views from the same MEANS.md snapshot.
 	Schema            json.RawMessage // The JSON schema compiled for this collection.
 	validator         *jsonschema.Schema
 	config            map[string]any

@@ -42,7 +42,7 @@ func SetSchema(path string, schema []byte, force bool) (*SchemaSetResult, error)
 	if err != nil {
 		return nil, err
 	}
-	fields, body, err := configFields(previous)
+	fields, body, _, err := configFields(previous)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", ConfigFilename, err)
 	}

@@ -26,6 +26,21 @@ schema:
       description: Optional labels for grouping related issues.
   required: [type, status, priority]
   additionalProperties: false
+app:
+  views:
+    - title: Open work
+      filter: data.status in ["todo", "in_progress"]
+      columns: [title, data.status, data.priority]
+    - title: Open bugs
+      filter: data.type == "bug" and data.status in ["todo", "in_progress"]
+      columns: [title, data.priority]
+    - title: TUI work
+      filter: '"tui" in (data.tags ?? [])'
+      columns: [title, data.status]
+    - title: Recently created
+      # Dates are optional; this view stays empty until documents have created_at.
+      filter: data.created_at != nil and date(data.created_at) > now() - duration("168h")
+      columns: [title, data.created_at]
 ---
 # Working with means issues
 

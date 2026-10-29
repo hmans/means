@@ -41,6 +41,9 @@ func (m *tuiModel) geometry() tuiGeometry {
 	buttons := []struct{ label, hint, key string }{
 		{"Search", "/", "/"}, {"Filter", "f", "f"}, {"Refresh", "r", "r"},
 	}
+	if m.app != nil && len(m.app.Views) > 0 {
+		buttons = append(buttons, struct{ label, hint, key string }{"Views ▾", "v", "v"})
+	}
 	for _, item := range buttons {
 		b := tuiControl(item.label, item.hint, item.key, m.width >= 60)
 		width := b.w
@@ -109,6 +112,32 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 	if g.small {
 		return nil
 	}
+	if m.mode == "views" && !m.loading {
+		menu := m.viewMenu()
+		if menu.contains(mouse.X, mouse.Y) {
+			if wheel {
+				delta := 0
+				if mouse.Button == tea.MouseWheelUp {
+					delta = -3
+				}
+				if mouse.Button == tea.MouseWheelDown {
+					delta = 3
+				}
+				m.choiceTop = max(0, min(max(0, len(m.choices)-m.pickerHeight()), m.choiceTop+delta))
+			} else if mouse.Button == tea.MouseLeft && menu.inside(mouse.X, mouse.Y) && mouse.Y >= menu.y+2 {
+				index := m.choiceTop + mouse.Y - menu.y - 2
+				if index < len(m.choices) {
+					m.choice = index
+					return m.choose()
+				}
+			}
+			return nil
+		}
+		if !wheel && mouse.Button == tea.MouseLeft {
+			m.mode = "documents"
+		}
+		return nil // Dismiss without clicking through to the underlying document.
+	}
 	if !wheel {
 		if mouse.Button != tea.MouseLeft {
 			return nil
@@ -140,7 +169,7 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 		return nil
 	}
 	if !wheel && g.search.contains(mouse.X, mouse.Y) {
-		if m.picking() {
+		if m.picking() && m.mode != "views" {
 			return nil
 		}
 		if m.mode != "search" {
@@ -162,7 +191,7 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 			return nil
 		}
 	}
-	if m.mode == "fields" || m.mode == "values" {
+	if m.picking() {
 		if wheel {
 			m.choiceTop = max(0, min(max(0, len(m.choices)-m.pageHeight()), m.choiceTop+delta))
 			return nil
@@ -301,7 +330,7 @@ func (m *tuiModel) View() tea.View {
 		if m.mode == "search" {
 			query = m.input
 		}
-		if m.picking() {
+		if m.picking() && m.mode != "views" {
 			query = m.pickerQuery
 			searchTitle = "Find a field"
 			if m.mode == "values" {
@@ -309,7 +338,7 @@ func (m *tuiModel) View() tea.View {
 			}
 		}
 		search := terminalCell(query)
-		if m.mode == "search" || m.picking() {
+		if m.mode == "search" || (m.picking() && m.mode != "views") {
 			search += "█"
 			// Keep the insertion point visible for long searches.
 			width := max(1, g.search.w-4)
@@ -318,7 +347,7 @@ func (m *tuiModel) View() tea.View {
 			search = tuiMuted.Render("Search titles and bodies…  / or click to type")
 		}
 		// The search field is one bordered row; its bottom border has no counter.
-		rows := tuiPane(g.search, searchTitle, []string{search}, m.mode == "search" || m.picking(), "")
+		rows := tuiPane(g.search, searchTitle, []string{search}, m.mode == "search" || (m.picking() && m.mode != "views"), "")
 		copy(frame[g.search.y:], rows)
 		keys := make([]string, 0, len(m.filters))
 		for key := range m.filters {
@@ -337,8 +366,17 @@ func (m *tuiModel) View() tea.View {
 		if len(filters) > 0 {
 			status = tuiMuted.Render("Filters ") + strings.Join(filters, " ")
 		}
+		if m.view != "" {
+			status = tuiAccent.Render(terminalCell(m.view)) + "  " + status
+		}
+		if len(m.viewErrors) > 0 {
+			status += tuiMuted.Render(fmt.Sprintf(" · %d view errors (d)", len(m.viewErrors)))
+		}
 		if m.loading {
 			status = tuiMuted.Render("Loading…")
+		}
+		if m.evaluating {
+			status += tuiMuted.Render(" · Updating view…")
 		}
 		if m.err != nil {
 			status = tuiMuted.Render("Error (previous results; r retries): " + terminalCell(m.err.Error()))
@@ -378,18 +416,27 @@ func (m *tuiModel) View() tea.View {
 			if len(lines) == 0 {
 				lines = []string{"No diagnostics. Your documents are ready to browse."}
 			}
-			body = tuiPane(g.body, fmt.Sprintf("Diagnostics / %d", len(m.diagnostics)), lines, true, tuiPosition(m.offset, m.pageHeight(), total))
+			body = tuiPane(g.body, fmt.Sprintf("Diagnostics / %d", len(m.diagnostics)+len(m.viewErrors)), lines, true, tuiPosition(m.offset, m.pageHeight(), total))
 			help = " Wheel or ↑↓ to scroll"
 		default:
 			var lines []string
+			view := m.currentView()
 			for i := m.listTop; i < min(len(m.docs), m.listTop+m.pageHeight()); i++ {
 				doc := m.docs[i]
-				lines = append(lines, tuiDocumentRow(doc.ID, doc.Frontmatter["title"].(string), i == m.selected, g.list.w-4))
+				if view != nil {
+					lines = append(lines, tuiAppRow(doc, view.Columns, i == m.selected, g.list.w-4))
+				} else {
+					lines = append(lines, tuiDocumentRow(doc.ID, doc.Frontmatter["title"].(string), i == m.selected, g.list.w-4))
+				}
 			}
 			if len(lines) == 0 {
 				lines = []string{"No matching documents.", "Clear the search or data filters."}
 			}
-			list := tuiPane(g.list, "Documents", lines, !m.previewFocus && m.mode != "search", tuiPosition(m.listTop, m.pageHeight(), len(m.docs)))
+			listTitle := "Documents"
+			if view != nil {
+				listTitle = strings.Join(view.Columns, " / ")
+			}
+			list := tuiPane(g.list, listTitle, lines, !m.previewFocus && m.mode != "search", tuiPosition(m.listTop, m.pageHeight(), len(m.docs)))
 			preview := m.preview[min(m.offset, len(m.preview)):]
 			if len(m.docs) == 0 {
 				preview = []string{"Select a document to read it here."}
@@ -426,7 +473,7 @@ func (m *tuiModel) View() tea.View {
 			if b.toolbar {
 				style = tuiButtonStyle
 			}
-			active := (b.key == "/" && m.mode == "search") || (b.key == "f" && (m.mode == "fields" || m.mode == "values")) || (b.key == "d" && m.mode == "diagnostics")
+			active := (b.key == "/" && m.mode == "search") || (b.key == "f" && (m.mode == "fields" || m.mode == "values")) || (b.key == "d" && m.mode == "diagnostics") || (b.key == "v" && (m.mode == "views" || m.view != ""))
 			if active {
 				style = style.Foreground(lipgloss.Color("231")).Background(lipgloss.Color("24"))
 			}
@@ -441,6 +488,9 @@ func (m *tuiModel) View() tea.View {
 			label += style.Render(" ")
 			line := tuiFit(frame[b.y], m.width)
 			frame[b.y] = ansi.Cut(line, 0, b.x) + label + ansi.Cut(line, b.x+b.w, m.width)
+		}
+		if m.mode == "views" {
+			m.renderViewMenu(frame)
 		}
 	}
 	for i, line := range frame {
