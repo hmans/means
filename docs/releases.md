@@ -34,8 +34,19 @@ chattocorp/sweet-release#47.
 
 ## Record a change
 
-Run `mise sweet change .` and commit the generated `.sweet/*.md` file with the
-code. For non-interactive use:
+Add a release note only for a meaningful user-facing change: a new capability,
+a bug fix that affects use, a significant performance improvement, or a
+compatibility change that requires user action. Describe what changes for users
+and consolidate related work into one note.
+
+Repository chores do not need notes. Skip instruction updates, README cleanup,
+issue bookkeeping, test-only changes, internal refactors, and CI/release
+maintenance without a meaningful user-facing effect. For example, adding a
+Homebrew installation option merits a note; changing the workflow that publishes
+it does not, unless users need to know about a resulting behavior change.
+
+For a qualifying change, run `mise sweet change .` and commit the generated
+`.sweet/*.md` file with the code. For non-interactive use:
 
 ```sh
 printf 'Describe the user-visible change.\n' | mise sweet change . --type fix --stdin

@@ -110,9 +110,16 @@ following its [workflow](issues/MEANS.md).
 - Use the Go toolchain configured in `mise.toml`.
 - Keep changes small and focused on the current milestone. Avoid building
   speculative abstractions or infrastructure for future features.
-- Record user-visible changes with `mise sweet change .` and commit the generated
-  `.sweet/` note with the code. See [docs/releases.md](docs/releases.md) for release
-  policies and the tagging and publishing workflow.
+- Add a Sweet release note only for a meaningful user-facing change: a new
+  capability, a bug fix that affects use, a significant performance improvement,
+  or a compatibility change that requires user action. Use `mise sweet change .`
+  and commit the generated `.sweet/` note with the code. Describe the user impact,
+  not the implementation steps, and consolidate related changes into one note.
+  Repository chores do not need release notes. Do not add notes for instruction
+  updates, README cleanup, issue bookkeeping, test-only changes, internal
+  refactors, or CI/release maintenance without a meaningful user-facing effect.
+  See [docs/releases.md](docs/releases.md) for release policies and the tagging
+  and publishing workflow.
 - Keep document operations independent of CLI presentation so other interfaces
   can reuse the same behavior.
 - Once Go code exists, format it with `gofmt` and run relevant tests using
