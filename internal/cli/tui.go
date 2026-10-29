@@ -164,6 +164,8 @@ type tuiModel struct {
 	listWidth          int // Preferred width in columns; zero uses the default.
 	draggingDivider    bool
 	dividerGrabOffset  int
+	mouseX, mouseY     int
+	mousePresent       bool
 	all, docs          []collection.SearchHit
 	base               []collection.SearchHit // Loaded documents matching the data filters.
 	diagnostics        []collection.Diagnostic
@@ -349,9 +351,11 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.filterChoices(m.pickerQuery + terminalCell(msg.Content))
 		}
 	case tea.MouseClickMsg:
+		m.mouseX, m.mouseY, m.mousePresent = msg.X, msg.Y, true
 		m.draggingDivider = false
 		return m, m.mouse(msg.Mouse(), false)
 	case tea.MouseMotionMsg:
+		m.mouseX, m.mouseY, m.mousePresent = msg.X, msg.Y, true
 		if m.draggingDivider && msg.Button == tea.MouseLeft {
 			m.resizeDivider(msg.X)
 		}
@@ -361,6 +365,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.draggingDivider = false
 		}
 	case tea.MouseWheelMsg:
+		m.mouseX, m.mouseY, m.mousePresent = msg.X, msg.Y, true
 		return m, m.mouse(msg.Mouse(), true)
 	case tea.KeyPressMsg:
 		m.draggingDivider = false

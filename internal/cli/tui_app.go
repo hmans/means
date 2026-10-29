@@ -147,12 +147,14 @@ func (m *tuiModel) openViews() {
 	m.choiceTop = tuiKeepVisible(m.choice, 0, m.pickerHeight(), len(m.choices))
 }
 
-func tuiAppRow(doc collection.SearchHit, columns []string, selected bool, width int) string {
+func tuiAppRow(doc collection.SearchHit, columns []string, selected, hovered bool, width int) string {
 	prefix := "  "
 	rowStyle := lipgloss.NewStyle()
 	if selected {
 		prefix = "> "
-		rowStyle = rowStyle.Background(lipgloss.Color("236"))
+	}
+	if selected || hovered {
+		rowStyle = rowStyle.Background(tuiDocumentBackground(selected))
 	}
 	remaining := max(0, width-2-2*(len(columns)-1))
 	weight := len(columns)
@@ -178,10 +180,10 @@ func tuiAppRow(doc collection.SearchHit, columns []string, selected bool, width 
 		}
 		space := remaining * units / weight
 		remaining, weight = remaining-space, weight-units
-		if selected {
-			style = style.Background(lipgloss.Color("236"))
+		if selected || hovered {
+			style = style.Background(tuiDocumentBackground(selected))
 		}
 		parts = append(parts, style.Render(tuiFit(terminalCell(text), space)))
 	}
-	return rowStyle.Render(tuiFit(prefix+strings.Join(parts, "  "), width))
+	return tuiFillDocumentRow(rowStyle.Render(prefix)+strings.Join(parts, rowStyle.Render("  ")), rowStyle, width)
 }

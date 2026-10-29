@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"image/color"
 	"os"
 	"sort"
 	"strings"
@@ -32,6 +33,7 @@ type tuiGeometry struct {
 	search, body, list, preview tuiRect
 	buttons                     []tuiButton
 	split, small                bool
+	status                      bool
 }
 
 func (m *tuiModel) geometry() tuiGeometry {
@@ -55,7 +57,12 @@ func (m *tuiModel) geometry() tuiGeometry {
 		x += width + 1
 	}
 	g.search = tuiRect{0, y + buttonHeight, m.width, 3}
-	g.body = tuiRect{0, g.search.y + 4, m.width, max(3, m.height-g.search.y-5)}
+	g.status = len(m.filters) > 0 || m.view != "" || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.query != "" || (m.mode == "search" && m.input != "") || m.picking()
+	bodyY := g.search.y + 3
+	if g.status {
+		bodyY++
+	}
+	g.body = tuiRect{0, bodyY, m.width, max(3, m.height-bodyY-1)}
 	g.list, g.preview = g.body, g.body
 	if g.split {
 		g.list.w = (m.width - 1) / 2
@@ -284,19 +291,47 @@ func tuiSelectedRow(text string, selected bool, width int) string {
 	return text
 }
 
-func tuiDocumentRow(id, title string, selected bool, width int) string {
+func tuiDocumentRow(id, title string, selected, hovered bool, width int) string {
 	prefix := "  "
 	idStyle := tuiAccent
 	titleStyle := tuiTitle
 	rowStyle := lipgloss.NewStyle()
 	if selected {
 		prefix = "> "
-		background := lipgloss.Color("236")
+	}
+	if selected || hovered {
+		background := tuiDocumentBackground(selected)
 		rowStyle = rowStyle.Bold(true).Background(background)
 		idStyle = idStyle.Background(background)
 		titleStyle = titleStyle.Background(background)
 	}
-	return rowStyle.Render(tuiFit(prefix+idStyle.Render(terminalCell(id))+"  "+titleStyle.Render(terminalCell(title)), width))
+	return tuiFillDocumentRow(rowStyle.Render(prefix)+idStyle.Render(terminalCell(id))+rowStyle.Render("  ")+titleStyle.Render(terminalCell(title)), rowStyle, width)
+}
+
+func tuiFillDocumentRow(text string, style lipgloss.Style, width int) string {
+	text = ansi.Truncate(text, width, style.Render("…"))
+	return text + style.Render(strings.Repeat(" ", max(0, width-ansi.StringWidth(text))))
+}
+
+func tuiDocumentBackground(selected bool) color.Color {
+	if selected {
+		return lipgloss.Color("24")
+	}
+	return lipgloss.Color("236")
+}
+
+func (m *tuiModel) hoveredDocument() int {
+	g := m.geometry()
+	if !m.mousePresent || g.small || m.draggingDivider || m.loading ||
+		(m.mode != "documents" && m.mode != "search") || (!g.split && m.previewFocus) ||
+		!g.list.inside(m.mouseX, m.mouseY) {
+		return -1
+	}
+	index := m.listTop + m.mouseY - g.list.y - 1
+	if index >= len(m.docs) {
+		return -1
+	}
+	return index
 }
 
 func tuiChoiceRow(choice tuiChoice, selected bool, width int) string {
@@ -382,7 +417,7 @@ func (m *tuiModel) View() tea.View {
 					chip.Foreground(lipgloss.Color("245")).Render(" "+m.filterOperator(key)+" ")+
 					chip.Foreground(lipgloss.Color("99")).Bold(true).Render(terminalCell(tuiValueLabel(m.filters[key]))+" "))
 		}
-		status := tuiMuted.Render("No data filters")
+		status := ""
 		if len(filters) > 0 {
 			status = tuiMuted.Render("Filters ") + strings.Join(filters, " ")
 		}
@@ -401,7 +436,9 @@ func (m *tuiModel) View() tea.View {
 		if m.err != nil {
 			status = tuiMuted.Render("Error (previous results; r retries): " + terminalCell(m.err.Error()))
 		}
-		frame[g.body.y-1] = " " + status
+		if g.status {
+			frame[g.body.y-1] = " " + status
+		}
 		help := " Wheel scroll · ↑↓ move"
 		var body []string
 		switch m.mode {
@@ -441,12 +478,13 @@ func (m *tuiModel) View() tea.View {
 		default:
 			var lines []string
 			view := m.currentView()
+			hovered := m.hoveredDocument()
 			for i := m.listTop; i < min(len(m.docs), m.listTop+m.pageHeight()); i++ {
 				doc := m.docs[i]
 				if view != nil {
-					lines = append(lines, tuiAppRow(doc, view.Columns, i == m.selected, g.list.w-4))
+					lines = append(lines, tuiAppRow(doc, view.Columns, i == m.selected, i == hovered, g.list.w-4))
 				} else {
-					lines = append(lines, tuiDocumentRow(doc.ID, doc.Frontmatter["title"].(string), i == m.selected, g.list.w-4))
+					lines = append(lines, tuiDocumentRow(doc.ID, doc.Frontmatter["title"].(string), i == m.selected, i == hovered, g.list.w-4))
 				}
 			}
 			if len(lines) == 0 {
@@ -457,6 +495,16 @@ func (m *tuiModel) View() tea.View {
 				listTitle = strings.Join(view.Columns, " / ")
 			}
 			list := tuiPane(g.list, listTitle, lines, !m.previewFocus && m.mode != "search", tuiPosition(m.listTop, m.pageHeight(), len(m.docs)))
+			for row := 1; row < len(list)-1; row++ {
+				index := m.listTop + row - 1
+				if index >= len(m.docs) || (index != m.selected && index != hovered) {
+					continue
+				}
+				background := lipgloss.NewStyle().Background(tuiDocumentBackground(index == m.selected))
+				list[row] = ansi.Cut(list[row], 0, 1) +
+					background.Render(" ") + lines[row-1] + background.Render(" ") +
+					ansi.Cut(list[row], g.list.w-1, g.list.w)
+			}
 			preview := m.preview[min(m.offset, len(m.preview)):]
 			if len(m.docs) == 0 {
 				preview = []string{"Select a document to read it here."}
@@ -522,6 +570,6 @@ func (m *tuiModel) View() tea.View {
 	}
 	v := tea.NewView(content)
 	v.AltScreen = true
-	v.MouseMode = tea.MouseModeCellMotion
+	v.MouseMode = tea.MouseModeAllMotion
 	return v
 }

@@ -239,7 +239,9 @@ default alignment. Smaller terminals use compact toolbar labels;
 below 32 columns or 12 rows, resize the terminal to browse.
 
 In terminals that support mouse reporting, click toolbar buttons or the search
-field, click a document to select it, and click the preview to focus it. The wheel
+field, click a document to select it, and click the preview to focus it. Hovered
+documents have a subtle gray background; the selected document has a blue background.
+The empty data-filter row is hidden. The wheel
 scrolls the pane under the pointer without changing the selected document or
 keyboard focus. Drag the gap or adjacent borders between the document list and
 preview to resize the panes. Each pane stays at least 32 columns wide; the chosen

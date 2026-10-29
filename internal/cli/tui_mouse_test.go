@@ -88,6 +88,44 @@ func TestTUIDividerDrag(t *testing.T) {
 	}
 }
 
+func TestTUIDocumentHoverAndEmptyFilterRow(t *testing.T) {
+	c := tuiTestCollection(t)
+	for i := 0; i < 30; i++ {
+		tuiCreate(t, c, fmt.Sprintf("Document %02d", i), map[string]any{})
+	}
+	m := newTUIModel(c.Path)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 26})
+	tuiRun(t, m, m.Init())
+	g := m.geometry()
+	if g.status || g.body.y != g.search.y+g.search.h || strings.Contains(m.View().Content, "No data filters") {
+		t.Fatal("empty filter row still occupies space")
+	}
+	m.Update(tea.MouseMotionMsg{X: 4, Y: g.list.y + 2})
+	if m.hoveredDocument() != 1 || m.selected != 0 || m.previewFocus {
+		t.Fatal("hover should target a row without changing selection or focus")
+	}
+	tuiWheel(m, 4, g.list.y+2, true)
+	if m.hoveredDocument() != 4 {
+		t.Fatal("hover did not follow scrolled content")
+	}
+	m.Update(tea.MouseMotionMsg{X: g.preview.x + 4, Y: g.preview.y + 2})
+	if m.hoveredDocument() != -1 {
+		t.Fatal("hover remained after leaving list")
+	}
+	m.filters["status"] = "open"
+	if !m.geometry().status || m.geometry().body.y != g.body.y+1 {
+		t.Fatal("active filter row was not restored")
+	}
+	m.mode = "views"
+	m.Update(tea.MouseMotionMsg{X: 4, Y: m.geometry().list.y + 2})
+	if m.hoveredDocument() != -1 {
+		t.Fatal("dropdown should suppress document hover")
+	}
+	if tuiDocumentRow("abcde", "Title", true, false, 30) != tuiDocumentRow("abcde", "Title", true, true, 30) {
+		t.Fatal("hover changed selected row styling")
+	}
+}
+
 func TestTUIMouseSelectionScrollAndFocus(t *testing.T) {
 	c := tuiTestCollection(t)
 	for i := 0; i < 30; i++ {
@@ -254,7 +292,7 @@ func TestTUIFramedLayoutBounds(t *testing.T) {
 		for _, mode := range []string{"documents", "search", "fields", "values", "diagnostics"} {
 			m.mode = mode
 			v := m.View()
-			if v.MouseMode != tea.MouseModeCellMotion {
+			if v.MouseMode != tea.MouseModeAllMotion {
 				t.Fatal("mouse reporting is disabled")
 			}
 			lines := strings.Split(v.Content, "\n")
