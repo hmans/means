@@ -2,4 +2,4 @@
 type: feature
 ---
 
-Generate Homebrew casks and publish stable releases to hmans/homebrew-tap with safe retries.
+Install means with Homebrew using `brew install --cask hmans/tap/means`.

@@ -1,68 +1,56 @@
 # means
 
-means is a general-purpose tool for managing collections of Markdown documents
-with structured data and schemas. Use it for issue tracking, research notes,
-agent memory, or other document-based workflows.
+means manages collections of Markdown documents with structured metadata.
+Use it for issue tracking, research notes, agent memory, and other document-based
+workflows. It ships as a single Go binary, with no managed daemon.
 
-A collection is a directory of documents and a `MEANS.md` containing collection identity,
-workflow guidance, and a JSON Schema expressed in YAML frontmatter. The files are the source of truth: people and other tools can edit them
-directly.
+A collection is a directory of Markdown files with YAML frontmatter. Its
+`MEANS.md` defines a JSON Schema for application data and guidance for working
+with the collection. The files are the source of truth: edit them with means,
+your editor, or other tools.
 
-Each document has a Markdown body and YAML frontmatter. Means generates its ID;
-the caller supplies its title. Application fields live under `data` and are checked against the
-collection's JSON Schema. Agents and applications can use the CLI with JSON
-input and output, or connect to one collection through the optional stdio MCP
-server. Ordinary commands run to completion; no daemon is needed.
+means is in early development. It includes:
 
-means is in early development. It currently supports collection initialization,
-validated schema replacement, creating and reading documents, hash-checked
-updates and deletion, listing, ranked full-text search with data filters,
-literal search, terminal tables, Markdown-rendered document viewing with `show`,
-an interactive document browser with `tui`,
-collection diagnostics, and opt-in OpenAI embeddings with semantic search.
-Means creates a commented user config at `~/.config/means/config.yaml` (or under
-`XDG_CONFIG_HOME`); edit it to enable embeddings on this machine.
+- Document creation, editing, and deletion with stable IDs and stale-write checks.
+- Full-text search, metadata filters, and opt-in semantic search.
+- An interactive terminal browser with Markdown previews.
+- Schema validation and collection diagnostics.
+- JSON input/output and a stdio MCP server for applications and agents.
 
-## Try it
+## Install
 
-Homebrew publishing is configured for `hmans/homebrew-tap`. After the first
-release through this workflow, install with `brew install --cask hmans/tap/means`.
-See [release setup](docs/releases.md) for publishing requirements.
+Homebrew installation will be available after the first tap release:
 
-Run `means help init` for collection setup and `means help mcp` for MCP integration.
-The same command help serves people, scripts, and agents.
-Run `means help agents` for a built-in guide to collection structure and writing
-`MEANS.md`, matched to the installed version.
+```sh
+brew install --cask hmans/tap/means
+```
 
-From this checkout, use the Go toolchain configured by [mise](https://mise.jdx.dev/):
+To build from this checkout, install [mise](https://mise.jdx.dev/), then run:
 
 ```sh
 mise install
-mise means init --path ./memory
-mise means create --path ./memory --input - --json <<'JSON'
-{"frontmatter":{"title":"Use Go for means","data":{"tags":["decision"]}},"body":"We chose Go for single-binary distribution.\n"}
-JSON
-mise means list --path ./memory --json
+mise deploy
 ```
 
-Run `mise deploy` to build this checkout and install `means` into `~/.local/bin`.
-Add that directory to your `PATH` to run `means` from any directory. Run
-`mise deploy` again to replace the installed binary with the current checkout.
+This installs `means` into `~/.local/bin`; add that directory to your `PATH`.
 
-`init` writes `MEANS.md` with a starter schema that accepts optional `tags`.
-Edit it to fit your application, or supply a complete file with `init --input FILE`.
-Use `init --schema FILE` to supply only a JSON Schema. Use
-the ID returned by `create` to read and update a document; filenames can change
-without changing identity.
+## Try it
 
-See the [usage guide](docs/guide.md) for collection layout, commands, updates,
-search, MCP setup, and migration notes. `mise means` shows a banner and available
-commands. `mise means help` gives a short introduction.
-`mise means help <command>` and `mise means <command> --help` give the same usage
-help; `--json` changes the format, not the content.
-Use `means info` to inspect a collection and `means edit <id>` to edit a document
-with `$VISUAL` or `$EDITOR`.
-Run `means tui --path ./issues` to browse documents, preview Markdown, and filter data.
+Create a collection and add your first note:
+
+```sh
+means init --path ./notes
+means create --path ./notes --title "My first note"
+means list --path ./notes
+means tui --path ./notes
+```
+
+Edit `notes/MEANS.md` to define your collection's schema and workflow.
+Use `means edit <id> --path ./notes` to open a note in your editor.
+
+See the [usage guide](docs/guide.md) for collection design, search, and MCP setup.
+Run `means help <command>` for command details, or `means help agents` for a
+guide to using means from an agent.
 
 ## This repository
 
@@ -70,3 +58,10 @@ means tracks its own work in the [issues collection](issues/), using its
 [configuration and workflow](issues/MEANS.md). Contributors
 should read [AGENTS.md](AGENTS.md). Run `mise test` for the Go test suite.
 See [releasing means](docs/releases.md) to record changes and prepare releases.
+
+## License
+
+Copyright 2026 the means contributors.
+
+The project's source code, documentation, examples, and configuration are
+licensed under the [Apache License, Version 2.0](LICENSE) (`Apache-2.0`).
