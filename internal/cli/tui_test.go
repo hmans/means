@@ -505,7 +505,7 @@ func TestTUIPickerTypeAhead(t *testing.T) {
 	}
 	m.openFields()
 	m.filterChoices("num")
-	tuiRun(t, m, tuiClickButton(t, m, "r"))
+	tuiPollNow(t, m)
 	if m.pickerQuery != "num" || len(m.choices) != 1 {
 		t.Fatal("refresh dropped picker query")
 	}
@@ -597,7 +597,7 @@ func TestTUIArrayItemFilters(t *testing.T) {
 	m.openValues()
 	m.filterChoices("cli")
 	tuiCreate(t, c, "New CLI", map[string]any{"tags": []any{"cli", "cli"}})
-	tuiRun(t, m, tuiClickButton(t, m, "r"))
+	tuiPollNow(t, m)
 	if m.choices[0].count == nil || *m.choices[0].count != 3 {
 		t.Fatal("refresh did not update document count")
 	}
