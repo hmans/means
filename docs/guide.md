@@ -3,17 +3,20 @@
 This guide covers the file format, detailed workflows, and implementation limits.
 `means <command> --help` and `means help <command>` show the same command help,
 including nested commands such as `schema set`. Adding `--json` returns the same
-description and usage in structured form; there is no separate audience-specific guide.
+description and usage in structured form; command syntax has one shared reference.
 
 Run `means` for help pointers and a command list grouped into documents,
 collection management, and help/integrations. `means help` and `means --help` show
 the same short introduction. `means help init` covers setup; `means help mcp`
 covers MCP integration. Successful initialization points to `means help create`.
 
-The old `means help humans`, `means help agents`, and `means agents` routes are
-hidden compatibility aliases for the overview. The agents aliases also accept
-a command and show its canonical help. Their JSON now uses `command`, `description`,
-and `usage`, like all other help, instead of the former `guide` field.
+`means help agents` serves a concise collection authoring guide embedded in the
+installed binary. It covers collection structure, `MEANS.md`, schema and workflow
+design, and agent discovery, without requiring a collection or user configuration.
+Its JSON uses `command`, `description`, and `usage`, like other help; `description`
+contains the same guide as text output. `means agents` is a hidden alias for this
+guide. Both agents routes still accept a command to show its canonical help.
+The hidden `means help humans` alias shows the overview.
 
 ## Collections
 

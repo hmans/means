@@ -1,17 +1,21 @@
 package cli
 
 import (
+	_ "embed"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// Keep old audience-specific routes as aliases for the canonical help.
+//go:embed agents.md
+var agentsGuide string
+
 func newAgentsCommand(opts *options) *cobra.Command {
 	return &cobra.Command{
-		Use:    "agents [command]",
-		Short:  "Compatibility alias for help",
-		Hidden: true,
+		Use:   "agents [command]",
+		Short: "Learn collection structure and MEANS.md authoring",
+		Long:  strings.TrimSpace(agentsGuide),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				target, remaining, err := cmd.Root().Find(args)
@@ -24,8 +28,8 @@ func newAgentsCommand(opts *options) *cobra.Command {
 				target.InitDefaultHelpFlag()
 				return opts.writeHelp(target)
 			}
-			cmd.Root().InitDefaultHelpFlag()
-			return opts.writeHelp(cmd.Root())
+			cmd.InitDefaultHelpFlag()
+			return opts.writeHelp(cmd)
 		},
 	}
 }

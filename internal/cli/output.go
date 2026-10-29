@@ -19,6 +19,7 @@ Get started:
 
 Use --path to select a collection (default: the current directory).
 Use "means <command> --help" for command details and examples.
+Use "means help agents" for collection structure and MEANS.md authoring.
 Use "means help mcp" for MCP integration guidance.
 
 --json returns the same information as structured JSON. Successful command results
@@ -34,7 +35,7 @@ func (o *options) writeBanner(cmd *cobra.Command) error {
 	}
 	commands := []entry{}
 	var text strings.Builder
-	fmt.Fprintf(&text, "means — %s\n\nRun \"means help\" for usage guidance.\nRun \"means help mcp\" for MCP integration guidance.\n\nAvailable commands:\n", cmd.Short)
+	fmt.Fprintf(&text, "means — %s\n\nRun \"means help\" for usage guidance.\nRun \"means help agents\" for collection structure and MEANS.md authoring.\nRun \"means help mcp\" for MCP integration guidance.\n\nAvailable commands:\n", cmd.Short)
 	for _, group := range cmd.Groups() {
 		fmt.Fprintf(&text, "\n%s\n", group.Title)
 		for _, child := range cmd.Commands() {
@@ -53,7 +54,7 @@ func (o *options) writeBanner(cmd *cobra.Command) error {
 		Description string   `json:"description"`
 		Commands    []entry  `json:"commands"`
 		NextSteps   []string `json:"next_steps"`
-	}{cmd.Name(), cmd.Short, commands, []string{"means help", "means help mcp"}}, text.String())
+	}{cmd.Name(), cmd.Short, commands, []string{"means help", "means help agents", "means help mcp"}}, text.String())
 }
 
 func embeddingProgress(cmd *cobra.Command) func(string) {
