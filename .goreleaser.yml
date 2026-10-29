@@ -30,6 +30,19 @@ archives:
 checksum:
   name_template: checksums.txt
 
+homebrew_casks:
+  - name: means
+    description: Manage Markdown collections with typed frontmatter and local schemas
+    homepage: https://github.com/hmans/means
+    # The workflow publishes this exact file after the release assets are available.
+    skip_upload: true
+    repository:
+      owner: hmans
+      name: homebrew-tap
+    url:
+      template: "https://github.com/hmans/means/releases/download/v{{ .Version }}/{{ .ArtifactName }}"
+    binaries: [means]
+
 snapshot:
   version_template: '{{ if index .Env "RELEASE_VERSION" }}{{ .Env.RELEASE_VERSION }}{{ else }}0.0.0-SNAPSHOT-{{ .ShortCommit }}{{ end }}'
 

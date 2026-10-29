@@ -19,6 +19,14 @@ read/write. This token lets release PRs trigger CI and lets pushed tags trigger
 the Release workflow. Both shared calls receive it as `release-token`.
 The Release workflow uses `GITHUB_TOKEN` to publish archives and notes.
 
+Add `HOMEBREW_TAP_TOKEN` as a repository Actions secret in `hmans/means`.
+Use a fine-grained personal token scoped to `hmans/homebrew-tap`, with
+Contents read/write permission. The tap must have a default branch and permit
+this token to push directly. The built-in `GITHUB_TOKEN` cannot write to the tap.
+Set the secret interactively with `gh secret set HOMEBREW_TAP_TOKEN --repo hmans/means`;
+do not put the token in a file or commit it. A missing or expired token fails the
+Homebrew job but leaves the GitHub Release available.
+
 Update the shared workflow references in `bump.yml` and `ci.yml` together.
 Use a merged commit SHA or an immutable `workflows-vX.Y.Z` tag. Both calls pin
 `01911da0f43f6147d1918c5b4e776abcdd9b7c3a`, the merged revision of
@@ -76,9 +84,13 @@ builds Linux, macOS, and Windows binaries for amd64 and arm64. Archives use
 tar.gz on Linux/macOS and ZIP on Windows, with `checksums.txt` for SHA-256 hashes.
 The linker sets the version reported by `means version`.
 
+GoReleaser also generates `dist/homebrew/Casks/means.rb` with download URLs and
+checksums for macOS and Linux on amd64 and arm64. Its direct tap upload is disabled;
+the workflow publishes the cask as a release asset alongside the archives.
+
 The workflow verifies the Linux binary version and all archive checksums, then
-uses `gh release create --verify-tag` to create a draft named `means <version>`,
-upload archives and checksums, and publish. Build or upload failures leave the release
+uses `gh release create --verify-tag` to upload the assets and publish a release
+named `means <version>`. Build or upload failures leave the release
 unpublished. Versions with prerelease suffixes are marked as
 prereleases. The workflow uses the built-in `GITHUB_TOKEN` with `contents: write`;
 release PR creation and tag pushes use `RELEASE_PR_TOKEN` as described above.
@@ -89,6 +101,21 @@ tags are kept and missing tags are pushed. For failed publication, rerun the
 tag's Release run. It rebuilds the archives, recreates any incomplete draft,
 and skips publication if the release is already published. Other tags' releases
 are untouched.
+
+After a stable release, the separate `homebrew` job downloads the published
+`means.rb` and commits it to `Casks/means.rb` in `hmans/homebrew-tap`. Prereleases do not update
+the tap. Tap updates are serialized, unchanged files create no commit, and retries
+of older releases cannot replace a newer cask. The job uses the published cask so
+its checksums always refer to the original assets, even if a retry rebuilds binaries.
+
+If the tap update fails, fix the token or push restriction and rerun the failed
+Homebrew job. There is no need to rebuild or republish the GitHub Release.
+Releases created before this workflow do not contain `means.rb`; publish a new
+release to start tap distribution.
+
+After the first successful tap publication, install with
+`brew install --cask hmans/tap/means`. Use `brew upgrade --cask means` for updates.
+This tap is separate from `hmans/homebrew-beans`.
 
 For local checks, use `mise run release:check` to validate the GoReleaser config
 and `mise run release:snapshot` to run tests, vet, and all six builds. Snapshots
