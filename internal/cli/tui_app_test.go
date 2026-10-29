@@ -194,6 +194,12 @@ func TestTUIAppDropdownInteraction(t *testing.T) {
 	m := newTUIModel(c.Path)
 	tuiRun(t, m, m.Init())
 	m.width = 120
+	before := m.geometry().body
+	m.openViews()
+	if m.geometry().body != before {
+		t.Fatal("opening dropdown shifted document panes")
+	}
+	tuiPress(m, tea.KeyEsc)
 	m.view = "View 12"
 	m.offset = 3
 	m.openViews()

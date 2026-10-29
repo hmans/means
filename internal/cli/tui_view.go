@@ -44,7 +44,7 @@ func (m *tuiModel) geometry() tuiGeometry {
 		{"Search", "/", "/"}, {"Filter", "f", "f"},
 	}
 	if m.app != nil && len(m.app.Views) > 0 {
-		buttons = append(buttons, struct{ label, hint, key string }{"Views ▾", "v", "v"})
+		buttons = append(buttons, struct{ label, hint, key string }{"Views", "v", "v"})
 	}
 	for _, item := range buttons {
 		b := tuiControl(item.label, item.hint, item.key, m.width >= 60)
@@ -57,7 +57,7 @@ func (m *tuiModel) geometry() tuiGeometry {
 		x += width + 1
 	}
 	g.search = tuiRect{0, y + buttonHeight, m.width, 3}
-	g.status = len(m.filters) > 0 || m.view != "" || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.query != "" || (m.mode == "search" && m.input != "") || m.picking()
+	g.status = len(m.filters) > 0 || m.view != "" || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.query != "" || (m.mode == "search" && m.input != "") || m.mode == "fields" || m.mode == "values"
 	bodyY := g.search.y + 3
 	if g.status {
 		bodyY++
