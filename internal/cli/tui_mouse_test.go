@@ -209,7 +209,7 @@ func TestTUIMouseToolbarSearchAndFilters(t *testing.T) {
 	if m.mode != "documents" || m.query != "Alpha" {
 		t.Fatal("document click did not commit live search")
 	}
-	tuiRun(t, m, tuiClickButton(t, m, "c"))
+	tuiRun(t, m, tuiClickButton(t, m, "x"))
 	tuiClickButton(t, m, "f")
 	tuiClick(m, 3, m.geometry().body.y+1)
 	if m.mode != "values" || m.field != "status" {
@@ -337,7 +337,7 @@ func TestTUIContextualControls(t *testing.T) {
 			if b.toolbar && b.key != "/" && b.key != "f" && b.key != "r" {
 				t.Fatalf("unexpected toolbar action: %s", b.key)
 			}
-			if b.key == "c" {
+			if b.key == "x" {
 				clear = true
 				if b.y != g.body.y-1 {
 					t.Fatal("Clear is not beside filters")

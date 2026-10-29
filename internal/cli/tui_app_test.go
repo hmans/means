@@ -52,8 +52,11 @@ func TestTUIAppViewsAndReload(t *testing.T) {
 		t.Fatal("view filter failed")
 	}
 	plain := ansi.Strip(m.View().Content)
-	if !strings.Contains(plain, "high") || !strings.Contains(plain, "data.priority") {
+	if !strings.Contains(plain, "high") || !strings.Contains(plain, "Open bugs") {
 		t.Fatal("configured columns were not rendered")
+	}
+	if strings.Contains(plain, "data.priority") || m.geometry().status {
+		t.Fatal("view should use the pane title without column names or an extra status row")
 	}
 	m.filters["priority"] = "low"
 	tuiRun(t, m, m.filterData())

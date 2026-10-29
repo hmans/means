@@ -262,11 +262,32 @@ Back restores the previous query. Browsing actions remain available from the key
 | / | Filter title/body text immediately while typing; Enter keeps the search |
 | f | Choose a top-level data field, then a schema or stored value |
 | v | Choose a collection-defined view (type to find, Enter to select) |
-| c | Clear all data filters and the text search |
+| x | Clear all data filters and the text search |
 | r | Reload documents and collection configuration from disk |
 | d | Open or close diagnostics; Up/Down scrolls them |
-| Esc | Restore the previous search, cancel a picker, or return to the list |
-| q or Ctrl+C | Quit (q is ordinary text in search and filter pickers) |
+| Esc | Cancel the current input or picker, return to the list, or leave the active view when browsing documents |
+| : | Open the command bar outside search and pickers |
+| :q or :quit, then Enter | Quit; bare q no longer quits |
+| Ctrl+C | Quit immediately |
+
+The experimental command pane temporarily replaces the search field and takes
+keyboard focus; document panes keep their state with muted borders. It uses Cobra
+for command dispatch and Bubbles for input.
+Commands are `quit` (alias `q`), `views` (alias `view`), `filters` (alias `filter`),
+`clear`, `home`, `diagnostics`, and `help`. `views` without an argument opens the
+picker; `views "Open work"` selects a named view. `views "All documents"` resets it.
+`home` leaves the current view while keeping search and data filters.
+`clear` clears search and data filters while keeping the current view.
+`filters` opens the existing field/value picker; filter arguments are not yet supported.
+Dim text previews a completion. Tab accepts a match and repeated Tab cycles matches;
+Shift+Tab cycles backwards. Completion is available at the end of the input;
+view-name completion inserts quotes and a `--` separator when needed.
+Enter executes the actual input, while Esc or Backspace on empty input dismisses
+the pane. Errors appear below
+the input with a red border and clear when the input changes. Long errors are
+limited to the space available in the pane (at most three lines).
+Input supports quoted arguments, but does not run shell expansions or pipelines.
+Collection-defined commands and scripting are not part of this prototype.
 
 The field picker includes the schema's direct top-level `properties`, even in an
 empty collection, plus fields found in stored documents. Property `title` and
@@ -372,7 +393,7 @@ The active view has a check mark. Arrow keys and the mouse wheel navigate the
 menu; Escape or clicking outside dismisses it without changing the view.
 The browser starts in **All documents**; select that entry to leave a custom view.
 Search and metadata filters combine with the view. Clear removes those extra
-filters, keeping the view. The active view name appears above the document list.
+filters, keeping the view. The active view name is the document pane title.
 Columns appear in their configured order, with extra space for titles; narrow
 columns truncate their displayed text. The preview still shows the full document.
 The issues collection includes example views in `issues/MEANS.md` to edit and try.

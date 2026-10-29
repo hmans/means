@@ -41,8 +41,13 @@ including fields with no documents yet. Schema titles and descriptions guide the
 picker. Stored fields and values remain available, including schema-invalid data.
 v opens collection views from MEANS.md app.views (Expr filters and columns).
 Views combine with search/data filters; All documents leaves the selected view.
-The first value option removes that field's filter. c clears all filters and search.
-r reloads the collection; d shows diagnostics; q or Ctrl+C quits. Esc closes a view.
+The first value option removes that field's filter. x clears all filters and search.
+r reloads the collection; d shows diagnostics. : opens the command bar; :quit or :q
+then Enter quits, as does Ctrl+C. Bare q does not quit. Tab completes commands and
+view names; repeated Tab cycles matches, Shift+Tab cycles backwards. Esc cancels.
+Commands: quit (q), views (view) [name], home, filters (filter), clear,
+diagnostics, help. Quote view names containing spaces; completion adds quotes.
+Esc closes a view.
 All documents are loaded in filename order, without a limit. Array fields offer
 individual items and match arrays containing the selected item (exact JSON equality).
 Choose one item per field; filters on different fields combine with AND. Other data
@@ -153,6 +158,7 @@ type tuiChoice struct {
 }
 
 type tuiModel struct {
+	commandBar         tuiCommandBar
 	evaluation         uint64
 	evaluating         bool
 	cancelEvaluation   context.CancelFunc
@@ -238,6 +244,14 @@ func (m *tuiModel) readSnapshot(background bool) tea.Cmd {
 }
 
 func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.commandBar.active {
+		switch msg.(type) {
+		case tea.KeyPressMsg, tea.PasteMsg:
+			return m, m.updateCommandBar(msg)
+		case tea.MouseClickMsg, tea.MouseWheelMsg, tea.MouseMotionMsg, tea.MouseReleaseMsg:
+			return m, nil
+		}
+	}
 	switch msg := msg.(type) {
 	case tuiEvaluated:
 		if msg.generation != m.evaluation {
@@ -370,8 +384,11 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		m.draggingDivider = false
 		key := msg.String()
-		if key == "ctrl+c" || (key == "q" && m.mode != "search" && !m.picking()) {
+		if key == "ctrl+c" {
 			return m, tea.Quit
+		}
+		if key == ":" && m.mode != "search" && !m.picking() {
+			return m, m.openCommandBar()
 		}
 		if m.loading {
 			return m, nil
@@ -399,6 +416,10 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if key == "esc" {
+			if m.mode == "documents" && m.view != "" {
+				cmd, _ := m.selectView("")
+				return m, cmd
+			}
 			if m.mode == "views" {
 				m.mode = "documents"
 				return m, nil
@@ -433,7 +454,12 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.choiceTop = tuiKeepVisible(m.choice, m.choiceTop, m.pickerHeight(), len(m.choices))
 			return m, nil
 		}
-		return m, m.action(key)
+		if key != "q" {
+			return m, m.action(key)
+		}
+	}
+	if m.commandBar.active {
+		return m, m.updateCommandInput(msg)
 	}
 	return m, nil
 }
@@ -455,7 +481,7 @@ func (m *tuiModel) action(key string) tea.Cmd {
 		m.openFields()
 	case "v":
 		m.openViews()
-	case "c":
+	case "c", "x":
 		m.filters, m.query, m.mode = map[string]any{}, "", "documents"
 		m.contains = map[string]bool{}
 		return m.filterData()
@@ -491,16 +517,8 @@ func (m *tuiModel) choose() tea.Cmd {
 	}
 	if m.mode == "views" {
 		chosen := m.choices[m.choice].value.(string)
-		if m.app != nil {
-			for _, view := range m.app.Views {
-				if view.Title == chosen && view.compileErr != nil {
-					return nil
-				}
-			}
-		}
-		m.view = chosen
-		m.mode, m.previewFocus = "documents", false
-		return m.filterData()
+		cmd, _ := m.selectView(chosen)
+		return cmd
 	}
 	if m.mode == "fields" {
 		m.field = m.choices[m.choice].value.(string)

@@ -57,8 +57,11 @@ func (m *tuiModel) geometry() tuiGeometry {
 		x += width + 1
 	}
 	g.search = tuiRect{0, y + buttonHeight, m.width, 3}
-	g.status = len(m.filters) > 0 || m.view != "" || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.query != "" || (m.mode == "search" && m.input != "") || m.mode == "fields" || m.mode == "values"
-	bodyY := g.search.y + 3
+	if m.commandBar.active && m.commandBar.failed {
+		g.search.h += min(3, max(1, m.height-g.search.y-8), len(m.commandErrorLines()))
+	}
+	g.status = len(m.filters) > 0 || len(m.viewErrors) > 0 || m.loading || m.evaluating || m.err != nil || m.query != "" || (m.mode == "search" && m.input != "") || m.mode == "fields" || m.mode == "values"
+	bodyY := g.search.y + g.search.h
 	if g.status {
 		bodyY++
 	}
@@ -76,7 +79,7 @@ func (m *tuiModel) geometry() tuiGeometry {
 		tuiControl("View", "Tab", "tab", m.width >= 64),
 		tuiControl("Diagnostics", "d", "d", m.width >= 64),
 		tuiControl("Back", "Esc", "esc", m.width >= 64),
-		tuiControl("Quit", "q", "q", m.width >= 64),
+		tuiControl("Quit", ":q", "q", m.width >= 64),
 	}
 	if m.width < 64 {
 		footer[1] = tuiControl("Diag", "d", "d", false)
@@ -89,7 +92,7 @@ func (m *tuiModel) geometry() tuiGeometry {
 		x--
 	}
 	if len(m.filters) > 0 || m.query != "" || (m.mode == "search" && m.input != "") {
-		b := tuiControl("Clear", "c", "c", m.width >= 60)
+		b := tuiControl("Clear", "x", "x", m.width >= 60)
 		b.x, b.y = m.width-b.w, g.body.y-1
 		g.buttons = append(g.buttons, b)
 	}
@@ -346,10 +349,13 @@ func tuiChoiceRow(choice tuiChoice, selected bool, width int) string {
 	return tuiFit("  "+label+tuiMuted.Render(suffix), width)
 }
 
-func tuiPane(r tuiRect, title string, lines []string, focused bool, position string) []string {
+func tuiPane(r tuiRect, title string, lines []string, focused bool, position string, borderOverride ...lipgloss.Style) []string {
 	border := tuiMuted
 	if focused {
 		border = tuiAccent
+	}
+	if len(borderOverride) > 0 {
+		border = borderOverride[0]
 	}
 	label := ansi.Truncate(" "+terminalCell(title)+" ", max(0, r.w-2), "…")
 	rows := []string{border.Render("╭" + label + strings.Repeat("─", max(0, r.w-2-ansi.StringWidth(label))) + "╮")}
@@ -378,7 +384,7 @@ func (m *tuiModel) View() tea.View {
 	g := m.geometry()
 	frame := make([]string, m.height)
 	if g.small {
-		frame[0] = "Resize to at least 32 × 12. q quits."
+		frame[0] = "Resize to at least 32 × 12. Ctrl+C quits."
 	} else {
 		query := m.query
 		searchTitle := "Search"
@@ -397,9 +403,15 @@ func (m *tuiModel) View() tea.View {
 			search += "█"
 			// Keep the insertion point visible for long searches.
 			width := max(1, g.search.w-4)
+			if m.mode == "search" {
+				width-- // Reserve space for the fixed search prompt.
+			}
 			search = ansi.Cut(search, max(0, ansi.StringWidth(search)-width), ansi.StringWidth(search))
+			if m.mode == "search" {
+				search = tuiMuted.Render("/") + search
+			}
 		} else if search == "" {
-			search = tuiMuted.Render("Search titles and bodies…  / or click to type")
+			search = tuiMuted.Render("Search titles and bodies…  / or click to type · : commands")
 		}
 		// The search field is one bordered row; its bottom border has no counter.
 		rows := tuiPane(g.search, searchTitle, []string{search}, m.mode == "search" || (m.picking() && m.mode != "views"), "")
@@ -420,9 +432,6 @@ func (m *tuiModel) View() tea.View {
 		status := ""
 		if len(filters) > 0 {
 			status = tuiMuted.Render("Filters ") + strings.Join(filters, " ")
-		}
-		if m.view != "" {
-			status = tuiAccent.Render(terminalCell(m.view)) + "  " + status
 		}
 		if len(m.viewErrors) > 0 {
 			status += tuiMuted.Render(fmt.Sprintf(" · %d view errors (d)", len(m.viewErrors)))
@@ -464,7 +473,7 @@ func (m *tuiModel) View() tea.View {
 					lines = []string{"No matching choices. Backspace or Ctrl+U to clear."}
 				}
 			}
-			body = tuiPane(g.body, title, lines, true, tuiPosition(m.choiceTop, m.pageHeight(), len(m.choices)))
+			body = tuiPane(g.body, title, lines, !m.commandBar.active, tuiPosition(m.choiceTop, m.pageHeight(), len(m.choices)))
 			help = " Type to find · ↑↓ · Enter chooses"
 		case "diagnostics":
 			lines := m.diagnosticLines()
@@ -473,7 +482,7 @@ func (m *tuiModel) View() tea.View {
 			if len(lines) == 0 {
 				lines = []string{"No diagnostics. Your documents are ready to browse."}
 			}
-			body = tuiPane(g.body, fmt.Sprintf("Diagnostics / %d", len(m.diagnostics)+len(m.viewErrors)), lines, true, tuiPosition(m.offset, m.pageHeight(), total))
+			body = tuiPane(g.body, fmt.Sprintf("Diagnostics / %d", len(m.diagnostics)+len(m.viewErrors)), lines, !m.commandBar.active, tuiPosition(m.offset, m.pageHeight(), total))
 			help = " Wheel or ↑↓ to scroll"
 		default:
 			var lines []string
@@ -492,9 +501,9 @@ func (m *tuiModel) View() tea.View {
 			}
 			listTitle := "Documents"
 			if view != nil {
-				listTitle = strings.Join(view.Columns, " / ")
+				listTitle = terminalCell(view.Title)
 			}
-			list := tuiPane(g.list, listTitle, lines, !m.previewFocus && m.mode != "search", tuiPosition(m.listTop, m.pageHeight(), len(m.docs)))
+			list := tuiPane(g.list, listTitle, lines, !m.commandBar.active && !m.previewFocus && m.mode != "search", tuiPosition(m.listTop, m.pageHeight(), len(m.docs)))
 			for row := 1; row < len(list)-1; row++ {
 				index := m.listTop + row - 1
 				if index >= len(m.docs) || (index != m.selected && index != hovered) {
@@ -509,7 +518,7 @@ func (m *tuiModel) View() tea.View {
 			if len(m.docs) == 0 {
 				preview = []string{"Select a document to read it here."}
 			}
-			right := tuiPane(g.preview, "Preview", preview, m.previewFocus && m.mode != "search", tuiPosition(m.offset, m.pageHeight(), len(m.preview)))
+			right := tuiPane(g.preview, "Preview", preview, !m.commandBar.active && m.previewFocus && m.mode != "search", tuiPosition(m.offset, m.pageHeight(), len(m.preview)))
 			if g.split {
 				for i := range list {
 					body = append(body, list[i]+" "+right[i])
@@ -530,7 +539,7 @@ func (m *tuiModel) View() tea.View {
 			if b.y == m.height-1 {
 				footerStart = min(footerStart, b.x)
 			}
-			if b.key == "c" {
+			if b.key == "x" {
 				statusEnd = b.x - 1
 			}
 		}
@@ -561,6 +570,40 @@ func (m *tuiModel) View() tea.View {
 			m.renderViewMenu(frame)
 		}
 	}
+	if m.commandBar.active {
+		if !g.small {
+			m.commandBar.input.SetWidth(max(1, g.search.w-6))
+			line := ansi.Cut(m.commandBar.view(), 0, g.search.w-4)
+			lines, title, border := []string{line}, "Command", tuiAccent
+			if m.commandBar.failed {
+				border = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
+				title = "Command — Error"
+				for _, message := range m.commandErrorLines() {
+					lines = append(lines, border.Render(message))
+				}
+			}
+			copy(frame[g.search.y:], tuiPane(g.search, title, lines, true, "", border))
+		} else {
+			m.commandBar.input.SetWidth(max(1, m.width-2))
+			frame[m.height-1] = ansi.Cut(m.commandBar.view(), 0, m.width)
+			if m.commandBar.message != "" {
+				message, style := terminalCell(m.commandBar.message), tuiMuted
+				if m.commandBar.failed {
+					message, style = "Error: "+message, lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
+				}
+				frame[max(0, m.height-2)] = style.Render(message)
+			}
+		}
+		if !g.small {
+			help := " Tab completes · Shift+Tab previous · Enter runs · Esc cancels"
+			if m.commandBar.failed {
+				help = " Edit the command to correct it · Enter retries · Esc cancels"
+			} else if m.commandBar.message != "" {
+				help = " " + terminalCell(m.commandBar.message)
+			}
+			frame[m.height-1] = tuiMuted.Render(help)
+		}
+	}
 	for i, line := range frame {
 		frame[i] = tuiFit(line, m.width)
 	}
@@ -572,4 +615,8 @@ func (m *tuiModel) View() tea.View {
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeAllMotion
 	return v
+}
+
+func (m *tuiModel) commandErrorLines() []string {
+	return strings.Split(ansi.Hardwrap("Error: "+terminalCell(m.commandBar.message), max(1, m.width-4), true), "\n")
 }

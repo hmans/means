@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -13,6 +14,33 @@ import (
 )
 
 const tuiAppLocation = "MEANS.md app.views"
+
+// Both the picker and command bar use the same validation and focus behavior.
+func (m *tuiModel) selectView(name string) (tea.Cmd, error) {
+	if name == "All documents" {
+		name = ""
+	}
+	if name != "" {
+		found := false
+		if m.app != nil {
+			for _, view := range m.app.Views {
+				if view.Title != name {
+					continue
+				}
+				if view.compileErr != nil {
+					return nil, fmt.Errorf("view %q is invalid; see Diagnostics", name)
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("unknown view %q", name)
+		}
+	}
+	m.view, m.mode, m.previewFocus = name, "documents", false
+	return m.filterData(), nil
+}
 
 type tuiApp struct {
 	Views  []tuiAppView
