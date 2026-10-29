@@ -58,7 +58,10 @@ func (m *tuiModel) geometry() tuiGeometry {
 	g.body = tuiRect{0, g.search.y + 4, m.width, max(3, m.height-g.search.y-5)}
 	g.list, g.preview = g.body, g.body
 	if g.split {
-		g.list.w = min(50, max(32, m.width*2/5))
+		g.list.w = (m.width - 1) / 2
+		if m.listWidth > 0 {
+			g.list.w = max(32, min(m.listWidth, m.width-33))
+		}
 		g.preview.x = g.list.w + 1
 		g.preview.w = m.width - g.preview.x
 	}
@@ -168,6 +171,13 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 	if m.loading {
 		return nil
 	}
+	if !wheel && g.split && (m.mode == "documents" || m.mode == "search") &&
+		mouse.X >= g.list.w-1 && mouse.X <= g.preview.x &&
+		mouse.Y >= g.body.y && mouse.Y < g.body.y+g.body.h {
+		m.draggingDivider = true
+		m.dividerGrabOffset = mouse.X - g.list.w
+		return nil
+	}
 	if !wheel && g.search.contains(mouse.X, mouse.Y) {
 		if m.picking() && m.mode != "views" {
 			return nil
@@ -234,6 +244,16 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 		}
 	}
 	return nil
+}
+
+func (m *tuiModel) resizeDivider(x int) {
+	g := m.geometry()
+	if !g.split || g.small {
+		m.draggingDivider = false
+		return
+	}
+	m.listWidth = max(32, min(x-m.dividerGrabOffset, m.width-33))
+	m.renderPreview()
 }
 
 var (
