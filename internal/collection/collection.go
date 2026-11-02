@@ -28,6 +28,7 @@ type Collection struct {
 	validator         *jsonschema.Schema
 	config            map[string]any
 	body              string
+	configHash        string
 	ctx               context.Context
 	embeddingProgress func(string)
 	embeddings        *EmbeddingConfig

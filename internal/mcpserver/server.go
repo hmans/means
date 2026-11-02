@@ -64,7 +64,10 @@ errors cannot be forced. No documents are rewritten. Checks cover current data,
 not all possible future data, and concurrent edits can race installation.
 The Markdown body of MEANS.md supplies collection-specific
 workflow guidance. It is not a document and is excluded from listing and reading.
-Call info for current guidance; restart the server to refresh discovery
+Call info for the exact body in instructions and the whole MEANS.md hash.
+Use instructions_set with hash and instructions to replace that body (empty clears
+it). Frontmatter bytes and file permissions are preserved. Stale hashes fail;
+call info again and reconcile before retrying. Restart the server to refresh discovery
 descriptions and connection instructions after editing collection metadata.`
 
 const startupInstructions = `Call info for the current schema and detailed guidance.
@@ -72,7 +75,8 @@ List or search to find IDs, then read before updating or deleting with its hash.
 Deletion is permanent; a repeated deletion fails. Create and
 update validate frontmatter.data against the current schema. Stored IDs are not
 filenames. Creation is not idempotent; do not retry a successful create.
-Use schema_set to validate and install schema changes; force permits document violations.`
+Use schema_set to validate and install schema changes; force permits document violations.
+Use instructions_set with the hash from info to replace the MEANS.md workflow body.`
 
 func collectionPurpose(info *collection.Description) string {
 	purpose := "Collection: " + info.Title + "."
@@ -80,14 +84,6 @@ func collectionPurpose(info *collection.Description) string {
 		purpose += "\n" + info.Description
 	}
 	return purpose
-}
-
-func collectionInstructions(info *collection.Description) string {
-	text := collectionPurpose(info) + "\n\n" + instructions
-	if info.Instructions != "" {
-		text += "\n\nCollection workflow (MEANS.md):\n" + info.Instructions
-	}
-	return text
 }
 
 func collectionStartupInstructions(info *collection.Description) string {
@@ -125,6 +121,15 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		&mcp.ServerOptions{Instructions: collectionStartupInstructions(info)})
 	for _, tool := range []toolDefinition{
 		{
+			name:        "instructions_set",
+			description: "Replace the MEANS.md Markdown workflow body using the whole-file hash from info. Supply the complete replacement in instructions; an empty string clears it. Preserves exact frontmatter bytes and permissions. Requires valid collection configuration; does not validate or change documents. Stale hashes fail: call info again and reconcile before retrying. Returns hash, title, description, and exact instructions. Observed concurrent changes reject replacement; external writes can still race the final check and rename. Restart to refresh startup guidance.",
+			schema:      `{"type":"object","properties":{"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Whole MEANS.md hash returned by info."},"instructions":{"type":"string","description":"Complete replacement Markdown body; empty string clears it."}},"required":["hash","instructions"],"additionalProperties":false}`,
+			destructive: true,
+			run: func(c *collection.Collection, args map[string]any) (any, error) {
+				return c.SetInstructions(args["hash"].(string), args["instructions"].(string))
+			},
+		},
+		{
 			name:        "schema_set",
 			description: "Validate and install a JSON Schema for this collection. Pass schema as an object or boolean, not a string. Optional force (default false) permits existing document violations but never invalid schemas or filesystem errors. Returns installed, healthy, checked, and diagnostics. Rejection is a tool error with structured diagnostics and leaves the schema unchanged. Checks current data, not abstract schema compatibility. Does not rewrite documents; concurrent edits can race installation. Can repair an invalid or missing schema in otherwise valid MEANS.md frontmatter while this server remains running. Malformed YAML requires a direct edit. Preserves identity and Markdown body; frontmatter may be reformatted. Restart to refresh discovery metadata.",
 			schema:      `{"type":"object","properties":{"schema":{"type":["object","boolean"],"description":"Complete self-contained JSON Schema. Draft 2020-12 by default; external references are unsupported."},"force":{"type":"boolean","default":false}},"required":["schema"],"additionalProperties":false}`,
@@ -143,15 +148,15 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		},
 		{
 			name:        "info",
-			description: "Return current collection identity, schema, path, and full guidance. Call before creating documents.",
+			description: "Return current collection identity, schema, path, exact MEANS.md body as instructions, whole-file hash, and tool usage guidance as usage. Call before creating documents or replacing the workflow with instructions_set.",
 			schema:      `{"type":"object","additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				current := c.Describe()
 				return map[string]any{"path": c.Path, "schema": c.Schema,
 					"title": current.Title, "description": current.Description,
-					"embeddings":   c.Embeddings(),
-					"instructions": collectionInstructions(current)}, nil
+					"embeddings": c.Embeddings(),
+					"hash":       current.Hash, "instructions": current.Instructions, "usage": instructions}, nil
 			},
 		},
 		{

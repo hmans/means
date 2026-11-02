@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
-// Description gives consumers the collection identity and Markdown guidance.
+// Description gives consumers the collection identity, exact Markdown guidance,
+// and SHA-256 hash of the complete configuration snapshot.
 type Description struct {
+	Hash         string `json:"hash"`
 	Title        string `json:"title"`
 	Description  string `json:"description"`
 	Instructions string `json:"instructions"`
@@ -61,6 +63,7 @@ func parseConfig(path string, data []byte) (*Collection, error) {
 		return nil, err
 	}
 	c.config, c.body, c.App = fields, body, app
+	c.configHash = contentHash(string(data))
 	return c, nil
 }
 
@@ -71,7 +74,7 @@ func encodeConfig(fields map[string]any, body string) (string, error) {
 
 // Describe returns identity and guidance from the loaded configuration snapshot.
 func (c *Collection) Describe() *Description {
-	info := &Description{Title: filepath.Base(c.Path), Instructions: c.body}
+	info := &Description{Hash: c.configHash, Title: filepath.Base(c.Path), Instructions: c.body}
 	if title, ok := c.config["title"].(string); ok && strings.TrimSpace(title) != "" {
 		info.Title = strings.TrimSpace(title)
 	}

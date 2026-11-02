@@ -154,7 +154,7 @@ func TestConfigReplacementRejectsConcurrentEdits(t *testing.T) {
 			if err != nil || string(stored) != updated {
 				t.Fatal("concurrent edit lost", err)
 			}
-			matches, err := filepath.Glob(filepath.Join(dir, ".means-schema-*.tmp"))
+			matches, err := filepath.Glob(filepath.Join(dir, ".means-config-*.tmp"))
 			if err != nil || len(matches) != 0 {
 				t.Fatalf("temporary files remain: %v %v", matches, err)
 			}
