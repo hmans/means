@@ -164,7 +164,7 @@ func TestDotenvStartupAndHelp(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("BROKEN='secret"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, args := range [][]string{{"--help"}, {"help", "embed"}, {"version"}, {}} {
+	for _, args := range [][]string{{"--help"}, {"help", "embed"}, {"version"}, {"schema"}, {"instructions"}, {}} {
 		var out, stderr bytes.Buffer
 		if err := Execute(args, nil, &out, &stderr, "test"); err != nil {
 			t.Fatalf("%v: %v", args, err)

@@ -126,7 +126,7 @@ Homebrew job. There is no need to rebuild or republish the GitHub Release.
 Releases created before this workflow do not contain `means.rb`; publish a new
 release to start tap distribution.
 
-After the first successful tap publication, install with
+Install the published release with
 `brew install --cask hmans/tap/means`. Use `brew upgrade --cask means` for updates.
 This tap is separate from `hmans/homebrew-beans`.
 

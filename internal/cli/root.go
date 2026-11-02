@@ -11,6 +11,7 @@ import (
 	"github.com/hmans/means/internal/collection"
 	"github.com/hmans/means/internal/userconfig"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type options struct {
@@ -39,15 +40,35 @@ func Execute(args []string, stdin io.Reader, stdout, stderr io.Writer, version s
 		if errors.Is(err, ErrUnhealthy) || errors.Is(err, ErrSchemaRejected) {
 			return err
 		}
-		// Flag parsing can stop before reaching --json. Re-read command flags
-		// without rejecting unknown flags so error formatting is order-independent.
-		command.FParseErrWhitelist.UnknownFlags = true
-		_ = command.ParseFlags(args)
+		// Recover --json even after an invalid flag value. Keep flag arity so
+		// a filename or other string value named --json is not treated as a flag.
+		flags := pflag.NewFlagSet("error output", pflag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		flags.ParseErrorsWhitelist.UnknownFlags = true
+		command.Flags().VisitAll(func(flag *pflag.Flag) {
+			copy := *flag
+			copy.Value = errorOutputFlag{Value: flag.Value, apply: flag.Name == "json"}
+			flags.AddFlag(&copy)
+		})
+		_ = flags.Parse(args)
 		writeErr := opts.write(stderr, map[string]string{"error": err.Error()}, "Error: "+err.Error()+"\n")
 		return errors.Join(err, writeErr)
 	}
 	if opts.configWarning != nil && command.Name() != "mcp" {
 		return opts.write(stderr, map[string]string{"warning": opts.configWarning.Error()}, "Warning: "+opts.configWarning.Error()+"\n")
+	}
+	return nil
+}
+
+// Only the output mode is recovered; other parsed command options stay unchanged.
+type errorOutputFlag struct {
+	pflag.Value
+	apply bool
+}
+
+func (f errorOutputFlag) Set(value string) error {
+	if f.apply {
+		_ = f.Value.Set(value)
 	}
 	return nil
 }
@@ -66,7 +87,7 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 			DisableDefaultCmd: true,
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "means" && cmd.Name() != "agents" && !strings.HasPrefix(cmd.CommandPath(), "means help ") {
+			if !cmd.HasSubCommands() && cmd.Name() != "version" && cmd.Name() != "help" && cmd.Name() != "means" && cmd.Name() != "agents" && !strings.HasPrefix(cmd.CommandPath(), "means help ") {
 				if err := userconfig.LoadEnvironment(opts.path); err != nil {
 					return err
 				}

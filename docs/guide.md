@@ -477,7 +477,7 @@ remove the separate file; it is no longer read.
 mise means list --path ./memory --limit 0 --json
 mise means search decision --path ./memory --json
 mise means search --path ./memory --filter 'tags=["decision"]' --json
-mise means read <id> --path ./memory --json
+mise means show <id> --path ./memory --json
 mise means show <id> --path ./memory
 ```
 
@@ -806,14 +806,14 @@ saves remove it. Hash checks have the same external-write race limitation as upd
 
 For automation, keep using the structured merge-patch interface below.
 
-Read before updating. JSON read/create/update results include an ID, frontmatter,
+Read before updating. JSON show/create/update results include an ID, frontmatter,
 body, and a SHA-256 hash of the exact stored file bytes. Supply that hash with
 only the fields to change:
 
 ```sh
 mise means update <id> --path ./memory --input - --json <<'JSON'
 {
-  "hash": "<hash from read>",
+  "hash": "<hash from show --json>",
   "frontmatter": {"title": "Corrected title", "data": {"tags": ["decision"]}}
 }
 JSON
@@ -870,9 +870,9 @@ relative to the selected collection.
 Read the document, review it, then supply its ID and current hash:
 
 ```sh
-mise means read <id> --path ./memory --json
+mise means show <id> --path ./memory --json
 mise means delete <id> --path ./memory --input - --json <<'JSON'
-{"hash":"<hash from read>"}
+{"hash":"<hash from show --json>"}
 JSON
 ```
 

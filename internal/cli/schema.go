@@ -19,6 +19,8 @@ func newSchemaCommand(opts *options) *cobra.Command {
 		Use: "schema", Short: "Manage the collection schema",
 		Long:    "Manage MEANS.md in the collection selected by --path. Use schema set to validate and install a proposed JSON Schema.",
 		Example: "  means schema set --path ./memory --input new-schema.json --json",
+		Args:    cobra.NoArgs,
+		RunE:    func(cmd *cobra.Command, _ []string) error { return opts.writeHelp(cmd) },
 	}
 	var input string
 	var force bool
