@@ -58,14 +58,10 @@ func compileDateTimeFilters(filters []DateTimeFilter) ([]compiledDateTimeFilter,
 }
 
 func (opts SearchOptions) matchesData(data map[string]any) bool {
-	return matchesData(data, opts.Filter, opts.dateTimeFilters)
-}
-
-func matchesData(data, filter map[string]any, dateTimeFilters []compiledDateTimeFilter) bool {
-	if !MatchesFilter(data, filter) {
+	if !MatchesFilter(data, opts.Filter) {
 		return false
 	}
-	for _, filter := range dateTimeFilters {
+	for _, filter := range opts.dateTimeFilters {
 		value, ok := data[filter.Field].(string)
 		if !ok {
 			return false

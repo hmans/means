@@ -361,8 +361,7 @@ type ListOptions struct {
 }
 
 func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
-	limit := opts.Limit
-	if limit < 0 {
+	if opts.Limit < 0 {
 		return nil, fmt.Errorf("limit must be zero or greater")
 	}
 	if opts.Offset < 0 {
@@ -372,51 +371,19 @@ func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	root, err := os.OpenRoot(c.Path)
+	search, err := c.searchScan(SearchOptions{
+		Filter: opts.Filter, dateTimeFilters: dateTimeFilters,
+		Limit: opts.Limit, WithBody: opts.WithBody,
+	}, opts.Offset)
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close()
-	entries, err := scanDocuments(root)
-	if err != nil {
-		return nil, err
+	result := &ListResult{
+		Documents:   make([]DocumentSummary, len(search.Documents)),
+		Diagnostics: search.Diagnostics, HasMore: search.HasMore,
 	}
-	counts := map[string]int{}
-	for _, entry := range entries {
-		if entry.doc != nil {
-			counts[entry.doc.ID]++
-		}
-	}
-	result := &ListResult{Documents: []DocumentSummary{}, Diagnostics: []Diagnostic{}}
-	skipped := 0
-	for _, entry := range entries {
-		summary := DocumentSummary{}
-		if entry.doc != nil {
-			summary.ID = entry.doc.ID
-		}
-		if summary.ID != "" && counts[summary.ID] > 1 {
-			entry.err = fmt.Errorf("%w %q; resolve the duplicate files", ErrDuplicateID, summary.ID)
-		}
-		if entry.err != nil {
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{ID: summary.ID, Path: path.Clean(entry.filename), Error: entry.err.Error()})
-			continue
-		}
-		if !matchesData(entry.doc.Frontmatter["data"].(map[string]any), opts.Filter, dateTimeFilters) {
-			continue
-		}
-		if skipped < opts.Offset {
-			skipped++
-			continue
-		}
-		if limit > 0 && len(result.Documents) == limit {
-			result.HasMore = true
-			continue
-		}
-		summary.Frontmatter = entry.doc.Frontmatter
-		if opts.WithBody {
-			summary.Body = &entry.doc.Body
-		}
-		result.Documents = append(result.Documents, summary)
+	for i, hit := range search.Documents {
+		result.Documents[i] = DocumentSummary{ID: hit.ID, Frontmatter: hit.Frontmatter, Body: hit.Body}
 	}
 	return result, nil
 }
