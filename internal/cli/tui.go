@@ -25,7 +25,9 @@ func newTUICommand(opts *options) *cobra.Command {
 	return &cobra.Command{
 		Use: "tui", Short: "Browse documents and filter data in an interactive terminal",
 		Long: `Open a read-only document browser with a Markdown preview. Requires terminal
-input and output. Up/down or j/k select documents; Tab switches to preview scrolling.
+input and output. Up/down or j/k select documents or scroll the focused panel.
+Tab or Enter cycles Documents, Data, and Content; Shift+Tab cycles backwards.
+Data starts at one third of the preview height; each preview panel scrolls separately.
 Click toolbar buttons, documents, or filter choices. Click a pane to focus it;
 scroll the mouse wheel over a pane to scroll its content. Drag the divider between
 panes to resize them for this session. Narrow terminals use
@@ -170,6 +172,9 @@ type tuiModel struct {
 	listWidth          int // Preferred width in columns; zero uses the default.
 	draggingDivider    bool
 	dividerGrabOffset  int
+	dataFraction       float64 // Preferred share of preview height; zero uses one third.
+	draggingPreview    bool
+	previewGrabOffset  int
 	mouseX, mouseY     int
 	mousePresent       bool
 	all, docs          []collection.SearchHit
@@ -182,6 +187,9 @@ type tuiModel struct {
 	selected, offset   int
 	listTop, choiceTop int
 	preview            []string
+	previewData        []string
+	dataOffset         int
+	dataFocus          bool
 	previewID          string
 	previewColumns     int
 	mode               string // documents, search, fields, values, diagnostics
@@ -258,7 +266,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.evaluating = false
-		id, offset, top := "", m.offset, m.listTop
+		id, offset, dataOffset, top := "", m.offset, m.dataOffset, m.listTop
 		if len(m.docs) > 0 {
 			id = m.docs[m.selected].ID
 		}
@@ -271,7 +279,8 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode == "diagnostics" {
 			m.offset = min(offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
 		} else if len(m.docs) > 0 && m.docs[m.selected].ID == id {
-			m.offset = min(offset, max(0, len(m.preview)-m.pageHeight()))
+			m.offset = min(offset, m.previewMaxOffset())
+			m.dataOffset = min(dataOffset, m.previewDataMaxOffset())
 		}
 		if len(m.docs) > 0 && m.docs[m.selected].ID == id {
 			m.listTop = min(top, max(0, len(m.docs)-m.pageHeight()))
@@ -289,6 +298,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitForChange()
 	case tea.WindowSizeMsg:
 		m.draggingDivider = false
+		m.draggingPreview = false
 		m.width, m.height = max(1, msg.Width), max(1, msg.Height)
 		m.renderPreview()
 		m.listTop = tuiKeepVisible(m.selected, m.listTop, m.pageHeight(), len(m.docs))
@@ -310,7 +320,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.background && m.app != nil && msg.app != nil && m.app.source == msg.app.source && reflect.DeepEqual(m.all, msg.all.Documents) && reflect.DeepEqual(m.diagnostics, msg.all.Diagnostics) && reflect.DeepEqual(m.fields, msg.fields) {
 			return m, next
 		}
-		id, offset, listTop := "", m.offset, m.listTop
+		id, offset, dataOffset, listTop := "", m.offset, m.dataOffset, m.listTop
 		if len(m.docs) > 0 {
 			id = m.docs[m.selected].ID
 		}
@@ -331,7 +341,8 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode == "diagnostics" {
 			m.offset = min(offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
 		} else if len(m.docs) > 0 && m.docs[m.selected].ID == id {
-			m.offset = min(offset, max(0, len(m.preview)-m.pageHeight()))
+			m.offset = min(offset, m.previewMaxOffset())
+			m.dataOffset = min(dataOffset, m.previewDataMaxOffset())
 		}
 		if len(m.docs) > 0 && m.docs[m.selected].ID == id {
 			m.listTop = min(listTop, max(0, len(m.docs)-m.pageHeight()))
@@ -367,22 +378,30 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseClickMsg:
 		m.mouseX, m.mouseY, m.mousePresent = msg.X, msg.Y, true
 		m.draggingDivider = false
+		m.draggingPreview = false
 		return m, m.mouse(msg.Mouse(), false)
 	case tea.MouseMotionMsg:
 		m.mouseX, m.mouseY, m.mousePresent = msg.X, msg.Y, true
 		if m.draggingDivider && msg.Button == tea.MouseLeft {
 			m.resizeDivider(msg.X)
+		} else if m.draggingPreview && msg.Button == tea.MouseLeft {
+			m.resizePreviewDivider(msg.Y)
 		}
 	case tea.MouseReleaseMsg:
 		if m.draggingDivider {
 			m.resizeDivider(msg.X)
 			m.draggingDivider = false
 		}
+		if m.draggingPreview {
+			m.resizePreviewDivider(msg.Y)
+			m.draggingPreview = false
+		}
 	case tea.MouseWheelMsg:
 		m.mouseX, m.mouseY, m.mousePresent = msg.X, msg.Y, true
 		return m, m.mouse(msg.Mouse(), true)
 	case tea.KeyPressMsg:
 		m.draggingDivider = false
+		m.draggingPreview = false
 		key := msg.String()
 		if key == "ctrl+c" || key == "ctrl+d" {
 			return m, tea.Quit
@@ -492,17 +511,30 @@ func (m *tuiModel) action(key string) tea.Cmd {
 			m.mode = "diagnostics"
 		}
 		m.offset = 0
-	case "tab", "enter":
-		m.previewFocus = !m.previewFocus
+	case "tab", "enter", "shift+tab":
+		focus := 0 // Documents, Data, Content.
+		if m.previewFocus {
+			focus = 2
+			if m.dataFocus {
+				focus = 1
+			}
+		}
+		step := 1
+		if key == "shift+tab" {
+			step = 2
+		}
+		focus = (focus + step) % 3
+		m.previewFocus, m.dataFocus = focus != 0, focus == 1
 		m.mode = "documents"
+		m.renderPreview()
 	case "up", "k":
 		m.move(-1)
 	case "down", "j":
 		m.move(1)
 	case "pgup":
-		m.move(-m.pageHeight())
+		m.move(-m.navigationHeight())
 	case "pgdown":
-		m.move(m.pageHeight())
+		m.move(m.navigationHeight())
 	case "home":
 		m.move(-int(^uint(0) >> 2))
 	case "end":
@@ -612,7 +644,7 @@ func (m *tuiModel) filterText(query string) {
 			m.docs = append(m.docs, doc)
 		}
 	}
-	m.selected, m.offset = 0, 0
+	m.selected, m.offset, m.dataOffset = 0, 0, 0
 	for i, doc := range m.docs {
 		if doc.ID == id {
 			m.selected = i
@@ -625,11 +657,26 @@ func (m *tuiModel) filterText(query string) {
 
 func (m *tuiModel) pageHeight() int { return max(1, m.geometry().body.h-2) }
 
+func (m *tuiModel) navigationHeight() int {
+	if !m.previewFocus || m.mode == "diagnostics" {
+		return m.pageHeight()
+	}
+	g := m.geometry()
+	if m.dataFocus {
+		return max(1, g.data.h-2)
+	}
+	return max(1, g.content.h-2)
+}
+
 func (m *tuiModel) move(delta int) {
 	if m.mode == "diagnostics" {
 		m.offset = max(0, min(max(0, len(m.diagnosticLines())-m.pageHeight()), m.offset+delta))
 	} else if m.previewFocus {
-		m.offset = max(0, min(max(0, len(m.preview)-m.pageHeight()), m.offset+delta))
+		if m.dataFocus {
+			m.dataOffset = max(0, min(m.previewDataMaxOffset(), m.dataOffset+delta))
+		} else {
+			m.offset = max(0, min(m.previewMaxOffset(), m.offset+delta))
+		}
 	} else {
 		m.selected = max(0, min(max(0, len(m.docs)-1), m.selected+delta))
 		m.listTop = tuiKeepVisible(m.selected, m.listTop, m.pageHeight(), len(m.docs))
@@ -862,17 +909,23 @@ func (m *tuiModel) previewWidth() int {
 func (m *tuiModel) renderPreview() {
 	defer func() {
 		if m.mode != "diagnostics" {
-			m.offset = min(m.offset, max(0, len(m.preview)-m.pageHeight()))
+			m.offset = min(m.offset, m.previewMaxOffset())
 		}
+		m.dataOffset = min(m.dataOffset, m.previewDataMaxOffset())
 	}()
 	if len(m.docs) == 0 {
 		m.preview, m.previewID = nil, ""
+		m.previewData = nil
+		m.dataOffset = 0
 		return
 	}
 	hit := m.docs[m.selected]
 	width := m.previewWidth()
 	if m.previewID == hit.ID && m.previewColumns == width {
 		return
+	}
+	if m.previewID != hit.ID {
+		m.dataOffset = 0
 	}
 	m.previewID, m.previewColumns = hit.ID, width
 	body := ""
@@ -883,7 +936,22 @@ func (m *tuiModel) renderPreview() {
 	if err != nil {
 		text = "Preview error: " + terminalCell(err.Error())
 	}
-	metadata, _ := json.MarshalIndent(hit.Frontmatter["data"], "", "  ")
-	text += "\n" + renderPreviewData(width, metadata)
-	m.preview = strings.Split(text, "\n")
+	metadata, err := renderPreviewData(width, hit.Frontmatter["data"])
+	if err != nil {
+		metadata = "Data preview error: " + terminalCell(err.Error())
+	}
+	m.previewData = tuiPreviewLines(metadata)
+	m.preview = tuiPreviewLines(text)
+}
+
+// Omit renderer padding so a panel with one content row still shows useful text.
+func tuiPreviewLines(text string) []string {
+	lines := strings.Split(text, "\n")
+	for len(lines) > 0 && strings.TrimSpace(ansi.Strip(lines[0])) == "" {
+		lines = lines[1:]
+	}
+	for len(lines) > 0 && strings.TrimSpace(ansi.Strip(lines[len(lines)-1])) == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines
 }

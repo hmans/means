@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"strings"
@@ -14,6 +16,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
 	"github.com/hmans/means/internal/collection"
+	"go.yaml.in/yaml/v3"
 )
 
 func terminalWidth(w io.Writer) int {
@@ -95,7 +98,37 @@ func renderDocument(w io.Writer, doc *collection.Document) (string, error) {
 	return renderDocumentWidth(terminalWidth(w), doc)
 }
 
-func renderPreviewData(width int, data []byte) string {
+func renderPreviewData(width int, value any) (string, error) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	// Decode JSON as YAML nodes to keep exact numbers and string types.
+	var node yaml.Node
+	if err := yaml.Unmarshal(data, &node); err != nil {
+		return "", err
+	}
+	var blockStyle func(*yaml.Node)
+	blockStyle = func(n *yaml.Node) {
+		n.Style = 0
+		if n.Kind == yaml.ScalarNode && n.Tag == "!!str" && n.Value == "<<" {
+			n.Style = yaml.DoubleQuotedStyle
+		}
+		for _, child := range n.Content {
+			blockStyle(child)
+		}
+	}
+	blockStyle(&node)
+	var out bytes.Buffer
+	encoder := yaml.NewEncoder(&out)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(&node); err != nil {
+		return "", err
+	}
+	if err := encoder.Close(); err != nil {
+		return "", err
+	}
+	data = out.Bytes()
 	width = max(1, width)
 	theme := styles.DarkStyleConfig
 	margin := uint(0)
@@ -104,15 +137,17 @@ func renderPreviewData(width int, data []byte) string {
 	theme.Document.BlockSuffix = ""
 	theme.CodeBlock.Margin = &margin
 	rendered := string(data)
+	fence := "```"
+	for strings.Contains(rendered, fence) {
+		fence += "`"
+	}
 	renderer, err := glamour.NewTermRenderer(glamour.WithStyles(theme), glamour.WithWordWrap(width))
 	if err == nil {
-		if highlighted, err := renderer.Render("```json\n" + string(data) + "\n```\n"); err == nil {
+		if highlighted, err := renderer.Render(fence + "yaml\n" + string(data) + "\n" + fence + "\n"); err == nil {
 			rendered = strings.Trim(highlighted, "\n")
 		}
 	}
-	separator := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(strings.Repeat("─", width))
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("37")).Render("Data")
-	return separator + "\n" + label + "\n" + rendered
+	return rendered, nil
 }
 
 func renderDocumentWidth(width int, doc *collection.Document) (string, error) {

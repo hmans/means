@@ -88,6 +88,124 @@ func TestTUIDividerDrag(t *testing.T) {
 	}
 }
 
+func TestTUIPreviewSplitAndIndependentScrolling(t *testing.T) {
+	c := tuiTestCollection(t)
+	long := tuiCreate(t, c, "Long data", map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")})
+	tuiCreate(t, c, "Short data", map[string]any{})
+	m := newTUIModel(c.Path)
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 36})
+	tuiRun(t, m, m.Init())
+	if m.docs[m.selected].ID != long.ID {
+		tuiPress(m, 'j')
+	}
+	step := 1 - 2*m.selected
+	g := m.geometry()
+	if g.data.h != 10 || g.content.h != 21 {
+		t.Fatalf("default split is not one third/two thirds: %d/%d", g.data.h, g.content.h)
+	}
+	m.move(step)
+	if m.geometry().data != g.data || m.geometry().content != g.content {
+		t.Fatal("document selection changed the panel heights")
+	}
+	m.move(-step)
+	tuiWheel(m, g.data.x+3, g.data.y+2, true)
+	if m.dataOffset != 3 || m.offset != 0 || m.previewFocus {
+		t.Fatal("data wheel changed content scroll or keyboard focus")
+	}
+	tuiWheel(m, g.content.x+3, g.content.y+2, true)
+	if m.dataOffset != 3 || m.offset != 3 || m.previewFocus {
+		t.Fatal("content wheel changed data scroll or keyboard focus")
+	}
+	tuiClick(m, g.data.x+3, g.data.y+2)
+	tuiPress(m, 'j')
+	if !m.previewFocus || !m.dataFocus || m.dataOffset != 4 || m.offset != 3 {
+		t.Fatal("keyboard did not follow data focus")
+	}
+	tuiPress(m, tea.KeyPgDown)
+	if m.dataOffset != 4+g.data.h-2 || m.offset != 3 {
+		t.Fatal("page down did not use the data panel height")
+	}
+	tuiPress(m, tea.KeyTab)
+	tuiPress(m, 'j')
+	if m.dataFocus || m.offset != 4 {
+		t.Fatal("Tab did not focus content")
+	}
+	m.Update(tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
+	if !m.previewFocus || !m.dataFocus {
+		t.Fatal("Shift+Tab did not return to data")
+	}
+	tuiPress(m, tea.KeyEnd)
+	dataEnd := m.dataOffset
+	if !strings.Contains(m.View().Content, "Content") || dataEnd == 0 || m.offset != 4 {
+		t.Fatal("data scrolling moved or hid content")
+	}
+	tuiCreate(t, c, "New document", map[string]any{})
+	tuiPollNow(t, m)
+	if m.dataOffset != dataEnd || m.offset != 4 {
+		t.Fatal("refresh did not preserve independent scroll positions")
+	}
+	tuiPress(m, tea.KeyHome)
+	if m.dataOffset != 0 || m.offset != 4 {
+		t.Fatal("Home scrolled the wrong panel")
+	}
+}
+
+func TestTUIPreviewDividerDrag(t *testing.T) {
+	c := tuiTestCollection(t)
+	tuiCreate(t, c, "Document", map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")})
+	m := newTUIModel(c.Path)
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 36})
+	tuiRun(t, m, m.Init())
+	for _, grabOffset := range []int{-1, 0} {
+		g := m.geometry()
+		x := g.preview.x + 3
+		tuiClick(m, x, g.data.y+g.data.h+grabOffset)
+		if !m.draggingPreview || m.draggingDivider {
+			t.Fatal("preview separator did not capture drag")
+		}
+		cached := &m.preview[0]
+		m.Update(tea.MouseMotionMsg{X: -10, Y: g.preview.y + 15 + grabOffset, Button: tea.MouseLeft})
+		if m.geometry().data.h != 15 || &m.preview[0] != cached {
+			t.Fatal("drag did not resize panels or unnecessarily rerendered Markdown")
+		}
+		m.Update(tea.MouseReleaseMsg{X: x, Y: g.preview.y + 12 + grabOffset, Button: tea.MouseLeft})
+		m.Update(tea.MouseMotionMsg{X: x, Y: 0, Button: tea.MouseLeft})
+		if m.draggingPreview || m.geometry().data.h != 12 || m.previewFocus || m.selected != 0 {
+			t.Fatal("release did not finish drag or changed focus/selection")
+		}
+	}
+	fraction := m.dataFraction
+	m.Update(tea.WindowSizeMsg{Width: 70, Height: 51})
+	if g := m.geometry(); g.data.h != 18 || m.dataFraction != fraction {
+		t.Fatal("resize did not retain the chosen proportion")
+	}
+	// The separator also works when a narrow terminal shows the preview.
+	tuiPress(m, tea.KeyTab)
+	m.dataOffset, m.offset = m.previewDataMaxOffset(), m.previewMaxOffset()
+	g := m.geometry()
+	tuiClick(m, 3, g.data.y+g.data.h)
+	m.Update(tea.MouseMotionMsg{X: 3, Y: -100, Button: tea.MouseLeft})
+	if m.geometry().data.h != 3 || m.offset > m.previewMaxOffset() {
+		t.Fatal("data panel minimum height was not enforced")
+	}
+	m.Update(tea.MouseMotionMsg{X: 3, Y: 1000, Button: tea.MouseLeft})
+	if m.geometry().content.h != 3 || m.dataOffset > m.previewDataMaxOffset() {
+		t.Fatal("content panel minimum height was not enforced")
+	}
+	m.Update(tea.WindowSizeMsg{Width: 70, Height: 12})
+	if m.draggingPreview {
+		t.Fatal("terminal resize did not cancel preview drag")
+	}
+	for _, mode := range []string{"fields", "values", "diagnostics", "views"} {
+		m.mode = mode
+		g := m.geometry()
+		tuiClick(m, 3, g.data.y+g.data.h)
+		if m.draggingPreview {
+			t.Fatalf("preview separator active in %s overlay", mode)
+		}
+	}
+}
+
 func TestTUIDocumentHoverAndEmptyFilterRow(t *testing.T) {
 	c := tuiTestCollection(t)
 	for i := 0; i < 30; i++ {
@@ -151,11 +269,11 @@ func TestTUIMouseSelectionScrollAndFocus(t *testing.T) {
 	if m.selected != 3 {
 		t.Fatal("click after scroll used stale row index")
 	}
-	tuiWheel(m, g.preview.x+3, g.preview.y+3, true)
+	tuiWheel(m, g.content.x+3, g.content.y+2, true)
 	if m.offset != 3 || m.previewFocus {
 		t.Fatal("wheel should scroll hovered pane without changing focus")
 	}
-	tuiClick(m, g.preview.x+3, g.preview.y+3)
+	tuiClick(m, g.content.x+3, g.content.y+2)
 	if !m.previewFocus {
 		t.Fatal("click did not focus preview")
 	}
@@ -180,7 +298,7 @@ func TestTUIMouseSelectionScrollAndFocus(t *testing.T) {
 		t.Fatal("narrow layout hit testing failed")
 	}
 	tuiClickButton(t, m, "tab")
-	tuiWheel(m, 3, m.geometry().preview.y+2, true)
+	tuiWheel(m, 3, m.geometry().content.y+1, true)
 	if m.offset == 0 {
 		t.Fatal("narrow preview did not scroll")
 	}

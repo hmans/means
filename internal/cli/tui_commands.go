@@ -37,6 +37,7 @@ func (m *tuiModel) openCommandBar() tea.Cmd {
 	input.SetStyles(styles)
 	m.commandBar = tuiCommandBar{active: true, input: input, cycle: -1}
 	m.draggingDivider = false
+	m.draggingPreview = false
 	m.completeCommandBar()
 	return m.commandBar.input.Focus()
 }

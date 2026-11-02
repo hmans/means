@@ -31,6 +31,7 @@ type tuiButton struct {
 
 type tuiGeometry struct {
 	search, body, list, preview tuiRect
+	data, content               tuiRect
 	buttons                     []tuiButton
 	split, small                bool
 	status                      bool
@@ -77,6 +78,21 @@ func (m *tuiModel) geometry() tuiGeometry {
 		}
 		g.preview.x = g.list.w + 1
 		g.preview.w = m.width - g.preview.x
+	}
+	g.content = g.preview
+	if g.preview.h >= 6 {
+		available := g.preview.h
+		fraction := m.dataFraction
+		if fraction == 0 {
+			fraction = 1.0 / 3
+		}
+		g.data = g.preview
+		g.data.h = max(3, min(int(float64(available)*fraction+0.5), available-3))
+		g.content.y += g.data.h
+		g.content.h = available - g.data.h
+	} else if m.previewFocus && m.dataFocus {
+		// Very short preview areas show only the focused panel.
+		g.data, g.content = g.preview, tuiRect{}
 	}
 	footer := []tuiButton{
 		tuiControl("View", "Tab", "tab", m.width >= 64),
@@ -186,6 +202,15 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 		m.dividerGrabOffset = mouse.X - g.list.w
 		return nil
 	}
+	previewVisible := g.split || m.previewFocus
+	if !wheel && previewVisible && (m.mode == "documents" || m.mode == "search") &&
+		g.data.h > 0 && g.content.h > 0 &&
+		mouse.X > g.preview.x && mouse.X < g.preview.x+g.preview.w-1 &&
+		mouse.Y >= g.data.y+g.data.h-1 && mouse.Y <= g.content.y {
+		m.draggingPreview = true
+		m.previewGrabOffset = mouse.Y - (g.data.y + g.data.h)
+		return nil
+	}
 	if !wheel && g.search.contains(mouse.X, mouse.Y) {
 		if m.picking() && m.mode != "views" {
 			return nil
@@ -228,15 +253,19 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 		return nil
 	}
 	list := (!g.split && !m.previewFocus) || (g.split && g.list.inside(mouse.X, mouse.Y))
-	preview := (!g.split && m.previewFocus) || (g.split && g.preview.inside(mouse.X, mouse.Y))
+	data := previewVisible && g.data.inside(mouse.X, mouse.Y)
+	content := previewVisible && g.content.inside(mouse.X, mouse.Y)
+	preview := data || content
 	if !list && !preview {
 		return nil
 	}
 	if wheel {
 		if list {
 			m.listTop = max(0, min(max(0, len(m.docs)-m.pageHeight()), m.listTop+delta))
+		} else if data {
+			m.dataOffset = max(0, min(m.previewDataMaxOffset(), m.dataOffset+delta))
 		} else {
-			m.offset = max(0, min(max(0, len(m.preview)-m.pageHeight()), m.offset+delta))
+			m.offset = max(0, min(m.previewMaxOffset(), m.offset+delta))
 		}
 		return nil
 	}
@@ -244,6 +273,9 @@ func (m *tuiModel) mouse(mouse tea.Mouse, wheel bool) tea.Cmd {
 		m.query = m.input
 	}
 	m.mode, m.previewFocus = "documents", preview
+	if preview {
+		m.dataFocus = data
+	}
 	if list {
 		index := m.listTop + mouse.Y - g.list.y - 1
 		if index < len(m.docs) {
@@ -262,6 +294,18 @@ func (m *tuiModel) resizeDivider(x int) {
 	}
 	m.listWidth = max(32, min(x-m.dividerGrabOffset, m.width-33))
 	m.renderPreview()
+}
+
+func (m *tuiModel) resizePreviewDivider(y int) {
+	g := m.geometry()
+	if g.small || g.data.h == 0 || g.content.h == 0 {
+		m.draggingPreview = false
+		return
+	}
+	available := g.data.h + g.content.h
+	height := max(3, min(y-m.previewGrabOffset-g.preview.y, available-3))
+	m.dataFraction = float64(height) / float64(available)
+	m.renderPreview() // Reuse rendered text and clamp each scroll position.
 }
 
 var (
@@ -376,6 +420,30 @@ func tuiPosition(top, height, total int) string {
 		return "0 items"
 	}
 	return fmt.Sprintf("%d–%d / %d", top+1, min(top+height, total), total)
+}
+
+func (m *tuiModel) previewMaxOffset() int {
+	return max(0, len(m.preview)-max(1, m.geometry().content.h-2))
+}
+
+func (m *tuiModel) previewDataMaxOffset() int {
+	return max(0, len(m.previewData)-max(1, m.geometry().data.h-2))
+}
+
+func (m *tuiModel) previewPanes(g tuiGeometry, focused bool) []string {
+	var rows []string
+	if g.data.h > 0 {
+		data := m.previewData[min(m.dataOffset, len(m.previewData)):]
+		rows = tuiPane(g.data, "Data", data, focused && m.dataFocus, tuiPosition(m.dataOffset, max(1, g.data.h-2), len(m.previewData)))
+	}
+	if g.content.h > 0 {
+		content := m.preview[min(m.offset, len(m.preview)):]
+		if len(m.docs) == 0 {
+			content = []string{"Select a document to read it here."}
+		}
+		rows = append(rows, tuiPane(g.content, "Content", content, focused && !m.dataFocus, tuiPosition(m.offset, max(1, g.content.h-2), len(m.preview)))...)
+	}
+	return rows
 }
 
 func (m *tuiModel) View() tea.View {
@@ -512,11 +580,7 @@ func (m *tuiModel) View() tea.View {
 					background.Render(" ") + lines[row-1] + background.Render(" ") +
 					ansi.Cut(list[row], g.list.w-1, g.list.w)
 			}
-			preview := m.preview[min(m.offset, len(m.preview)):]
-			if len(m.docs) == 0 {
-				preview = []string{"Select a document to read it here."}
-			}
-			right := tuiPane(g.preview, "Preview", preview, !m.commandBar.active && m.previewFocus && m.mode != "search", tuiPosition(m.offset, m.pageHeight(), len(m.preview)))
+			right := m.previewPanes(g, !m.commandBar.active && m.previewFocus && m.mode != "search")
 			if g.split {
 				for i := range list {
 					body = append(body, list[i]+" "+right[i])
