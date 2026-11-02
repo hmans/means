@@ -1,5 +1,25 @@
 # means Changelog
 
+## 0.5.0
+
+### Fixes
+
+- CLI JSON errors now remain structured after malformed flag values, and unknown
+  schema or instructions subcommands fail instead of reporting success. Array
+  filters now compare complete values, including objects nested inside arrays,
+  while preserving numeric precision. ([#41](https://github.com/hmans/means/pull/41))
+- Show application data as highlighted YAML above document content in the terminal
+  browser. The panels start with a one-third/two-thirds height split, scroll
+  separately, and have a draggable separator. ([#39](https://github.com/hmans/means/pull/39))
+
+### Features
+
+- Agents can now replace the MEANS.md workflow body through `instructions set` or
+  MCP `instructions_set`. Whole-file hashes reject stale writes while preserving
+  frontmatter and permissions. MCP `info` now returns the exact editable body in
+  `instructions` and general tool guidance separately in `usage`. ([#37](https://github.com/hmans/means/pull/37))
+- Quit the TUI immediately with Ctrl+D from any view, search, picker, or the command bar. ([#38](https://github.com/hmans/means/pull/38))
+
 ## 0.4.2
 
 ### Fixes
