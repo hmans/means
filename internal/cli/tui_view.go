@@ -382,7 +382,7 @@ func (m *tuiModel) View() tea.View {
 	g := m.geometry()
 	frame := make([]string, m.height)
 	if g.small {
-		frame[0] = "Resize to at least 32 × 12. Ctrl+C quits."
+		frame[0] = "Resize to at least 32 × 12. Ctrl+C or Ctrl+D quits."
 	} else {
 		query := m.query
 		searchTitle := "Search"
