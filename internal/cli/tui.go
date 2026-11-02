@@ -35,7 +35,7 @@ Esc restores the previous search. Typing filters the loaded documents immediatel
 f opens a data field/value picker. Select a field, then a value; filters combine
 with AND. Type to narrow fields or values immediately; use arrows to navigate,
 Enter or click to choose, Backspace to edit, Ctrl+U to clear, and Esc to cancel.
-Letters including j, k, and q are search text in the picker; Ctrl+C still quits.
+Letters including j, k, and q are search text in the picker; Ctrl+C or Ctrl+D quits.
 Fields and enum/const choices come from the schema's direct properties,
 including fields with no documents yet. Schema titles and descriptions guide the
 picker. Stored fields and values remain available, including schema-invalid data.
@@ -43,7 +43,7 @@ v opens collection views from MEANS.md app.views (Expr filters and columns).
 Views combine with search/data filters; All documents leaves the selected view.
 The first value option removes that field's filter. x clears all filters and search.
 r reloads the collection; d shows diagnostics. : opens the command bar; :quit or :q
-then Enter quits, as does Ctrl+C. Bare q does not quit. Tab completes commands and
+then Enter quits, as does Ctrl+C or Ctrl+D. Bare q does not quit. Tab completes commands and
 view names; repeated Tab cycles matches, Shift+Tab cycles backwards. Esc cancels.
 Commands: quit (q), views (view) [name], home, filters (filter), clear,
 diagnostics, help. Quote view names containing spaces; completion adds quotes.
@@ -384,7 +384,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		m.draggingDivider = false
 		key := msg.String()
-		if key == "ctrl+c" {
+		if key == "ctrl+c" || key == "ctrl+d" {
 			return m, tea.Quit
 		}
 		if key == ":" && m.mode != "search" && !m.picking() {

@@ -236,7 +236,7 @@ func (m *tuiModel) updateCommandBar(msg tea.Msg) tea.Cmd {
 	b := &m.commandBar
 	if key, ok := msg.(tea.KeyPressMsg); ok {
 		switch key.String() {
-		case "ctrl+c":
+		case "ctrl+c", "ctrl+d":
 			return tea.Quit
 		case "esc":
 			b.active = false

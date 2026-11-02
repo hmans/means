@@ -269,7 +269,7 @@ Back restores the previous query. Browsing actions remain available from the key
 | Esc | Cancel the current input or picker, return to the list, or leave the active view when browsing documents |
 | : | Open the command bar outside search and pickers |
 | :q or :quit, then Enter | Quit; bare q no longer quits |
-| Ctrl+C | Quit immediately |
+| Ctrl+C or Ctrl+D | Quit immediately |
 
 The experimental command pane temporarily replaces the search field and takes
 keyboard focus; document panes keep their state with muted borders. It uses Cobra
@@ -321,7 +321,7 @@ Both picker steps support immediate, case-insensitive type-ahead over their labe
 type a field name or title, then type a value to narrow its choices. Paste works too.
 Use arrow keys or Page Up/Page Down to navigate, Enter or a click to choose,
 Backspace to edit, and Ctrl+U to clear the picker query. Letters including `j`, `k`,
-and `q` are text in the picker; Ctrl+C or the Quit footer control still exits.
+and `q` are text in the picker; Ctrl+C, Ctrl+D, or the Quit footer control still exits.
 Each new picker step starts with an empty query. Esc cancels the picker without
 applying its highlighted choice. Picker searches do not change the document text
 search or data filters until a value is chosen. Refresh preserves the picker query.
