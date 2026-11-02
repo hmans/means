@@ -19,7 +19,7 @@ means is in early development. It includes:
 
 ## Install
 
-Homebrew installation will be available after the first tap release:
+Install with Homebrew:
 
 ```sh
 brew install --cask hmans/tap/means

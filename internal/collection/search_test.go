@@ -8,6 +8,39 @@ import (
 	"testing"
 )
 
+func TestArrayFiltersRequireExactValues(t *testing.T) {
+	for _, tt := range []struct {
+		name, actual, filter string
+		want                 bool
+	}{
+		{"partial object", `{"item":{"a":1,"b":2}}`, `{"item":{"a":1}}`, true},
+		{"partial object in array", `{"items":[{"a":1,"b":2}]}`, `{"items":[{"a":1}]}`, false},
+		{"nested partial object in array", `{"items":[{"nested":{"a":1,"b":2}}]}`, `{"items":[{"nested":{"a":1}}]}`, false},
+		{"nested array", `{"items":[[{"a":1,"b":2}]]}`, `{"items":[[{"a":1}]]}`, false},
+		{"exact object and equivalent numbers", `{"items":[{"a":1,"b":9007199254740993}]}`, `{"items":[{"b":9007199254740993.0,"a":1.0}]}`, true},
+		{"different large numbers", `{"items":[9007199254740993]}`, `{"items":[9007199254740992]}`, false},
+		{"missing null field", `{"items":[{"a":null}]}`, `{"items":[{"b":null}]}`, false},
+		{"array order", `{"items":[1,2]}`, `{"items":[2,1]}`, false},
+		{"array length", `{"items":[1,2]}`, `{"items":[1]}`, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			decode := func(raw string) map[string]any {
+				t.Helper()
+				var value map[string]any
+				d := json.NewDecoder(strings.NewReader(raw))
+				d.UseNumber()
+				if err := d.Decode(&value); err != nil {
+					t.Fatal(err)
+				}
+				return value
+			}
+			if got := MatchesFilter(decode(tt.actual), decode(tt.filter)); got != tt.want {
+				t.Fatalf("MatchesFilter(%s, %s) = %v, want %v", tt.actual, tt.filter, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSearchTextFiltersLimitsAndDiagnostics(t *testing.T) {
 	c, err := Init(t.TempDir(), []byte(`{"type":"object","properties":{"type":{"type":"string"},"priority":{"type":"string"},"count":{"type":"integer"},"details":{"type":"object"}},"required":["type","priority"],"additionalProperties":false}`))
 	if err != nil {

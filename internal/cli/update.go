@@ -16,7 +16,7 @@ func newUpdateCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <id>",
 		Short: "Patch a document only if its content hash still matches",
-		Long: `Read the document with show --json or read --json, then patch it with --input FILE|-:
+		Long: `Read the document with show --json, then patch it with --input FILE|-:
 {"hash":"<current hash>","frontmatter":{"data":{"status":"done"}}}.
 Omitted fields stay; null deletes metadata keys; arrays replace. A supplied body
 replaces the full body. Stale hashes and invalid data fail without saving.
@@ -25,10 +25,10 @@ IDs are immutable; title changes preserve filenames. Null deletes keys and canno
 set literal null values (use edit for that). On conflict, read again and reconcile.
 A concurrent external write can still race the final hash check and replacement.
 Text returns the ID; JSON returns id, hash, frontmatter, body. Errors exit 1.`,
-		Example: `  means read <id> --path ./memory --json
+		Example: `  means show <id> --path ./memory --json
   means update <id> --path ./memory --input - --json <<'JSON'
   {
-    "hash": "<hash from read>",
+    "hash": "<hash from show --json>",
     "frontmatter": {"title": "Corrected title", "data": {"tags": ["decision"]}},
     "body": "Updated Markdown body.\n"
   }

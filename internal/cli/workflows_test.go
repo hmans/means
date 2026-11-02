@@ -162,13 +162,17 @@ func TestEditorWorkflow(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			doc, err := c.Create(map[string]any{"title": "Before", "data": map[string]any{"old": true}}, "before\n")
+			// Numeric IDs must remain strings in both the source and editor fixture.
+			if err := os.WriteFile(filepath.Join(c.Path, "12345-before.md"), []byte("---\nid: \"12345\"\ntitle: Before\ndata: {old: true}\n---\nbefore\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			doc, err := c.Read("12345")
 			if err != nil {
 				t.Fatal(err)
 			}
 			dir := t.TempDir()
 			t.Setenv("TMPDIR", dir)
-			content := "---\nid: " + doc.ID + "\ntitle: After\ndata: {nullable: null}\n---\nafter\n"
+			content := "---\nid: \"" + doc.ID + "\"\ntitle: After\ndata: {nullable: null}\n---\nafter\n"
 			if mode == "invalid" {
 				content = "not a document"
 			}

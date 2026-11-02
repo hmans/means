@@ -16,6 +16,8 @@ func newInstructionsCommand(opts *options) *cobra.Command {
 		Use: "instructions", Short: "Manage the collection workflow body",
 		Long:    "Use info to read the MEANS.md body and its hash, then instructions set to replace it.",
 		Example: "  means info --json\n  means instructions set --input instructions.json --json",
+		Args:    cobra.NoArgs,
+		RunE:    func(cmd *cobra.Command, _ []string) error { return opts.writeHelp(cmd) },
 	}
 	var input string
 	set := &cobra.Command{

@@ -158,17 +158,31 @@ func MatchesFilter(data, filter map[string]any) bool {
 }
 
 func matchesValue(actual, expected any) bool {
+	return matchesFilterValue(actual, expected, false)
+}
+
+// Objects are partial filters except inside arrays, where every value is exact.
+func matchesFilterValue(actual, expected any, exact bool) bool {
 	switch expected := expected.(type) {
 	case map[string]any:
 		object, ok := actual.(map[string]any)
-		return ok && MatchesFilter(object, expected)
+		if !ok || (exact && len(object) != len(expected)) {
+			return false
+		}
+		for key, value := range expected {
+			actual, exists := object[key]
+			if !exists || !matchesFilterValue(actual, value, exact) {
+				return false
+			}
+		}
+		return true
 	case []any:
 		array, ok := actual.([]any)
 		if !ok || len(array) != len(expected) {
 			return false
 		}
 		for i := range expected {
-			if !matchesValue(array[i], expected[i]) {
+			if !matchesFilterValue(array[i], expected[i], true) {
 				return false
 			}
 		}

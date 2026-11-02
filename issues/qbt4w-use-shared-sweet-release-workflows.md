@@ -1,7 +1,7 @@
 ---
 data:
   priority: normal
-  status: in_progress
+  status: done
   tags:
     - releases
   type: task
@@ -18,4 +18,4 @@ Validation: workflow lint, Go tests/vet, all six snapshot archives, native binar
 
 Sweet #47 is merged. Both workflow calls now pin its merged revision 01911da0f43f6147d1918c5b4e776abcdd9b7c3a, whose tree matches the reviewed Sweet commit.
 
-Remaining: merge Means PR #16 and confirm the next live release end to end.
+Completed: Means PR #16 merged on 2026-10-25. The live v0.4.2 Release workflow succeeded end to end: https://github.com/hmans/means/actions/runs/40886099081. Published release: https://github.com/hmans/means/releases/tag/v0.4.2.

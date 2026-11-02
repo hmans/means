@@ -22,9 +22,9 @@ These options are exclusive. Stale hashes fail. There is no undo, force, or
 confirmation prompt. Directories and collection configuration are kept.
 A concurrent external write can still race the final hash check and deletion.
 Text returns the deleted ID; JSON returns {"id":"..."}. Errors exit 1.`,
-		Example: `  means read <id> --path ./memory --json
+		Example: `  means show <id> --path ./memory --json
   means delete <id> --path ./memory --input - --json <<'JSON'
-  {"hash":"<hash from read>"}
+  {"hash":"<hash from show --json>"}
 JSON`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -60,7 +60,7 @@ JSON`,
 		},
 	}
 	cmd.Flags().StringVar(&input, "input", "", "Delete JSON with content hash from FILE, or - for stdin (alternative to --hash)")
-	cmd.Flags().StringVar(&suppliedHash, "hash", "", "Current content hash from show --json or read --json")
+	cmd.Flags().StringVar(&suppliedHash, "hash", "", "Current content hash from show --json")
 	cmd.MarkFlagsMutuallyExclusive("input", "hash")
 	return cmd
 }
