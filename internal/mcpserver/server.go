@@ -161,15 +161,19 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		},
 		{
 			name:        "list",
-			description: "List valid document IDs and frontmatter in filename order, without bodies or hashes. Returns documents, diagnostics, and has_more. limit counts valid documents (default 20; 0 returns all). Malformed documents and every duplicate occurrence are excluded and reported in diagnostics regardless of the limit. Read an ID before updating it.",
-			schema:      `{"type":"object","properties":{"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all."}},"additionalProperties":false}`,
+			description: "List valid document IDs and frontmatter in filename order, without bodies or hashes. Returns documents, diagnostics, and has_more. offset skips valid documents (default 0) before limit (default 20; 0 returns all remaining). Malformed documents and every duplicate occurrence are excluded and reported in diagnostics regardless of offset or limit. has_more indicates valid documents after this page. Each call scans current files; changes between calls can shift pages. Read an ID before updating it.",
+			schema:      `{"type":"object","properties":{"offset":{"type":"integer","minimum":0,"description":"Valid documents to skip before limit; default 0."},"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all remaining."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(c *collection.Collection, args map[string]any) (any, error) {
 				limit, err := limitArg(args)
 				if err != nil {
 					return nil, err
 				}
-				return c.List(limit)
+				offset, err := integerArg(args, "offset", 0)
+				if err != nil {
+					return nil, err
+				}
+				return c.ListWithOptions(collection.ListOptions{Offset: offset, Limit: limit})
 			},
 		},
 		{
@@ -262,18 +266,22 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 }
 
 func limitArg(args map[string]any) (int, error) {
-	if value, exists := args["limit"]; exists {
+	return integerArg(args, "limit", 20)
+}
+
+func integerArg(args map[string]any, name string, defaultValue int) (int, error) {
+	if value, exists := args[name]; exists {
 		n, ok := new(big.Rat).SetString(value.(json.Number).String())
 		if !ok || !n.IsInt() || !n.Num().IsInt64() {
-			return 0, fmt.Errorf("limit is too large")
+			return 0, fmt.Errorf("%s is too large", name)
 		}
-		limit := int(n.Num().Int64())
-		if int64(limit) != n.Num().Int64() {
-			return 0, fmt.Errorf("limit is too large")
+		result := int(n.Num().Int64())
+		if int64(result) != n.Num().Int64() {
+			return 0, fmt.Errorf("%s is too large", name)
 		}
-		return limit, nil
+		return result, nil
 	}
-	return 20, nil
+	return defaultValue, nil
 }
 
 type toolDefinition struct {

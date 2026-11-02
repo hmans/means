@@ -186,12 +186,41 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if !foundBroken {
 				t.Fatal("missing malformed-document error")
 			}
+			allDocuments := listed["documents"].([]any)
+			for _, tc := range []struct {
+				args   string
+				offset int
+				count  int
+				more   bool
+			}{
+				{`{"offset":1,"limit":2}`, 1, 2, true},
+				{`{"offset":1}`, 1, 20, false},
+				{`{"offset":20,"limit":0}`, 20, 1, false},
+				{`{"offset":21,"limit":1}`, 21, 0, false},
+				{`{"offset":100,"limit":0}`, 21, 0, false},
+			} {
+				page := call("list", tc.args, false)
+				documents := page["documents"].([]any)
+				if len(documents) != tc.count || page["has_more"] != tc.more || len(page["diagnostics"].([]any)) != 1 {
+					t.Fatalf("%s: %v", tc.args, page)
+				}
+				for i, document := range documents {
+					if document.(map[string]any)["id"] != allDocuments[tc.offset+i].(map[string]any)["id"] {
+						t.Fatalf("page order differs: %s: %v", tc.args, page)
+					}
+				}
+			}
 			call("read", `{"id":"../outside"}`, true)
 			call("read", `{"id":"missing"}`, true)
 			call("list", `{"limit":-1}`, true)
 			call("list", `{"limit":0.5}`, true)
 			call("list", `{"limit":1e100}`, true)
 			call("list", `{"limit":1e0}`, false)
+			call("list", `{"offset":-1}`, true)
+			call("list", `{"offset":0.5}`, true)
+			call("list", `{"offset":1e100}`, true)
+			call("list", `{"offset":"1"}`, true)
+			call("list", `{"offset":1e0}`, false)
 			call("info", `{"path":"elsewhere"}`, true)
 			call("info", `null`, true)
 			// Schema changes affect the next call; reads still allow old metadata.

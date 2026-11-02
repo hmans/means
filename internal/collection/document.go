@@ -34,9 +34,9 @@ type Document struct {
 }
 
 type DocumentSummary struct {
+	Body        *string        `json:"body,omitempty"`
 	ID          string         `json:"id"`
 	Frontmatter map[string]any `json:"frontmatter"`
-	Body        *string        `json:"body,omitempty"`
 }
 
 type ListResult struct {
@@ -353,6 +353,9 @@ func (c *Collection) List(limit int) (*ListResult, error) {
 }
 
 type ListOptions struct {
+	Filter   map[string]any
+	DateTime []DateTimeFilter
+	Offset   int // Skip this many valid matching documents before applying Limit.
 	Limit    int
 	WithBody bool
 }
@@ -361,6 +364,13 @@ func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
 	limit := opts.Limit
 	if limit < 0 {
 		return nil, fmt.Errorf("limit must be zero or greater")
+	}
+	if opts.Offset < 0 {
+		return nil, fmt.Errorf("offset must be zero or greater")
+	}
+	dateTimeFilters, err := compileDateTimeFilters(opts.DateTime)
+	if err != nil {
+		return nil, err
 	}
 	root, err := os.OpenRoot(c.Path)
 	if err != nil {
@@ -378,6 +388,7 @@ func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
 		}
 	}
 	result := &ListResult{Documents: []DocumentSummary{}, Diagnostics: []Diagnostic{}}
+	skipped := 0
 	for _, entry := range entries {
 		summary := DocumentSummary{}
 		if entry.doc != nil {
@@ -388,6 +399,13 @@ func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
 		}
 		if entry.err != nil {
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{ID: summary.ID, Path: path.Clean(entry.filename), Error: entry.err.Error()})
+			continue
+		}
+		if !matchesData(entry.doc.Frontmatter["data"].(map[string]any), opts.Filter, dateTimeFilters) {
+			continue
+		}
+		if skipped < opts.Offset {
+			skipped++
 			continue
 		}
 		if limit > 0 && len(result.Documents) == limit {
