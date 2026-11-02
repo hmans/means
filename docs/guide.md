@@ -236,14 +236,19 @@ are clickable footer controls.
 The selected row is highlighted, the focused pane has an accent border, and pane
 footers show the visible range. Wide terminals show both panes side by side;
 below 90 columns, the View button or Tab switches panes. The preview includes
-syntax-highlighted JSON application data below a separator after the body, with
-the ID at the upper right beside the wrapping title.
+syntax-highlighted YAML application data in a separate Data panel above the
+Content panel. Data starts at one third of the preview height and Content uses
+the rest. Each panel scrolls separately. Drag their separator or adjacent borders
+to change the split; the chosen proportion stays in effect for the session,
+including after a terminal resize. Each panel keeps at least one content row.
+Very short preview areas show only the focused panel.
+The ID is at the upper right beside the wrapping title in the Content panel.
 Body text has no extra outer margin. Wrapped list items currently follow Glamour's
 default alignment. Smaller terminals use compact toolbar labels;
 below 32 columns or 12 rows, resize the terminal to browse.
 
 In terminals that support mouse reporting, click toolbar buttons or the search
-field, click a document to select it, and click the preview to focus it. Hovered
+field, click a document to select it, and click Data or Content to focus it. Hovered
 documents have a subtle gray background; the selected document has a blue background.
 The empty data-filter row is hidden. The wheel
 scrolls the pane under the pointer without changing the selected document or
@@ -257,9 +262,10 @@ Back restores the previous query. Browsing actions remain available from the key
 
 | Key | Action |
 | --- | --- |
-| Up/Down or j/k | Select a document, or scroll the focused preview |
-| Tab or Enter | Switch between list selection and preview scrolling |
-| Page Up/Page Down, Home/End | Move within the list or preview |
+| Up/Down or j/k | Select a document, or scroll the focused panel |
+| Tab or Enter | Cycle focus through Documents, Data, and Content |
+| Shift+Tab | Cycle focus backwards |
+| Page Up/Page Down, Home/End | Move within the focused list or panel |
 | / | Filter title/body text immediately while typing; Enter keeps the search |
 | f | Choose a top-level data field, then a schema or stored value |
 | v | Choose a collection-defined view (type to find, Enter to select) |

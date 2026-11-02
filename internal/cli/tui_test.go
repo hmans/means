@@ -70,9 +70,9 @@ func TestTUISnapshotFiltersAndPreviewCache(t *testing.T) {
 	if &m.preview[0] != cached {
 		t.Fatal("search rerendered an unchanged preview")
 	}
-	m.offset = len(m.preview) - m.pageHeight()
+	m.offset = m.previewMaxOffset()
 	m.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height + 10})
-	if &m.preview[0] != cached || m.offset > max(0, len(m.preview)-m.pageHeight()) {
+	if &m.preview[0] != cached || m.offset > m.previewMaxOffset() {
 		t.Fatal("height-only resize must reuse the preview and clamp scrolling")
 	}
 	m.Update(tea.WindowSizeMsg{Width: m.width + 1, Height: m.height})
@@ -117,6 +117,45 @@ func TestTUISnapshotFiltersAndPreviewCache(t *testing.T) {
 	m.filterText("Alpha")
 	if !strings.Contains(ansi.Strip(strings.Join(m.preview, "\n")), newBody) {
 		t.Fatal("restored selection did not render its preview")
+	}
+}
+
+func TestTUIYAMLPreviewPanels(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+	c := tuiTestCollection(t)
+	tuiCreate(t, c, "Alpha", map[string]any{"status": "open", "count": json.Number("9007199254740993")})
+	m := newTUIModel(c.Path)
+	tuiRun(t, m, m.Init())
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 35})
+	view := m.View().Content
+	data, content := strings.Index(view, "╭ Data "), strings.Index(view, "╭ Content ")
+	if data < 0 || content <= data || !strings.Contains(view[data:content], "status: open") || !strings.Contains(view[data:content], "count: 9007199254740993") {
+		t.Fatalf("missing separate YAML panel above content: %s", view)
+	}
+	if !strings.Contains(view[content:], "Preview heading") || strings.Contains(view, "\x1b") {
+		t.Fatalf("content missing or NO_COLOR ignored: %s", view)
+	}
+
+	// Large metadata must not hide the end of the document permanently.
+	large := tuiTestCollection(t)
+	_, err := large.Create(map[string]any{"title": "Long data", "data": map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")}}, strings.Repeat("More content.\n\n", 30)+"Last content line")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, size := range [][2]int{{140, 24}, {60, 16}, {32, 12}} {
+		m = newTUIModel(large.Path)
+		tuiRun(t, m, m.Init())
+		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+		m.previewFocus = true
+		m.move(int(^uint(0) >> 2))
+		view = m.View().Content
+		if m.offset == 0 || !strings.Contains(view, "Last content line") || !strings.Contains(view, "╰") {
+			t.Fatalf("%v: cannot scroll to content after large data: %s", size, view)
+		}
+		m.move(-int(^uint(0) >> 2))
+		if !strings.Contains(m.View().Content, "╭ Data ") {
+			t.Fatal("cannot return to the data panel")
+		}
 	}
 }
 
@@ -239,6 +278,10 @@ func TestTUISearchNavigationAndSizing(t *testing.T) {
 	tuiPress(m, tea.KeyEsc)
 	if m.query != "ALPHA 日本語" || len(m.docs) != 1 {
 		t.Fatal("cancel changed search")
+	}
+	tuiPress(m, tea.KeyTab)
+	if !m.previewFocus || !m.dataFocus {
+		t.Fatal("Tab did not focus Data")
 	}
 	tuiPress(m, tea.KeyTab)
 	m.move(10)

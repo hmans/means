@@ -37,23 +37,27 @@ func TestPreviewDocumentLayout(t *testing.T) {
 }
 
 func TestPreviewData(t *testing.T) {
-	data := []byte("{\n  \"tags\": [\"cli\"],\n  \"count\": 3,\n  \"active\": true,\n  \"empty\": null\n}")
-	rendered := renderPreviewData(60, data)
-	plain := ansi.Strip(rendered)
-	parts := strings.SplitN(plain, "\n", 3)
-	if len(parts) != 3 || parts[0] != strings.Repeat("─", 60) || parts[1] != "Data" {
-		t.Fatalf("missing separator or label: %q", plain)
+	data := map[string]any{
+		"tags": []any{"cli"}, "count": json.Number("9007199254740993"),
+		"active": true, "empty": nil, "date": "2026-11-02",
+		"nested": map[string]any{"status": "open"}, "text": "true",
+		"multiline": "first\n```\nlast", "ratio": json.Number("0.1234567890123456789"),
 	}
-	lines := strings.Split(parts[2], "\n")
+	rendered, err := renderPreviewData(60, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := ansi.Strip(rendered)
+	lines := strings.Split(plain, "\n")
 	for i := range lines {
 		lines[i] = strings.TrimRight(lines[i], " ")
 	}
-	if strings.TrimSpace(strings.Join(lines, "\n")) != string(data) {
-		t.Fatalf("highlighting changed JSON: %q", parts[2])
+	want := "active: true\ncount: 9007199254740993\ndate: \"2026-11-02\"\nempty: null\nmultiline: |-\n  first\n  ```\n  last\nnested:\n  status: open\nratio: 0.1234567890123456789\ntags:\n  - cli\ntext: \"true\""
+	if strings.TrimSpace(strings.Join(lines, "\n")) != want {
+		t.Fatalf("unexpected YAML: %q", plain)
 	}
-	styledData := strings.SplitN(rendered, "\n", 3)[2]
-	if styledData == ansi.Strip(styledData) {
-		t.Fatal("JSON has no syntax highlighting")
+	if rendered == plain {
+		t.Fatal("YAML has no syntax highlighting")
 	}
 }
 
