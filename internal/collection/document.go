@@ -34,9 +34,9 @@ type Document struct {
 }
 
 type DocumentSummary struct {
+	Body        *string        `json:"body,omitempty"`
 	ID          string         `json:"id"`
 	Frontmatter map[string]any `json:"frontmatter"`
-	Body        *string        `json:"body,omitempty"`
 }
 
 type ListResult struct {
@@ -353,52 +353,37 @@ func (c *Collection) List(limit int) (*ListResult, error) {
 }
 
 type ListOptions struct {
+	Filter   map[string]any
+	DateTime []DateTimeFilter
+	Offset   int // Skip this many valid matching documents before applying Limit.
 	Limit    int
 	WithBody bool
 }
 
 func (c *Collection) ListWithOptions(opts ListOptions) (*ListResult, error) {
-	limit := opts.Limit
-	if limit < 0 {
+	if opts.Limit < 0 {
 		return nil, fmt.Errorf("limit must be zero or greater")
 	}
-	root, err := os.OpenRoot(c.Path)
+	if opts.Offset < 0 {
+		return nil, fmt.Errorf("offset must be zero or greater")
+	}
+	dateTimeFilters, err := compileDateTimeFilters(opts.DateTime)
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close()
-	entries, err := scanDocuments(root)
+	search, err := c.searchScan(SearchOptions{
+		Filter: opts.Filter, dateTimeFilters: dateTimeFilters,
+		Limit: opts.Limit, WithBody: opts.WithBody,
+	}, opts.Offset)
 	if err != nil {
 		return nil, err
 	}
-	counts := map[string]int{}
-	for _, entry := range entries {
-		if entry.doc != nil {
-			counts[entry.doc.ID]++
-		}
+	result := &ListResult{
+		Documents:   make([]DocumentSummary, len(search.Documents)),
+		Diagnostics: search.Diagnostics, HasMore: search.HasMore,
 	}
-	result := &ListResult{Documents: []DocumentSummary{}, Diagnostics: []Diagnostic{}}
-	for _, entry := range entries {
-		summary := DocumentSummary{}
-		if entry.doc != nil {
-			summary.ID = entry.doc.ID
-		}
-		if summary.ID != "" && counts[summary.ID] > 1 {
-			entry.err = fmt.Errorf("%w %q; resolve the duplicate files", ErrDuplicateID, summary.ID)
-		}
-		if entry.err != nil {
-			result.Diagnostics = append(result.Diagnostics, Diagnostic{ID: summary.ID, Path: path.Clean(entry.filename), Error: entry.err.Error()})
-			continue
-		}
-		if limit > 0 && len(result.Documents) == limit {
-			result.HasMore = true
-			continue
-		}
-		summary.Frontmatter = entry.doc.Frontmatter
-		if opts.WithBody {
-			summary.Body = &entry.doc.Body
-		}
-		result.Documents = append(result.Documents, summary)
+	for i, hit := range search.Documents {
+		result.Documents[i] = DocumentSummary{ID: hit.ID, Frontmatter: hit.Frontmatter, Body: hit.Body}
 	}
 	return result, nil
 }

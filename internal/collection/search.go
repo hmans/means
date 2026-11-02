@@ -79,6 +79,12 @@ func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
 	if opts.Query != "" && !opts.Literal {
 		return c.searchFullText(opts)
 	}
+	return c.searchScan(opts, 0)
+}
+
+// searchScan returns matches in filename order and diagnostics for the whole collection.
+// Callers validate options and compile datetime filters before scanning.
+func (c *Collection) searchScan(opts SearchOptions, offset int) (*SearchResult, error) {
 	var pattern *regexp.Regexp
 	if opts.Query != "" {
 		var err error
@@ -130,6 +136,10 @@ func (c *Collection) Search(opts SearchOptions) (*SearchResult, error) {
 			} else {
 				continue
 			}
+		}
+		if offset > 0 {
+			offset--
+			continue
 		}
 		if opts.Limit > 0 && len(result.Documents) == opts.Limit {
 			result.HasMore = true

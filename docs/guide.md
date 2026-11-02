@@ -500,12 +500,19 @@ schema, so documents remain readable after schema changes.
 
 `list --json` returns `documents`, `diagnostics`, and `has_more`, like search.
 Documents contain IDs and frontmatter; bodies require `--with-body`, and hashes
-are omitted. Its default limit is 20 valid documents; `--limit 0` returns all.
+are omitted. Its default limit is 20 valid documents. `--offset N` skips N valid
+matching documents before the limit (default 0); `--limit 0` returns all remaining
+matches. Both values must be zero or greater. For example,
+`means list --offset 20 --limit 20 --json` returns the second page of 20 documents.
+`has_more` indicates valid matches after the returned page. An offset at or past
+the end returns an empty documents array with `has_more: false`.
 List accepts the same exact-data and datetime filters as search, combined with AND
-before the limit. For example, `means list --filter status=todo` selects open work.
+before the offset and limit. For example, `means list --filter status=todo` selects open work.
 List uses filename order and performs no text indexing or embedding API calls.
 Malformed documents and every duplicate occurrence are excluded from documents
-and reported in diagnostics with ID, path, and error, regardless of the limit.
+and reported in diagnostics with ID, path, and error, regardless of offset or limit.
+MCP `list` accepts the same `offset` and `limit` values. Each call scans the current
+files; changes between calls can shift documents between pages.
 `search` uses full-text ranking by default: all
 query terms must occur, in any order, across the title and body. Title matches
 receive a boost; equal scores sort by stored ID. Queries use lowercase Unicode

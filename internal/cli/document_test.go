@@ -115,6 +115,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 	for _, args := range [][]string{
 		{"create"}, {"create", "--input="}, {"create", "--input", "missing.json"},
 		{"read"}, {"read", "missing"}, {"read", "../outside"}, {"list", "--limit", "-1"},
+		{"list", "--offset", "-1"}, {"list", "--offset", "0.5"}, {"list", "--offset", "9999999999999999999999"},
 	} {
 		var stdout, stderr bytes.Buffer
 		args = append(args, "--path", dir, "--json")
@@ -125,7 +126,7 @@ func TestDocumentCommandErrorsAndHelp(t *testing.T) {
 	for command, topics := range map[string][]string{
 		"create": {"--input -", "frontmatter", "MEANS.md", "data", "exit 1", "<<'JSON'"},
 		"read":   {"filename", "--json", "schema", "exit 1"},
-		"list":   {"--limit", "has_more", "Malformed", "exit 1"},
+		"list":   {"--offset", "--limit", "has_more", "Malformed", "exit 1"},
 		"update": {"hash", "read", "--input -", "null deletes", "arrays", "Stale", "concurrent", "exit 1", "<<'JSON'"},
 		"delete": {"hash", "--input -", "Permanently", "Stale", "no undo", "concurrent external write", "exit 1", "<<'JSON'"},
 	} {
