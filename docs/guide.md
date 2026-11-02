@@ -81,8 +81,9 @@ The root `MEANS.md` must be a regular UTF-8 file, not a symlink. It is configura
 not a document, and is excluded from lists and reads. The server does not load `AGENTS.md`.
 
 Run `means info --path ./memory` to inspect collection identity, schema, and
-workflow. `info --json` returns `path`, `title`, `description`, `schema`, and
-`instructions`. Instructions contain the exact Markdown body of `MEANS.md`.
+workflow. `info --json` returns `path`, `title`, `description`, `schema`,
+`instructions`, and `hash`. Instructions contain the exact Markdown body of `MEANS.md`.
+The hash is SHA-256 of the complete file, including frontmatter.
 Info requires a valid collection configuration and schema.
 
 For agent use, put collection purpose, path, and when-to-use guidance in project
@@ -90,6 +91,37 @@ instructions or a discoverable skill, or register the collection with an MCP cli
 Write schema-specific rules and workflow in MEANS.md. Creating that file alone does
 not make a CLI-based agent discover it; means does not load project instructions.
 Verify the intended collection with `info` and check representative data with `doctor`.
+
+### Changing the workflow body
+
+Read `info --json`, edit its `instructions` value, then use `instructions set`:
+
+```sh
+mise means info --path ./memory --json
+mise means instructions set --path ./memory --input instructions.json --json
+```
+
+The input file contains the hash from `info` and the complete replacement body:
+
+```json
+{"hash":"<hash from info>","instructions":"# Workflow\n\nSearch before creating a note.\n"}
+```
+
+Use `--input -` for stdin. An empty instructions string clears the body.
+The operation preserves exact frontmatter bytes (including comments and schema)
+and file permissions. It requires a valid collection configuration, but does not
+validate or change documents. JSON returns `hash`, `title`, `description`, and
+`instructions`; the returned hash can be used for the next edit.
+
+The hash covers all of MEANS.md. If the body or frontmatter changes after `info`,
+the update fails. Read `info` again and reconcile changes before retrying.
+Writes use a same-directory temporary replacement with no lock. Observed changes
+reject replacement, but an external write can still race the final check and rename.
+
+MCP provides the same operation as `instructions_set`, with the same JSON input.
+MCP `info.instructions` contains the exact body; general tool guidance is returned
+separately as `usage`. Current guidance reloads on each call. Restart MCP to
+refresh the connection instructions and discovery metadata.
 
 ### Changing the schema
 
@@ -869,7 +901,7 @@ managed daemon. Register the command once per collection to give one agent
 multiple collections. Each server advertises its collection identity and the
 Markdown workflow from `MEANS.md` at startup. Call `info` for the current
 schema and guidance. Other tools are `list`, `search`, `read`, `create`,
-`update`, `delete`, and `schema_set`; they use the same collection behavior as the CLI.
+`update`, `delete`, `schema_set`, and `instructions_set`; they use the same collection behavior as the CLI.
 Embedding maintenance on create/update/delete is automatic. Backfills and forced
 rebuilds use CLI `means embed`; they are not exposed as MCP tools.
 `info` includes the host embedding configuration loaded at startup (or null when disabled).

@@ -79,6 +79,13 @@ following its [workflow](issues/MEANS.md).
   help and startup errors, not protocol framing. Use MEANS.md frontmatter title/description for
   collection identity and its Markdown body for collection workflows.
   Root MEANS.md is reserved configuration, excluded from document lists/reads.
+  Info returns the exact MEANS.md body as instructions and a SHA-256 hash of the
+  complete configuration file. CLI instructions set and MCP instructions_set
+  require that hash and replace the complete body (empty clears it), preserving
+  exact frontmatter bytes and permissions. Require valid configuration without
+  checking documents. Reject stale hashes and observed concurrent file changes;
+  external writes can still race replacement. MCP info puts general tool guidance
+  in usage, separate from the editable instructions.
   MCP advertises identity and workflow at startup; info reads current
   guidance. The server does not load AGENTS.md. Multiple registrations may bind
   one agent to multiple collections, with names chosen by the consumer.

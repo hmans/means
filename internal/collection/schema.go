@@ -121,9 +121,9 @@ func orderedSchema(schema []byte) (json.RawMessage, error) {
 // replaceConfig rejects observed changes to any part of the configuration.
 // A concurrent write can still race the final rename; this is not a lock.
 func replaceConfig(root *os.Root, directory string, previousInfo os.FileInfo, previous []byte, content string) error {
-	temp, err := os.CreateTemp(directory, ".means-schema-*.tmp")
+	temp, err := os.CreateTemp(directory, ".means-config-*.tmp")
 	if err != nil {
-		return fmt.Errorf("create schema temporary file: %w", err)
+		return fmt.Errorf("create configuration temporary file: %w", err)
 	}
 	name := filepath.Base(temp.Name())
 	defer root.Remove(name)
@@ -135,7 +135,7 @@ func replaceConfig(root *os.Root, directory string, previousInfo os.FileInfo, pr
 		writeErr = temp.Sync()
 	}
 	if err := errors.Join(writeErr, temp.Close()); err != nil {
-		return fmt.Errorf("write schema: %w", err)
+		return fmt.Errorf("write configuration: %w", err)
 	}
 	latestStat, err := root.Lstat(ConfigFilename)
 	if err != nil {
@@ -152,7 +152,7 @@ func replaceConfig(root *os.Root, directory string, previousInfo os.FileInfo, pr
 		return fmt.Errorf("%w: configuration changed during validation", ErrConflict)
 	}
 	if err := root.Rename(name, ConfigFilename); err != nil {
-		return fmt.Errorf("replace schema: %w", err)
+		return fmt.Errorf("replace configuration: %w", err)
 	}
 	return nil
 }

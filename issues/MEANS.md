@@ -59,7 +59,9 @@ mise means update <id> --path ./issues --input - --json
 
 Read the schema in this file's frontmatter before creating issues. When accessed through MCP, use `info`
 for the current schema and these instructions; the tools are `list`, `search`,
-`read`, `create`, `update`, `delete`, and `schema_set`.
+`read`, `create`, `update`, `delete`, `schema_set`, and `instructions_set`.
+To change this workflow, read `info` and use `instructions_set` with its whole-file
+hash and the complete replacement instructions. CLI users can use `instructions set`.
 
 Embedding settings belong to the local Means user config, not this collection.
 To enable them on this machine, edit `$XDG_CONFIG_HOME/means/config.yaml` (default

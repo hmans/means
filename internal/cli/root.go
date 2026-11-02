@@ -123,7 +123,7 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 	root.SetHelpCommand(help)
 	agentsAlias := newAgentsCommand(opts)
 	agentsAlias.Hidden = true
-	root.AddCommand(agentsAlias, newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts), newEmbedCommand(opts),
+	root.AddCommand(agentsAlias, newVersionCommand(opts, version), newInitCommand(opts), newSchemaCommand(opts), newInstructionsCommand(opts), newEmbedCommand(opts),
 		newCreateCommand(opts), newReadCommand(opts), newShowCommand(opts), newListCommand(opts), newSearchCommand(opts), newUpdateCommand(opts), newDeleteCommand(opts), newDoctorCommand(opts), newMCPCommand(opts, version), newInfoCommand(opts), newEditCommand(opts), newTUICommand(opts))
 	root.AddGroup(&cobra.Group{ID: "documents", Title: "Documents:"}, &cobra.Group{ID: "collection", Title: "Collection:"}, &cobra.Group{ID: "other", Title: "Help and integrations:"})
 	root.SetHelpCommandGroupID("other")
@@ -131,7 +131,7 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 		switch cmd.Name() {
 		case "create", "list", "search", "show", "read", "edit", "update", "delete", "tui":
 			cmd.GroupID = "documents"
-		case "init", "info", "schema", "doctor", "embed":
+		case "init", "info", "schema", "instructions", "doctor", "embed":
 			cmd.GroupID = "collection"
 		default:
 			cmd.GroupID = "other"

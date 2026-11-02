@@ -15,7 +15,10 @@ func newMCPCommand(opts *options, version string) *cobra.Command {
 		Long: `Serve the collection selected by --path over stdio for an MCP client.
 Initialize the collection first and register each collection separately.
 Call info to verify identity, schema, and workflow. Other tools are list, search,
-read, create, update, delete, and schema_set. Successful calls return structuredContent;
+read, create, update, delete, schema_set, and instructions_set. Info returns the exact
+MEANS.md body as instructions, its whole-file hash, and tool guidance as usage.
+Use instructions_set with that hash to replace the workflow body.
+Successful calls return structuredContent;
 errors include explanations. Embed is CLI-only. Register the executable and
 absolute collection path in your client's stdio MCP configuration.
 Stdout is reserved for MCP protocol framing; --json only affects help and startup errors.

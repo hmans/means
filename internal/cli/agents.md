@@ -97,8 +97,13 @@ not a document; it is excluded from document lists and reads.
 5. Use `schema set` to check a proposed schema against existing documents before
    installing it. It does not migrate documents. For a staged migration, accept
    both forms, migrate data, then tighten the schema.
+6. Use `instructions set` to replace the MEANS.md workflow body. Read `info --json`
+   first and supply its whole-file hash with the complete replacement instructions.
+   An empty string clears the body. Frontmatter bytes and permissions are preserved.
 
 Read a document before updating or deleting it and supply its current hash.
 On a conflict, read again and reconcile changes. Keep collection-specific rules
 in `MEANS.md`; use command help for operation details and `means help mcp` for
-integration. MCP `info` supplies the current collection schema and guidance.
+integration. MCP `info` supplies the current collection schema, exact workflow
+body as `instructions`, and its whole-file `hash`. General tool guidance is in
+`usage`. Use MCP `instructions_set` with that hash to replace the workflow body.
