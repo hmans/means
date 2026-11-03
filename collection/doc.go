@@ -11,6 +11,8 @@
 // is not usable. No Close call is needed: each operation closes its files and
 // caches before returning. See the examples for [Collection.Create],
 // [Collection.Search], [Collection.Update], and [SetSchema].
+// [Watch] provides optional change notifications with a separate context-owned
+// lifetime. Cancel its context to release filesystem watches.
 //
 // MEANS.md contains YAML frontmatter with a required schema and optional title,
 // description, and app views, followed by Markdown workflow instructions.

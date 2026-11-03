@@ -148,6 +148,56 @@ Use the complete configuration hash from `Describe()`. An empty string clears
 the body. Frontmatter bytes and permissions are preserved. Reload afterward to
 observe the new instructions through the collection snapshot.
 
+## Watch external changes
+
+Use `Watch(ctx, path)` to receive collection invalidations. Start the watcher
+before the initial read, then reload configuration and documents after each event:
+
+```go
+watchCtx, cancel := context.WithCancel(ctx)
+defer cancel()
+events, err := collection.Watch(watchCtx, "./notes")
+if err != nil {
+    return err
+}
+// Load the initial snapshot here.
+for event := range events {
+    if event.Err != nil {
+        // Report degraded monitoring: notifications might have been lost.
+    }
+    // Reload with collection.Load and refresh the data the application needs.
+    // A failed reload can retain the previous snapshot until the next event.
+}
+```
+
+The directory must exist at startup. Its `MEANS.md` may be absent or invalid,
+so an editor can keep monitoring while the user repairs configuration.
+Watch does not load settings, write files, or contact external services.
+
+Notifications combine changes after 200 milliseconds of quiet. There is no
+initial event. They do not identify documents or represent a durable operation
+log; extra invalidations are possible. A slow consumer does not block filesystem
+monitoring: pending notifications are coalesced in bounded memory.
+
+The watcher covers visible subdirectories and atomic file replacements. It
+ignores hidden paths and does not follow symlinks below the root. A nested
+`MEANS.md`, even an invalid one, marks a separate collection. Adding or removing
+that boundary invalidates the parent, but the nested collection's documents are
+excluded. Watch each collection separately; discovery of new collections belongs
+to the host application.
+
+On a watcher error, reload the snapshot as well as reporting `event.Err`.
+The watcher attempts to restore directory watches and continues. Filesystem
+notifications depend on operating-system and filesystem support; use a manual
+refresh or application-managed polling when stronger guarantees are needed.
+The root directory can be removed and recreated, but its parent must remain.
+A root symlink is resolved once at startup.
+
+Cancel the supplied context when finished, including when a consumer stops
+receiving. The channel closes after filesystem resources are released.
+Drain it after cancellation if the host must wait for cleanup. UI selection,
+refresh scheduling, and embedding settings remain under the host's control.
+
 ## Host settings and cancellation
 
 The library does not read or bootstrap user configuration, load `.env` files,
