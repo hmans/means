@@ -102,6 +102,8 @@ not a document; it is excluded from document lists and reads.
    An empty string clears the body. Frontmatter bytes and permissions are preserved.
 
 Read a document before updating or deleting it and supply its current hash.
+Append handles concurrency internally; its hash is optional. Supply one to require
+a specific version. Repeating a hashless append adds the text again.
 On a conflict, read again and reconcile changes. Keep collection-specific rules
 in `MEANS.md`; use command help for operation details and `means help mcp` for
 integration. MCP `info` supplies the current collection schema, exact workflow

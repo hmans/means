@@ -9,7 +9,7 @@ import (
 	"github.com/gofrs/flock"
 )
 
-// tryLock waits up to five seconds for an exclusive cache lock. A timed-out wait
+// tryLock waits up to five seconds for an exclusive file lock. A timed-out wait
 // reports busy; cancellation of ctx itself is returned as a lock error.
 func tryLock(ctx context.Context, filename, name, busy string) (*flock.Flock, error) {
 	lock := flock.New(filename)

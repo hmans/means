@@ -835,6 +835,27 @@ read again and review the intervening changes before retrying. Updates use a
 same-directory temporary replacement, but do not lock the document against a
 write racing the final replacement.
 
+To add text to the end of the body, use `append`:
+
+```sh
+means append <id> "More text." --path ./memory
+means append <id> --body-file ./addition.md --path ./memory
+```
+
+Use `--body-file -` to read text from stdin. For structured input, use
+`--input FILE|-` with `{"body":"\n\nMore text.\n"}`.
+Do not combine these input modes. Text is appended exactly, with no added spaces
+or newlines. Empty text leaves the body unchanged. Append preserves frontmatter
+formatting, filenames, and permissions. Means serializes appends using
+`.means/append.lock`, with a context-aware wait of up to five seconds. It reads
+the latest document under this lock and uses the same hash checks, validation,
+and embedding maintenance as `update`. Other commands and external editors do
+not take the append lock; an external write can still race the final replacement.
+No prior read is required. To require a specific version, use `--hash HASH` from
+`show --json`, or add `hash` to the JSON input. A supplied hash must be valid
+and match. Repeating a hashless append adds the text again. JSON returns the
+updated document and its new hash. See `means help append` for examples.
+
 `mise means doctor --path ./memory --json` checks every visible document against
 the current schema without changing files. It reports malformed frontmatter,
 invalid means fields, duplicate IDs, and application schema violations. It takes

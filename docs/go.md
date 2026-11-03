@@ -85,6 +85,16 @@ to an empty body clears it. IDs cannot be patched. `ReplaceMarkdown` accepts a
 complete edited document and replaces metadata instead of merge-patching it,
 preserving literal null values. It requires the original ID and content hash.
 
+`Append(ctx, id, hash, text)` adds exact text to the end of the body. It inserts
+no spaces or newlines. Pass an empty hash to append to the latest stored version,
+or a hash from `Read` to require that version. The returned document has the new
+hash. Append serializes calls with a collection-local lock and a context-aware
+wait of up to five seconds. It uses the same validation, embedding maintenance,
+and frontmatter and permission preservation as a body-only update. Other commands
+and external editors do not take the append lock; the final replacement retains
+the external-write race limit described below. Repeating a hashless call appends
+the text again.
+
 Updates and deletion reject observed content changes with `ErrConflict`.
 Read again and reconcile the change before retrying. These checks do not lock
 external editors out: a write can still race the final replacement or deletion.
