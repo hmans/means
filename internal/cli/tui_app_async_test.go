@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/hmans/means/collection"
 )
 
 func TestTUIInvalidViewsAndCompilationCache(t *testing.T) {
@@ -112,5 +115,57 @@ func TestTUIRefreshSupersedesViewEvaluation(t *testing.T) {
 	m.Update(oldResult)
 	if len(m.docs) != 2 {
 		t.Fatal("old snapshot overwrote refreshed results")
+	}
+}
+
+func TestTUIViewRefreshUpdatesPreviewAfterInterveningInput(t *testing.T) {
+	for _, change := range []string{"body", "data", "title"} {
+		t.Run(change, func(t *testing.T) {
+			c := tuiTestCollection(t)
+			doc := tuiCreate(t, c, "Alpha", map[string]any{"status": "open"})
+			writeTUIApp(t, c.Path(), "views: [{title: Everything}]")
+			m := newTUIModel(c.Path())
+			tuiRun(t, m, m.Init())
+			m.openViews()
+			m.choice = 1
+			tuiRun(t, m, m.choose())
+
+			patch := collection.Patch{}
+			want := ""
+			switch change {
+			case "body":
+				want = "Updated body"
+				patch.Body = &want
+			case "data":
+				want = "closed"
+				patch.Frontmatter = map[string]any{"data": map[string]any{"status": want}}
+			case "title":
+				want = "Alpha updated"
+				patch.Frontmatter = map[string]any{"title": want}
+			}
+			if _, err := c.Update(context.Background(), doc.ID, doc.Hash, patch); err != nil {
+				t.Fatal(err)
+			}
+			_, refresh := m.Update(tuiChanged{})
+			_, evaluate := m.Update(refresh())
+			if !m.evaluating {
+				t.Fatal("refresh did not start background view evaluation")
+			}
+			// Render the old snapshot while delivery of the new view is pending.
+			tuiPress(m, '/')
+			m.Update(tea.PasteMsg{Content: "Alpha"})
+			m.Update(tea.WindowSizeMsg{Width: m.width + 10, Height: m.height})
+			tuiRun(t, m, evaluate)
+			if len(m.docs) != 1 || m.docs[m.selected].ID != doc.ID || m.mode != "search" || m.input != "Alpha" {
+				t.Fatal("refresh lost selection or live search")
+			}
+			lines := m.preview
+			if change == "data" {
+				lines = m.previewData
+			}
+			if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), want) {
+				t.Fatalf("preview retained old %s after view evaluation", change)
+			}
+		})
 	}
 }
