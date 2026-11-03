@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +41,7 @@ Malformed documents are skipped with diagnostics; API/config/filesystem errors e
 			if err != nil {
 				return err
 			}
-			result, err := c.WithEmbeddingProgress(opts.embeddingProgress(cmd)).EmbedWithOptions(collection.EmbedOptions{Force: force})
+			result, err := c.WithEmbeddingProgress(opts.embeddingProgress(cmd)).Embed(cmd.Context(), collection.EmbedOptions{Force: force})
 			if err != nil {
 				return err
 			}

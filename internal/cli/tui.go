@@ -17,7 +17,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -76,13 +76,13 @@ for help and errors only; use list/search --json for structured document results
 			if err != nil {
 				return err
 			}
-			m := newTUIModel(c.Path)
+			m := newTUIModel(c.Path())
 			defer func() {
 				if m.cancelEvaluation != nil {
 					m.cancelEvaluation()
 				}
 			}()
-			watcher, err := newTUIWatcher(c.Path)
+			watcher, err := newTUIWatcher(c.Path())
 			if err != nil {
 				return fmt.Errorf("watch collection: %w", err)
 			}
@@ -241,13 +241,13 @@ func (m *tuiModel) readSnapshot(background bool) tea.Cmd {
 		if err != nil {
 			return tuiLoaded{background: background, err: err}
 		}
-		all, err := c.Search(collection.SearchOptions{WithBody: true})
+		all, err := c.Search(context.Background(), collection.SearchOptions{WithBody: true})
 		if err != nil {
 			return tuiLoaded{background: background, err: err}
 		}
-		app := compileTUIApp(c.App, previousApp)
+		app := compileTUIApp(c.App(), previousApp)
 		all.Diagnostics = append(all.Diagnostics, app.errors...)
-		return tuiLoaded{background: background, fields: tuiSchemaFields(c.Schema), all: all, app: app}
+		return tuiLoaded{background: background, fields: tuiSchemaFields(c.Schema()), all: all, app: app}
 	}
 }
 

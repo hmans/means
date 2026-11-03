@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestEmbeddingCLI(t *testing.T) {
@@ -32,7 +32,7 @@ func TestEmbeddingCLI(t *testing.T) {
 	run := func(input string, args ...string) []byte {
 		t.Helper()
 		var out, stderr bytes.Buffer
-		args = append(args, "--path", c.Path, "--json")
+		args = append(args, "--path", c.Path(), "--json")
 		if err := Execute(args, strings.NewReader(input), &out, &stderr, "test"); err != nil {
 			t.Fatalf("%v: %v %s", args, err, stderr.String())
 		}
@@ -58,7 +58,7 @@ func TestEmbeddingCLI(t *testing.T) {
 	}
 	refreshed := run("", "embed")
 	var textOut, textErr bytes.Buffer
-	if err := Execute([]string{"embed", "--path", c.Path}, nil, &textOut, &textErr, "test"); err != nil || !strings.Contains(textErr.String(), "0 generated, 1 reused, 0 removed") {
+	if err := Execute([]string{"embed", "--path", c.Path()}, nil, &textOut, &textErr, "test"); err != nil || !strings.Contains(textErr.String(), "0 generated, 1 reused, 0 removed") {
 		t.Fatalf("text refresh progress: %s %v", textErr.String(), err)
 	}
 	if bytes.Contains(refreshed, []byte(`"body"`)) || bytes.Contains(refreshed, []byte(`"vector"`)) || calls.Load() != 2 {
@@ -79,13 +79,13 @@ func TestEmbeddingCLI(t *testing.T) {
 	if calls.Load() != 4 {
 		t.Fatal("CLI delete called API")
 	}
-	cache, err := os.ReadFile(filepath.Join(c.Path, ".means", "embeddings.jsonl"))
+	cache, err := os.ReadFile(filepath.Join(c.Path(), ".means", "embeddings.jsonl"))
 	if err != nil || bytes.Contains(cache, []byte(doc.ID)) {
 		t.Fatalf("delete retained embedding: %s %v", cache, err)
 	}
 	for _, args := range [][]string{{"search", "--semantic"}, {"search", "text", "--semantic", "--literal"}} {
 		var out, stderr bytes.Buffer
-		if err := Execute(append(args, "--path", c.Path, "--json"), nil, &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
+		if err := Execute(append(args, "--path", c.Path(), "--json"), nil, &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
 			t.Fatalf("invalid args %v: %v %s", args, err, stderr.String())
 		}
 	}

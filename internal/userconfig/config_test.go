@@ -30,6 +30,11 @@ func TestParse(t *testing.T) {
 			t.Errorf("accepted %q", input)
 		}
 	}
+	for _, value := range []string{"[]", "{provider: wrong}", "{provider: true}", "{provider: openai, model: ''}", "{provider: openai, model: wrong}", "{provider: openai, dimensions: 0}", "{provider: openai, dimensions: -1}"} {
+		if _, err := Parse([]byte("embeddings: " + value)); err == nil {
+			t.Errorf("accepted embedding settings %s", value)
+		}
+	}
 }
 
 func TestBootstrapNeverOverwrites(t *testing.T) {

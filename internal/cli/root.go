@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/hmans/means/internal/userconfig"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -164,6 +165,9 @@ func newRootCommand(version string) (*cobra.Command, *options) {
 func (opts *options) loadCollection() (*collection.Collection, error) {
 	c, err := collection.Load(opts.path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("%w; run means init --path %q", err, opts.path)
+		}
 		return nil, err
 	}
 	return c.WithEmbeddings(opts.config.Embeddings), nil

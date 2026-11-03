@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,7 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func tuiPollNow(t *testing.T, m *tuiModel) {
@@ -27,7 +28,7 @@ func tuiPollNow(t *testing.T, m *tuiModel) {
 func TestTUIAutomaticRefresh(t *testing.T) {
 	c := tuiTestCollection(t)
 	doc := tuiCreate(t, c, "Alpha", map[string]any{"tags": []any{"cli"}})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(m.Init()())
 	m.offset = 5
 	cached := &m.preview[0]
@@ -51,7 +52,7 @@ func TestTUIAutomaticRefresh(t *testing.T) {
 		t.Fatal("background check blocked or discarded live input")
 	}
 	newBody := "Externally updated body."
-	updated, err := c.Update(doc.ID, doc.Hash, collection.Patch{Body: &newBody})
+	updated, err := c.Update(context.Background(), doc.ID, doc.Hash, collection.Patch{Body: &newBody})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +67,7 @@ func TestTUIAutomaticRefresh(t *testing.T) {
 	m.field = "tags"
 	m.openValues()
 	m.filterChoices("cli")
-	if _, err := c.Delete(other.ID, other.Hash); err != nil {
+	if _, err := c.Delete(context.Background(), other.ID, other.Hash); err != nil {
 		t.Fatal(err)
 	}
 	tuiPollNow(t, m)
@@ -74,7 +75,7 @@ func TestTUIAutomaticRefresh(t *testing.T) {
 		t.Fatal("deletion did not update picker counts while retaining input")
 	}
 	m.choose()
-	if _, err := c.Delete(updated.ID, updated.Hash); err != nil {
+	if _, err := c.Delete(context.Background(), updated.ID, updated.Hash); err != nil {
 		t.Fatal(err)
 	}
 	tuiPollNow(t, m)
@@ -86,9 +87,9 @@ func TestTUIAutomaticRefresh(t *testing.T) {
 func TestTUIAutomaticRefreshRecoveryAndBoundaries(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Root", map[string]any{})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
-	config := filepath.Join(c.Path, "MEANS.md")
+	config := filepath.Join(c.Path(), "MEANS.md")
 	original, err := os.ReadFile(config)
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +104,7 @@ func TestTUIAutomaticRefreshRecoveryAndBoundaries(t *testing.T) {
 	if err := os.WriteFile(config, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	nested, err := collection.Init(filepath.Join(c.Path, "nested"), []byte(`true`))
+	nested, err := collection.Init(filepath.Join(c.Path(), "nested"), []byte(`true`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func TestTUIAutomaticRefreshRecoveryAndBoundaries(t *testing.T) {
 	if m.err != nil || len(m.docs) != 1 {
 		t.Fatal("recovery failed or crossed a nested collection boundary")
 	}
-	if err := os.Remove(filepath.Join(nested.Path, "MEANS.md")); err != nil {
+	if err := os.Remove(filepath.Join(nested.Path(), "MEANS.md")); err != nil {
 		t.Fatal(err)
 	}
 	tuiPollNow(t, m)

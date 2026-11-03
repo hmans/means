@@ -2,13 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestSchemaSetCLI(t *testing.T) {
@@ -17,7 +18,7 @@ func TestSchemaSetCLI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := c.Create(map[string]any{"title": "Keep"}, ""); err != nil {
+		if _, err := c.Create(context.Background(), collection.CreateOptions{Title: "Keep", Body: ""}); err != nil {
 			t.Fatal(err)
 		}
 		input := source
@@ -28,7 +29,7 @@ func TestSchemaSetCLI(t *testing.T) {
 			}
 		}
 		for _, force := range []bool{false, true} {
-			args := []string{"schema", "set", "--path", c.Path, "--input", input, "--json"}
+			args := []string{"schema", "set", "--path", c.Path(), "--input", input, "--json"}
 			if force {
 				args = append(args, "--force")
 			}
@@ -68,7 +69,7 @@ func TestSchemaSetCLIValidationAndHelp(t *testing.T) {
 		{"schema", "set", "--input", "-", "--force"}, {"schema", "set", "extra", "--input", "-"},
 	} {
 		var out, stderr bytes.Buffer
-		if err := Execute(append(args, "--path", c.Path, "--json"), strings.NewReader(`{"type":42}`), &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
+		if err := Execute(append(args, "--path", c.Path(), "--json"), strings.NewReader(`{"type":42}`), &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
 			t.Fatalf("response: %v %s %s", err, out.String(), stderr.String())
 		}
 	}
@@ -88,7 +89,7 @@ func TestSchemaSetCLIValidationAndHelp(t *testing.T) {
 		}
 	}
 	var out, stderr bytes.Buffer
-	if err := Execute([]string{"schema", "set", "--path", c.Path, "--input", "-"}, strings.NewReader(`true`), &out, &stderr, "test"); err != nil || stderr.Len() != 0 || !strings.Contains(out.String(), "Installed schema") {
+	if err := Execute([]string{"schema", "set", "--path", c.Path(), "--input", "-"}, strings.NewReader(`true`), &out, &stderr, "test"); err != nil || stderr.Len() != 0 || !strings.Contains(out.String(), "Installed schema") {
 		t.Fatalf("text success: %v %s %s", err, out.String(), stderr.String())
 	}
 }

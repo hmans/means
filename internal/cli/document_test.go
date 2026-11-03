@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestDocumentWorkflow(t *testing.T) {

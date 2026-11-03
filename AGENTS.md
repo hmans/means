@@ -64,7 +64,11 @@ following its [workflow](issues/MEANS.md).
   Lists omit hashes so consumers retrieve full content before updating. Body-only
   changes preserve frontmatter text; metadata changes may reformat YAML.
 - Support software consumers as well as humans and agents. Provide structured
-  CLI input, output, and errors, and a stdio MCP interface; an SDK may follow.
+  CLI input, output, and errors, a stdio MCP interface, and the public
+  github.com/hmans/means/collection Go package. CLI, TUI, and MCP use this package.
+  Keep the binary entry point at the module root. Collection configuration is a
+  loaded snapshot; reload it explicitly after changes. Pass contexts to operations
+  and host embedding settings explicitly; user configuration stays internal.
 - Use Cobra for the CLI. Every command inherits `--path` (defaulting to the
   current working directory) and `--json`. Use the shared output helpers for
   responses; write errors to stderr and successful results to stdout.

@@ -1,7 +1,7 @@
 ---
 data:
   priority: normal
-  status: todo
+  status: in_progress
   tags:
     - sdk
     - design

@@ -59,7 +59,7 @@ JSON`,
 			if err != nil {
 				return err
 			}
-			result, err := c.SetInstructions(hash, instructions)
+			result, err := c.SetInstructions(cmd.Context(), hash, instructions)
 			if err != nil {
 				return err
 			}

@@ -32,7 +32,7 @@ func TestEmbeddingTools(t *testing.T) {
 		t.Fatal(err)
 	}
 	progress := make(chan string, 30)
-	server, err := NewWithEmbeddingProgress(c.Path, "test", func(message string) { progress <- message })
+	server, err := NewWithEmbeddingProgress(c.Path(), "test", func(message string) { progress <- message })
 	if err != nil {
 		t.Fatal(err)
 	}

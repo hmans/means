@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spf13/cobra"
 )
@@ -60,7 +60,7 @@ Datetimes need timezone offsets; before/after are exclusive, on-or variants incl
 			if cmd.Flags().Changed("min-score") {
 				threshold = &minScore
 			}
-			result, err := c.Search(collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
+			result, err := c.Search(cmd.Context(), collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
 			if err != nil {
 				return err
 			}

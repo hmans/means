@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestInitSuppliedSchema(t *testing.T) {

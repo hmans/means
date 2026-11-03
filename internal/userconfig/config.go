@@ -13,10 +13,11 @@ import (
 	"syscall"
 	"unicode/utf8"
 
+	"github.com/hmans/means/collection"
 	"go.yaml.in/yaml/v3"
 )
 
-type Config struct{ Embeddings *Embeddings }
+type Config struct{ Embeddings *collection.EmbeddingConfig }
 
 const Example = `# Means user configuration. Applies to every collection on this machine.
 # Uncomment to enable embeddings. Set OPENROUTER_API_KEY in your environment.

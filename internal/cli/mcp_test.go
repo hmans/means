@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -123,7 +123,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if metadata["count"] != createdMetadata["count"] || metadata["ratio"] != createdMetadata["ratio"] || read["body"] != "## Notes\n\nExact body.\n" {
 				t.Fatalf("round-trip lost content: %v", read)
 			}
-			stored, err := c.Read(id)
+			stored, err := c.Read(context.Background(), id)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,7 +155,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				t.Fatal("body not cleared")
 			}
 			for range 20 {
-				if _, err := c.Create(map[string]any{"title": "Another document"}, ""); err != nil {
+				if _, err := c.Create(context.Background(), collection.CreateOptions{Title: "Another document", Body: ""}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -264,7 +264,7 @@ func TestMCPToolsOverStdio(t *testing.T) {
 			if call("info", `{}`, false)["schema"] != true {
 				t.Fatal("boolean schema not preserved")
 			}
-			fixture, err := c.Create(map[string]any{"title": "Search fixture"}, "Timeout during deployment")
+			fixture, err := c.Create(context.Background(), collection.CreateOptions{Title: "Search fixture", Body: "Timeout during deployment"})
 			if err != nil {
 				t.Fatal(err)
 			}

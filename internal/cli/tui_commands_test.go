@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestTUIViewCommandMatchesPicker(t *testing.T) {
@@ -15,8 +15,8 @@ func TestTUIViewCommandMatchesPicker(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tuiCreate(t, c, fmt.Sprintf("Document %02d", i), map[string]any{})
 	}
-	writeTUIApp(t, c.Path, "views:\n  - title: Open work\n  - title: Broken\n    filter: 'data.status =='\n")
-	models := []*tuiModel{newTUIModel(c.Path), newTUIModel(c.Path)}
+	writeTUIApp(t, c.Path(), "views:\n  - title: Open work\n  - title: Broken\n    filter: 'data.status =='\n")
+	models := []*tuiModel{newTUIModel(c.Path()), newTUIModel(c.Path())}
 	for _, m := range models {
 		m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
 		tuiRun(t, m, m.Init())
@@ -65,8 +65,8 @@ func TestTUICommandBackspace(t *testing.T) {
 
 func TestTUIHomeAndClearCommands(t *testing.T) {
 	c := tuiTestCollection(t)
-	writeTUIApp(t, c.Path, "views:\n  - title: Open work\n")
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), "views:\n  - title: Open work\n")
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 20})
 	tuiRun(t, m, m.Init())
 	run := func(command string) {
@@ -107,7 +107,7 @@ func TestTUICommandErrorKeepsSelectionVisible(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tuiCreate(t, c, fmt.Sprintf("Document %02d", i), map[string]any{})
 	}
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 80, Height: 20})
 	tuiRun(t, m, m.Init())
 	m.selected = m.pageHeight() - 1
@@ -219,8 +219,8 @@ func TestTUICommandColorsPreserveInputLayout(t *testing.T) {
 func TestTUICommands(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Document", map[string]any{})
-	writeTUIApp(t, c.Path, "views:\n  - title: Closed issues\n  - title: Current work\n")
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), "views:\n  - title: Closed issues\n  - title: Current work\n")
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 26})
 	tuiRun(t, m, m.Init())
 	if cmd := tuiPress(m, 'q'); cmd != nil {

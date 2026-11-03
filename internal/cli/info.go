@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ func newInfoCommand(opts *options) *cobra.Command {
 				Path   string          `json:"path"`
 				Schema json.RawMessage `json:"schema"`
 				*collection.Description
-			}{c.Path, c.Schema, c.Describe()}
+			}{c.Path(), c.Schema(), c.Describe()}
 			schema, err := json.MarshalIndent(result.Schema, "", "  ")
 			if err != nil {
 				return err

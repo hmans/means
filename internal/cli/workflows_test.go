@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestHumanDocumentWorkflow(t *testing.T) {
@@ -20,7 +21,7 @@ func TestHumanDocumentWorkflow(t *testing.T) {
 	run := func(input string, args ...string) (string, error) {
 		t.Helper()
 		var out, stderr bytes.Buffer
-		err := Execute(append(args, "--path", c.Path), strings.NewReader(input), &out, &stderr, "test")
+		err := Execute(append(args, "--path", c.Path()), strings.NewReader(input), &out, &stderr, "test")
 		if err != nil && out.Len() != 0 {
 			t.Fatalf("failure wrote stdout: %s", &out)
 		}
@@ -62,7 +63,7 @@ func TestHumanDocumentWorkflow(t *testing.T) {
 	if _, err := run("", "delete", doc.ID, "--hash", doc.Hash); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Read(doc.ID); err == nil {
+	if _, err := c.Read(context.Background(), doc.ID); err == nil {
 		t.Fatal("document still exists")
 	}
 }
@@ -77,14 +78,14 @@ func TestInfoAndFilteredList(t *testing.T) {
 		{"status": "done", "created": "2026-10-02T00:00:00Z"},
 		{"status": "todo", "created": "2026-10-03T00:00:00Z"},
 	} {
-		if _, err := c.Create(map[string]any{"title": "Task", "data": data}, "body"); err != nil {
+		if _, err := c.Create(context.Background(), collection.CreateOptions{Title: "Task", Data: data, Body: "body"}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	run := func(args ...string) string {
 		t.Helper()
 		var out, stderr bytes.Buffer
-		if err := Execute(append(args, "--path", c.Path, "--json"), nil, &out, &stderr, "test"); err != nil {
+		if err := Execute(append(args, "--path", c.Path(), "--json"), nil, &out, &stderr, "test"); err != nil {
 			t.Fatalf("%v: %v %s", args, err, &stderr)
 		}
 		return out.String()
@@ -96,7 +97,7 @@ func TestInfoAndFilteredList(t *testing.T) {
 	if err := json.Unmarshal([]byte(run("info")), &info); err != nil {
 		t.Fatal(err)
 	}
-	if info.Title != "Test collection" || info.Path != c.Path || info.Instructions != "Exact instructions\n" || !info.Schema {
+	if info.Title != "Test collection" || info.Path != c.Path() || info.Instructions != "Exact instructions\n" || !info.Schema {
 		t.Fatalf("info: %+v", info)
 	}
 	filters := []string{"--filter", "status=todo", "--after", "created=2026-10-02T00:00:00Z", "--limit", "1", "--with-body"}
@@ -163,10 +164,10 @@ func TestEditorWorkflow(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Numeric IDs must remain strings in both the source and editor fixture.
-			if err := os.WriteFile(filepath.Join(c.Path, "12345-before.md"), []byte("---\nid: \"12345\"\ntitle: Before\ndata: {old: true}\n---\nbefore\n"), 0600); err != nil {
+			if err := os.WriteFile(filepath.Join(c.Path(), "12345-before.md"), []byte("---\nid: \"12345\"\ntitle: Before\ndata: {old: true}\n---\nbefore\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			doc, err := c.Read("12345")
+			doc, err := c.Read(context.Background(), "12345")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -183,7 +184,7 @@ func TestEditorWorkflow(t *testing.T) {
 			t.Setenv("MEANS_TEST_EDIT_CONTENT", edited)
 			script := "#!/bin/sh\ncp \"$MEANS_TEST_EDIT_CONTENT\" \"$1\"\n"
 			if mode == "conflict" {
-				files, err := filepath.Glob(filepath.Join(c.Path, doc.ID+"-*.md"))
+				files, err := filepath.Glob(filepath.Join(c.Path(), doc.ID+"-*.md"))
 				if err != nil || len(files) != 1 {
 					t.Fatal(files, err)
 				}
@@ -198,7 +199,7 @@ func TestEditorWorkflow(t *testing.T) {
 				if err := os.WriteFile(proposal, []byte("---\nschema: {type: object, required: [new_field]}\n---\n"), 0600); err != nil {
 					t.Fatal(err)
 				}
-				t.Setenv("MEANS_TEST_CONFIG", filepath.Join(c.Path, "MEANS.md"))
+				t.Setenv("MEANS_TEST_CONFIG", filepath.Join(c.Path(), "MEANS.md"))
 				t.Setenv("MEANS_TEST_CONFIG_PROPOSAL", proposal)
 				script += "cp \"$MEANS_TEST_CONFIG_PROPOSAL\" \"$MEANS_TEST_CONFIG\"\n"
 			}
@@ -209,8 +210,8 @@ func TestEditorWorkflow(t *testing.T) {
 			t.Setenv("VISUAL", "")
 			t.Setenv("EDITOR", editor)
 			var out, stderr bytes.Buffer
-			err = Execute([]string{"edit", doc.ID, "--path", c.Path, "--json"}, nil, &out, &stderr, "test")
-			after, readErr := c.Read(doc.ID)
+			err = Execute([]string{"edit", doc.ID, "--path", c.Path(), "--json"}, nil, &out, &stderr, "test")
+			after, readErr := c.Read(context.Background(), doc.ID)
 			if readErr != nil {
 				t.Fatal(readErr)
 			}

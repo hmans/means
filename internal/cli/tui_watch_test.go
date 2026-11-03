@@ -78,7 +78,7 @@ func TestTUIWatcher(t *testing.T) {
 
 func TestTUIRefreshQueuesChangesDuringLoad(t *testing.T) {
 	c := tuiTestCollection(t)
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	initial := m.Init()
 	m.Update(tuiChanged{})
 	_, followup := m.Update(initial())

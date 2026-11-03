@@ -2,7 +2,7 @@ package mcpserver
 
 import (
 	"context"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/hmans/means/internal/userconfig"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"os"
@@ -54,7 +54,7 @@ func TestMCPBootstrapsAndSnapshotsUserConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server, err := New(c.Path, "test")
+	server, err := New(c.Path(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestMCPBootstrapsAndSnapshotsUserConfig(t *testing.T) {
 	if info := callTool(t, ctx, session, "info", `{}`); info["embeddings"] != nil {
 		t.Fatal("running MCP changed host settings")
 	}
-	restarted, err := New(c.Path, "test")
+	restarted, err := New(c.Path(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,11 +112,11 @@ func TestMCPBootstrapFailureAllowsOfflineStartup(t *testing.T) {
 		t.Fatal(err)
 	}
 	var messages []string
-	if _, err := NewWithEmbeddingProgress(c.Path, "test", func(s string) { messages = append(messages, s) }); err != nil || len(messages) != 1 {
+	if _, err := NewWithEmbeddingProgress(c.Path(), "test", func(s string) { messages = append(messages, s) }); err != nil || len(messages) != 1 {
 		t.Fatalf("startup: %v %v", messages, err)
 	}
 	messages = nil
-	if _, err := NewWithEmbeddingProgress(filepath.Join(c.Path, "missing"), "test", func(s string) { messages = append(messages, s) }); err == nil || len(messages) != 0 {
+	if _, err := NewWithEmbeddingProgress(filepath.Join(c.Path(), "missing"), "test", func(s string) { messages = append(messages, s) }); err == nil || len(messages) != 0 {
 		t.Fatalf("failed startup mixed warning and error: %v %v", messages, err)
 	}
 }
@@ -131,19 +131,19 @@ func TestDotenvStartup(t *testing.T) {
 	const key = "MEANS_TEST_MCP_DOTENV"
 	t.Setenv(key, "")
 	os.Unsetenv(key)
-	if err := os.WriteFile(filepath.Join(c.Path, ".env"), []byte(key+"=loaded\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := New(c.Path, "test"); err != nil {
+	if _, err := New(c.Path(), "test"); err != nil {
 		t.Fatal(err)
 	}
 	if os.Getenv(key) != "loaded" {
 		t.Fatal("MCP did not load collection .env")
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, ".env"), []byte("BROKEN='secret"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte("BROKEN='secret"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := New(c.Path, "test"); err == nil {
+	if _, err := New(c.Path(), "test"); err == nil {
 		t.Fatal("invalid dotenv accepted")
 	}
 }

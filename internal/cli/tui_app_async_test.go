@@ -11,8 +11,8 @@ func TestTUIInvalidViewsAndCompilationCache(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Alpha", map[string]any{})
 	config := "views:\n  - title: Broken\n    filter: 'data.('\n  - title: Valid\n    filter: title == 'Alpha'\n"
-	writeTUIApp(t, c.Path, config)
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), config)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	if len(m.docs) != 1 || len(m.diagnostics) != 1 || m.app.Views[0].compileErr == nil {
 		t.Fatal("a broken view prevented startup or hid its diagnostic")
@@ -33,12 +33,12 @@ func TestTUIInvalidViewsAndCompilationCache(t *testing.T) {
 	if len(m.docs) != 1 || m.docs[0].Frontmatter["title"] != "Alpha" {
 		t.Fatal("valid sibling view failed")
 	}
-	writeTUIApp(t, c.Path, strings.ReplaceAll(config, "title == 'Alpha'", "title =="))
+	writeTUIApp(t, c.Path(), strings.ReplaceAll(config, "title == 'Alpha'", "title =="))
 	tuiPollNow(t, m)
 	if m.app == app || m.view != "" || len(m.docs) != 2 || len(m.diagnostics) != 2 {
 		t.Fatal("breaking the active view did not fall back to All documents")
 	}
-	writeTUIApp(t, c.Path, config)
+	writeTUIApp(t, c.Path(), config)
 	tuiPollNow(t, m)
 	if m.app.Views[1].compileErr != nil || len(m.diagnostics) != 1 {
 		t.Fatal("fixed expression did not recover")
@@ -49,8 +49,8 @@ func TestTUIViewEvaluationRejectsStaleResults(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Alpha", map[string]any{"status": "open"})
 	tuiCreate(t, c, "Beta", map[string]any{"status": "closed"})
-	writeTUIApp(t, c.Path, "views: [{title: Alpha, filter: title == 'Alpha'}, {title: Beta, filter: title == 'Beta'}]")
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), "views: [{title: Alpha, filter: title == 'Alpha'}, {title: Beta, filter: title == 'Beta'}]")
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.openViews()
 	m.choice = 1
@@ -101,8 +101,8 @@ func TestTUIViewEvaluationRejectsStaleResults(t *testing.T) {
 func TestTUIRefreshSupersedesViewEvaluation(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Alpha", map[string]any{})
-	writeTUIApp(t, c.Path, "views: [{title: Everything}]")
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), "views: [{title: Everything}]")
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.openViews()
 	m.choice = 1

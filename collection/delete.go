@@ -1,0 +1,62 @@
+package collection
+
+import (
+	"context"
+	"fmt"
+	"os"
+)
+
+// DeleteResult identifies the document that was permanently removed.
+type DeleteResult struct {
+	ID string `json:"id"`
+}
+
+// Delete removes a document only when its stored bytes match hash. Like Update,
+// this is optimistic: a concurrent write can race the final removal.
+// Application data need not satisfy the current schema, but the envelope must
+// be readable and the ID must be unique within the selected collection.
+func (c *Collection) Delete(ctx context.Context, id, hash string) (*DeleteResult, error) {
+	c, err := c.operation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateDocumentID(id); err != nil {
+		return nil, err
+	}
+	if !validHash.MatchString(hash) {
+		return nil, fmt.Errorf("hash is required and must be 64 lowercase hexadecimal SHA-256 characters; read the document first")
+	}
+	embeddings, err := c.openEmbeddings()
+	if err != nil {
+		return nil, err
+	}
+	defer embeddings.close()
+	root, err := os.OpenRoot(c.path)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	doc, err := readDocument(root, id)
+	if err != nil {
+		return nil, err
+	}
+	if doc.Hash != hash {
+		return nil, conflict(id)
+	}
+	if err := embeddings.remove(id); err != nil {
+		return nil, err
+	}
+	if embeddings != nil {
+		latest, err := readDocument(root, id)
+		if err != nil {
+			return nil, err
+		}
+		if latest.Hash != hash || latest.filename != doc.filename {
+			return nil, conflict(id)
+		}
+	}
+	if err := root.Remove(doc.filename); err != nil {
+		return nil, fmt.Errorf("delete document: %w", err)
+	}
+	return &DeleteResult{ID: id}, nil
+}

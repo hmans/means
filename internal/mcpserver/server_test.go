@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

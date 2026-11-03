@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/spf13/cobra"
 )
@@ -56,7 +56,7 @@ JSON`,
 			if err != nil {
 				return err
 			}
-			doc, err := c.WithEmbeddingProgress(opts.embeddingProgress(cmd)).Update(args[0], hash, patch)
+			doc, err := c.WithEmbeddingProgress(opts.embeddingProgress(cmd)).Update(cmd.Context(), args[0], hash, patch)
 			if err != nil {
 				return err
 			}

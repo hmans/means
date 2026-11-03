@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestPreviewDocumentLayout(t *testing.T) {
@@ -67,17 +68,17 @@ func TestDocumentTables(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, title := range []string{"First title", "Second title"} {
-		if _, err := c.Create(map[string]any{"title": title, "data": map[string]any{"secret": "metadata-marker"}}, "body-marker"); err != nil {
+		if _, err := c.Create(context.Background(), collection.CreateOptions{Title: title, Data: map[string]any{"secret": "metadata-marker"}, Body: "body-marker"}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "00000-broken.md"), []byte("bad"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "00000-broken.md"), []byte("bad"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, command := range []string{"list", "search"} {
 		t.Run(command, func(t *testing.T) {
 			var out, errs bytes.Buffer
-			if err := Execute([]string{command, "--path", c.Path, "--limit", "0"}, nil, &out, &errs, "test"); err != nil {
+			if err := Execute([]string{command, "--path", c.Path(), "--limit", "0"}, nil, &out, &errs, "test"); err != nil {
 				t.Fatal(err)
 			}
 			text := out.String()
@@ -92,7 +93,7 @@ func TestDocumentTables(t *testing.T) {
 				}
 			}
 			out.Reset()
-			if err := Execute([]string{command, "--path", c.Path, "--limit", "1"}, nil, &out, &errs, "test"); err != nil {
+			if err := Execute([]string{command, "--path", c.Path(), "--limit", "1"}, nil, &out, &errs, "test"); err != nil {
 				t.Fatal(err)
 			}
 			if !strings.Contains(out.String(), "--limit 0") {
@@ -110,12 +111,12 @@ func TestShowDocument(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc, err := c.Create(map[string]any{"title": "A *literal* title", "data": map[string]any{"number": json.Number("9007199254740993")}}, "## Heading\n\nA **bold** statement.\n\n- item\n\n```go\nfmt.Println(42)\n```\n")
+	doc, err := c.Create(context.Background(), collection.CreateOptions{Title: "A *literal* title", Data: map[string]any{"number": json.Number("9007199254740993")}, Body: "## Heading\n\nA **bold** statement.\n\n- item\n\n```go\nfmt.Println(42)\n```\n"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	var out, errs bytes.Buffer
-	if err := Execute([]string{"show", doc.ID, "--path", c.Path}, nil, &out, &errs, "test"); err != nil {
+	if err := Execute([]string{"show", doc.ID, "--path", c.Path()}, nil, &out, &errs, "test"); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{doc.ID, "A *literal* title", "Heading", "bold", "item", "fmt.Println(42)"} {
@@ -130,10 +131,10 @@ func TestShowDocument(t *testing.T) {
 	}
 	var read bytes.Buffer
 	out.Reset()
-	if err := Execute([]string{"show", doc.ID, "--path", c.Path, "--json"}, nil, &out, &errs, "test"); err != nil {
+	if err := Execute([]string{"show", doc.ID, "--path", c.Path(), "--json"}, nil, &out, &errs, "test"); err != nil {
 		t.Fatal(err)
 	}
-	if err := Execute([]string{"read", doc.ID, "--path", c.Path, "--json"}, nil, &read, &errs, "test"); err != nil {
+	if err := Execute([]string{"read", doc.ID, "--path", c.Path(), "--json"}, nil, &read, &errs, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(out.Bytes(), read.Bytes()) {
@@ -142,7 +143,7 @@ func TestShowDocument(t *testing.T) {
 	for _, args := range [][]string{{"show"}, {"show", "missing"}, {"show", doc.ID, "extra"}} {
 		out.Reset()
 		errs.Reset()
-		if err := Execute(append(args, "--path", c.Path, "--json"), nil, &out, &errs, "test"); err == nil || out.Len() != 0 || !json.Valid(errs.Bytes()) {
+		if err := Execute(append(args, "--path", c.Path(), "--json"), nil, &out, &errs, "test"); err == nil || out.Len() != 0 || !json.Valid(errs.Bytes()) {
 			t.Fatalf("invalid show: %v %s %s", err, &out, &errs)
 		}
 	}

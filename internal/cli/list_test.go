@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestListOffset(t *testing.T) {
@@ -23,11 +23,11 @@ func TestListOffset(t *testing.T) {
 			status = "done"
 		}
 		source := fmt.Sprintf("---\nid: doc%d\ntitle: Document %d\ndata: {status: %s, at: '2026-10-0%dT00:00:00Z'}\n---\nbody %d", i, i, status, i+1, i)
-		if err := os.WriteFile(filepath.Join(c.Path, fmt.Sprintf("%d.md", i)), []byte(source), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(c.Path(), fmt.Sprintf("%d.md", i)), []byte(source), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "broken.md"), []byte("broken"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "broken.md"), []byte("broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
@@ -38,7 +38,7 @@ func TestListOffset(t *testing.T) {
 		{"0", "1", 1, true}, {"1", "1", 1, true}, {"1", "0", 2, false},
 		{"2", "1", 1, false}, {"3", "1", 0, false}, {"100", "0", 0, false},
 	} {
-		args := []string{"list", "--path", c.Path, "--filter", "status=todo", "--after", "at=2026-10-01T00:00:00Z", "--offset", tc.offset, "--limit", tc.limit}
+		args := []string{"list", "--path", c.Path(), "--filter", "status=todo", "--after", "at=2026-10-01T00:00:00Z", "--offset", tc.offset, "--limit", tc.limit}
 		var out, stderr bytes.Buffer
 		if err := Execute(append(args, "--json", "--with-body"), nil, &out, &stderr, "test"); err != nil {
 			t.Fatalf("%v: %v %s", args, err, &stderr)
