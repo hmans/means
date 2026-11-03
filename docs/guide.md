@@ -387,7 +387,9 @@ editor saves. Hidden paths and nested collection contents are ignored. Watches
 are closed when the TUI exits; no daemon is installed. Press `r` to check immediately.
 
 Background checks do not block typing. Search input, filters, picker input and
-selection, and document selection are retained where possible. Scroll positions
+selection, and document selection are retained where possible. The selected
+document's Content and Data panes update after external edits, including while
+you type or resize the terminal during a collection view refresh. Scroll positions
 are retained and clamped to the available content. Unchanged snapshots leave the
 preview alone. A failed collection load keeps the last usable snapshot, shows the
 error, and retries on the next filesystem change or manual refresh. Watcher errors

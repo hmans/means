@@ -190,7 +190,7 @@ type tuiModel struct {
 	previewData        []string
 	dataOffset         int
 	dataFocus          bool
-	previewID          string
+	previewHit         collection.SearchHit
 	previewColumns     int
 	mode               string // documents, search, fields, values, diagnostics
 	previewFocus       bool
@@ -336,7 +336,6 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if view := m.currentView(); view == nil || view.compileErr != nil {
 			m.view = ""
 		}
-		m.previewID = "" // Refresh may change content without changing its ID.
 		evaluate := m.filterData()
 		if m.mode == "diagnostics" {
 			m.offset = min(offset, max(0, len(m.diagnosticLines())-m.pageHeight()))
@@ -914,20 +913,22 @@ func (m *tuiModel) renderPreview() {
 		m.dataOffset = min(m.dataOffset, m.previewDataMaxOffset())
 	}()
 	if len(m.docs) == 0 {
-		m.preview, m.previewID = nil, ""
+		m.preview, m.previewHit = nil, collection.SearchHit{}
 		m.previewData = nil
 		m.dataOffset = 0
 		return
 	}
 	hit := m.docs[m.selected]
 	width := m.previewWidth()
-	if m.previewID == hit.ID && m.previewColumns == width {
+	// View evaluation can finish after input has rendered the previous snapshot.
+	// Compare the content as well as the ID so that snapshot cannot stay cached.
+	if reflect.DeepEqual(m.previewHit, hit) && m.previewColumns == width {
 		return
 	}
-	if m.previewID != hit.ID {
+	if m.previewHit.ID != hit.ID {
 		m.dataOffset = 0
 	}
-	m.previewID, m.previewColumns = hit.ID, width
+	m.previewHit, m.previewColumns = hit, width
 	body := ""
 	if hit.Body != nil {
 		body = *hit.Body
