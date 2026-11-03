@@ -74,6 +74,12 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	if !utf8.ValidString(opts.Query) {
 		return nil, fmt.Errorf("query must be valid UTF-8")
 	}
+	if opts.Filter != nil {
+		opts.Filter, err = normalizeObject(opts.Filter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter: %w", err)
+		}
+	}
 	if opts.Semantic {
 		if opts.Literal || strings.TrimSpace(opts.Query) == "" {
 			return nil, fmt.Errorf("semantic search requires a nonempty query and cannot be combined with literal search")

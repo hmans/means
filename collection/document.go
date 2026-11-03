@@ -100,7 +100,7 @@ func (c *Collection) create(ctx context.Context, frontmatter map[string]any, bod
 	// Validate everything before touching the filesystem. The placeholder is
 	// replaced with a generated ID after validation.
 	frontmatter["id"] = "pending"
-	if err := c.Validate(frontmatter); err != nil {
+	if err := c.validate(frontmatter); err != nil {
 		return nil, err
 	}
 	if !utf8.ValidString(body) {
@@ -394,6 +394,12 @@ func (c *Collection) List(ctx context.Context, opts ListOptions) (*ListResult, e
 	}
 	if opts.Offset < 0 {
 		return nil, fmt.Errorf("offset must be zero or greater")
+	}
+	if opts.Filter != nil {
+		opts.Filter, err = normalizeObject(opts.Filter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid filter: %w", err)
+		}
 	}
 	dateTimeFilters, err := compileDateTimeFilters(opts.DateTime)
 	if err != nil {

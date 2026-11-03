@@ -76,7 +76,7 @@ func (c *Collection) Doctor(ctx context.Context) (*DoctorResult, error) {
 			add(fmt.Errorf("%w %q; resolve the duplicate files", ErrDuplicateID, id))
 		}
 		if entry.err == nil {
-			if err := c.ValidateData(entry.doc.Frontmatter["data"].(map[string]any)); err != nil {
+			if err := c.validateData(entry.doc.Frontmatter["data"].(map[string]any)); err != nil {
 				add(err)
 			}
 			if embeddings != nil && counts[id] == 1 {

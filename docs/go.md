@@ -103,6 +103,11 @@ Both return per-document `Diagnostics` separately from fatal errors and report
 diagnosed even outside a requested list page. Full-text search updates disposable
 caches under `.means/`; it needs write access there.
 
+Creation, validation, updates, and list/search filters accept JSON-compatible Go
+values such as `int` and `[]string`. Public operations normalize them to the same
+representation used by stored documents. `MatchesFilter` is a lower-level helper:
+its inputs must already use `json.Number`, `[]any`, and `map[string]any`.
+
 Creation and updates validate the means envelope and application data. Reads,
 lists, and searches check the envelope but allow data that no longer satisfies
 the schema. `ValidateData` checks an application object; `Validate` checks a

@@ -78,14 +78,31 @@ var ErrValidation = errors.New("document validation failed")
 
 // Validate checks the means envelope and data against the embedded schema.
 func (c *Collection) Validate(frontmatter map[string]any) error {
+	normalized, err := normalizeObject(frontmatter)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrValidation, err)
+	}
+	return c.validate(normalized)
+}
+
+// Internal callers already hold normalized document values.
+func (c *Collection) validate(frontmatter map[string]any) error {
 	if err := validateEnvelope(frontmatter); err != nil {
 		return fmt.Errorf("%w: %w", ErrValidation, err)
 	}
-	return c.ValidateData(frontmatter["data"].(map[string]any))
+	return c.validateData(frontmatter["data"].(map[string]any))
 }
 
 // ValidateData checks application data independently of the means-owned fields.
 func (c *Collection) ValidateData(data map[string]any) error {
+	normalized, err := normalizeObject(data)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrValidation, err)
+	}
+	return c.validateData(normalized)
+}
+
+func (c *Collection) validateData(data map[string]any) error {
 	if err := c.validator.Validate(data); err != nil {
 		return fmt.Errorf("%w: frontmatter.data does not satisfy the schema: %w", ErrValidation, err)
 	}

@@ -213,3 +213,42 @@ func TestPublicCreationAndDiagnostics(t *testing.T) {
 		t.Fatalf("document diagnostics = %+v, %v", listed, err)
 	}
 }
+
+func TestPublicNativeGoValues(t *testing.T) {
+	c, err := collection.Init(t.TempDir(), []byte(`{"type":"object","properties":{"tags":{"type":"array","items":{"type":"string"}},"count":{"type":"integer"}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	data := map[string]any{"tags": []string{"go"}, "count": 42}
+	doc, err := c.Create(ctx, collection.CreateOptions{Title: "Go values", Data: data})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Run("validate", func(t *testing.T) {
+		if err := c.ValidateData(data); err != nil {
+			t.Fatalf("validation rejected Create input: %v", err)
+		}
+		if err := c.Validate(map[string]any{"id": doc.ID, "title": "Go values", "data": data}); err != nil {
+			t.Fatalf("envelope validation rejected Create input: %v", err)
+		}
+	})
+	t.Run("list", func(t *testing.T) {
+		listed, err := c.List(ctx, collection.ListOptions{Filter: data})
+		if err != nil || len(listed.Documents) != 1 {
+			t.Fatalf("native filter missed document: %+v, %v", listed, err)
+		}
+	})
+	for _, query := range []collection.SearchOptions{{}, {Query: "Go"}, {Query: "Go", Literal: true}} {
+		t.Run("search", func(t *testing.T) {
+			query.Filter = data
+			found, err := c.Search(ctx, query)
+			if err != nil || len(found.Documents) != 1 {
+				t.Fatalf("native filter missed document: %+v, %v", found, err)
+			}
+		})
+	}
+	if _, ok := data["tags"].([]string); !ok || data["count"] != 42 {
+		t.Fatal("operation changed caller values")
+	}
+}

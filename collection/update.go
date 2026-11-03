@@ -107,7 +107,7 @@ func (c *Collection) update(id, hash string, patch Patch, replace bool) (*Docume
 			frontmatter = mergeObject(frontmatter, patch.Frontmatter)
 		}
 	}
-	if err := c.Validate(frontmatter); err != nil {
+	if err := c.validate(frontmatter); err != nil {
 		return nil, err
 	}
 	body := current.Body
