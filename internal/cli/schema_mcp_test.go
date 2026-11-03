@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -21,11 +21,11 @@ func TestMCPSchemaSet(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				original, err := os.ReadFile(filepath.Join(c.Path, collection.ConfigFilename))
+				original, err := os.ReadFile(filepath.Join(c.Path(), collection.ConfigFilename))
 				if err != nil {
 					t.Fatal(err)
 				}
-				doc, err := c.Create(map[string]any{"title": "Keep"}, "Body")
+				doc, err := c.Create(context.Background(), collection.CreateOptions{Title: "Keep", Body: "Body"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -35,7 +35,7 @@ func TestMCPSchemaSet(t *testing.T) {
 				if jsonFlag {
 					flags = []string{"--json"}
 				}
-				session := connectMCP(t, ctx, c.Path, protocol, flags...)
+				session := connectMCP(t, ctx, c.Path(), protocol, flags...)
 				call := func(args string, wantError bool) *mcp.CallToolResult {
 					t.Helper()
 					r, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "schema_set", Arguments: json.RawMessage(args)})
@@ -73,7 +73,7 @@ func TestMCPSchemaSet(t *testing.T) {
 				if diagnostic["id"] != doc.ID || diagnostic["path"] == "" {
 					t.Fatalf("diagnostic: %v", diagnostic)
 				}
-				filename := filepath.Join(c.Path, collection.ConfigFilename)
+				filename := filepath.Join(c.Path(), collection.ConfigFilename)
 				stored, err := os.ReadFile(filename)
 				if err != nil || string(stored) != string(original) {
 					t.Fatal("rejection changed schema", err)
@@ -82,7 +82,7 @@ func TestMCPSchemaSet(t *testing.T) {
 				if forced["installed"] != true || forced["healthy"] != false || len(forced["diagnostics"].([]any)) != 1 {
 					t.Fatalf("force: %v", forced)
 				}
-				current, err := c.Read(doc.ID)
+				current, err := c.Read(context.Background(), doc.ID)
 				if err != nil || current.Hash != doc.Hash {
 					t.Fatal("document changed", err)
 				}

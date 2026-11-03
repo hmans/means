@@ -11,7 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func writeTUIApp(t *testing.T, path, config string) {
@@ -27,7 +27,7 @@ func loadTUIApp(path string) (*tuiApp, error) {
 	if err != nil {
 		return nil, err
 	}
-	return compileTUIApp(c.App, nil), nil
+	return compileTUIApp(c.App(), nil), nil
 }
 
 func TestTUIAppViewsAndReload(t *testing.T) {
@@ -36,8 +36,8 @@ func TestTUIAppViewsAndReload(t *testing.T) {
 	tuiCreate(t, c, "Closed bug", map[string]any{"status": "done", "type": "bug", "tags": []any{"cli"}})
 	tuiCreate(t, c, "Feature", map[string]any{"status": "todo", "type": "feature"})
 	config := "views:\n  - title: Open bugs\n    filter: data.type == 'bug' and data.status == 'todo' and 'cli' in (data.tags ?? [])\n    columns: [title, data.priority]\n"
-	writeTUIApp(t, c.Path, config)
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), config)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	if len(m.docs) != 3 {
 		t.Fatal("startup should use All documents")
@@ -69,7 +69,7 @@ func TestTUIAppViewsAndReload(t *testing.T) {
 	}
 	tuiPress(m, '/')
 	m.Update(tea.PasteMsg{Content: "Open"})
-	writeTUIApp(t, c.Path, strings.ReplaceAll(config, "data.status == 'todo'", "data.status == 'done'"))
+	writeTUIApp(t, c.Path(), strings.ReplaceAll(config, "data.status == 'todo'", "data.status == 'done'"))
 	tuiPollNow(t, m)
 	if len(m.docs) != 0 || m.input != "Open" || m.mode != "search" {
 		t.Fatal("live config reload lost active search or view")
@@ -78,13 +78,13 @@ func TestTUIAppViewsAndReload(t *testing.T) {
 	if len(m.docs) != 1 || m.docs[0].ID == a.ID {
 		t.Fatal("edited view did not apply")
 	}
-	writeTUIApp(t, c.Path, "views: [broken")
+	writeTUIApp(t, c.Path(), "views: [broken")
 	_, cmd := m.Update(tuiChanged{})
 	m.Update(cmd())
 	if m.err == nil || len(m.docs) != 1 || m.view != "Open bugs" {
 		t.Fatal("invalid app did not retain last usable state")
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, collection.ConfigFilename), []byte("---\nschema: true\n---\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), collection.ConfigFilename), []byte("---\nschema: true\n---\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	tuiPollNow(t, m)
@@ -137,8 +137,8 @@ func TestTUIAppValidationAndErrors(t *testing.T) {
 	}
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Bad date", map[string]any{"created_at": "invalid"})
-	writeTUIApp(t, c.Path, "views: [{title: Dates, filter: 'date(data.created_at) < now()', columns: [id, title, data.created_at]}]")
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), "views: [{title: Dates, filter: 'date(data.created_at) < now()', columns: [id, title, data.created_at]}]")
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.openViews()
 	m.choice = 1
@@ -155,8 +155,8 @@ func TestTUIAppValidationAndErrors(t *testing.T) {
 func TestTUIAppMouseAndLayout(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Document", map[string]any{"priority": "high"})
-	writeTUIApp(t, c.Path, "views: [{title: Work, columns: [id, title, data.priority]}]")
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), "views: [{title: Work, columns: [id, title, data.priority]}]")
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	for _, b := range m.geometry().buttons {
 		if b.key == "v" {
@@ -193,8 +193,8 @@ func TestTUIAppDropdownInteraction(t *testing.T) {
 	for i := 0; i < 15; i++ {
 		config += fmt.Sprintf("  - title: View %02d\n", i)
 	}
-	writeTUIApp(t, c.Path, config)
-	m := newTUIModel(c.Path)
+	writeTUIApp(t, c.Path(), config)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.width = 120
 	before := m.geometry().body

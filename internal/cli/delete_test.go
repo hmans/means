@@ -2,13 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestDeleteCLI(t *testing.T) {
@@ -18,7 +19,7 @@ func TestDeleteCLI(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			doc, err := c.Create(map[string]any{"title": "Remove"}, "Body")
+			doc, err := c.Create(context.Background(), collection.CreateOptions{Title: "Remove", Body: "Body"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -30,7 +31,7 @@ func TestDeleteCLI(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			args := []string{"delete", doc.ID, "--path", c.Path, "--input", inputPath}
+			args := []string{"delete", doc.ID, "--path", c.Path(), "--input", inputPath}
 			if asJSON {
 				args = append(args, "--json")
 			}
@@ -49,7 +50,7 @@ func TestDeleteCLI(t *testing.T) {
 			} else if out.String() != doc.ID+"\n" {
 				t.Fatal(out.String())
 			}
-			if _, err := c.Read(doc.ID); err == nil {
+			if _, err := c.Read(context.Background(), doc.ID); err == nil {
 				t.Fatal("document remains")
 			}
 			out.Reset()
@@ -65,24 +66,24 @@ func TestDeleteCLIInvalidInput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc, err := c.Create(map[string]any{"title": "Keep"}, "Body")
+	doc, err := c.Create(context.Background(), collection.CreateOptions{Title: "Keep", Body: "Body"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, input := range []string{"", "{", "null", "[]", "{}", `{"hash":null}`, `{"hash":1}`, `{"hash":"bad"}`, `{"hash":""}`, `{"hash":"HASH","force":true}`, `{"hash":"HASH"} {}`, `{"hash":"` + strings.Repeat("0", 64) + `"}`} {
 		input = strings.ReplaceAll(input, "HASH", doc.Hash)
 		var out, stderr bytes.Buffer
-		if err := Execute([]string{"delete", doc.ID, "--path", c.Path, "--input", "-", "--json"}, strings.NewReader(input), &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
+		if err := Execute([]string{"delete", doc.ID, "--path", c.Path(), "--input", "-", "--json"}, strings.NewReader(input), &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
 			t.Fatalf("input %s: %v %s %s", input, err, out.String(), stderr.String())
 		}
-		current, err := c.Read(doc.ID)
+		current, err := c.Read(context.Background(), doc.ID)
 		if err != nil || current.Hash != doc.Hash {
 			t.Fatalf("changed document: %+v %v", current, err)
 		}
 	}
 	for _, args := range [][]string{{"delete"}, {"delete", doc.ID}, {"delete", doc.ID, "--input", "missing.json"}, {"delete", doc.ID, "--input", "-"}} {
 		var out, stderr bytes.Buffer
-		if err := Execute(append(args, "--path", c.Path, "--json"), strings.NewReader(""), &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
+		if err := Execute(append(args, "--path", c.Path(), "--json"), strings.NewReader(""), &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) {
 			t.Fatalf("args: %v %s", err, stderr.String())
 		}
 	}

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -22,7 +22,7 @@ func TestInstructionsSetCLI(t *testing.T) {
 	run := func(input string, args ...string) (string, string, error) {
 		t.Helper()
 		var out, stderr bytes.Buffer
-		args = append(args, "--path", c.Path, "--json")
+		args = append(args, "--path", c.Path(), "--json")
 		err := Execute(args, strings.NewReader(input), &out, &stderr, "test")
 		return out.String(), stderr.String(), err
 	}
@@ -88,7 +88,7 @@ func TestMCPInstructionsSet(t *testing.T) {
 				if jsonFlag {
 					flags = []string{"--json"}
 				}
-				session := connectMCP(t, ctx, c.Path, protocol, flags...)
+				session := connectMCP(t, ctx, c.Path(), protocol, flags...)
 				call := func(name string, args any, wantError bool) map[string]any {
 					t.Helper()
 					r, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
@@ -129,7 +129,7 @@ func TestMCPInstructionsSet(t *testing.T) {
 					if info["instructions"] != body || info["hash"] != updated["hash"] || updated["instructions"] != body {
 						t.Fatal("info did not refresh", info, updated)
 					}
-					stored, err := os.ReadFile(filepath.Join(c.Path, collection.ConfigFilename))
+					stored, err := os.ReadFile(filepath.Join(c.Path(), collection.ConfigFilename))
 					if err != nil || string(stored) != prefix+body {
 						t.Fatal("frontmatter or body changed", string(stored), err)
 					}

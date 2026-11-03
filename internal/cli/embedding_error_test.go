@@ -2,11 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/hmans/means/collection"
 )
 
 func TestEmbeddingFailureKeepsJSONErrorParseable(t *testing.T) {
@@ -19,11 +22,11 @@ func TestEmbeddingFailureKeepsJSONErrorParseable(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out, stderr bytes.Buffer
-	err = Execute([]string{"create", "--path", c.Path, "--input", "-", "--json"}, strings.NewReader(`{"frontmatter":{"title":"failure"}}`), &out, &stderr, "test")
+	err = Execute([]string{"create", "--path", c.Path(), "--input", "-", "--json"}, strings.NewReader(`{"frontmatter":{"title":"failure"}}`), &out, &stderr, "test")
 	if err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) || !strings.Contains(stderr.String(), "503") {
 		t.Fatalf("error stream: %v %s", err, stderr.String())
 	}
-	listed, err := c.List(0)
+	listed, err := c.List(context.Background(), collection.ListOptions{Limit: 0})
 	if err != nil || len(listed.Documents) != 0 {
 		t.Fatal("failed embedding wrote document")
 	}

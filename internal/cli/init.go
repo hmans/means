@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -110,5 +110,5 @@ func writeInitResult(cmd *cobra.Command, opts *options, c *collection.Collection
 		Path      string   `json:"path"`
 		Config    string   `json:"config"`
 		NextSteps []string `json:"next_steps"`
-	}{c.Path, filepath.Join(c.Path, collection.ConfigFilename), []string{"means help create"}}, "Initialized collection at "+c.Path+"\nNext: run means help create to add a document.\n")
+	}{c.Path(), filepath.Join(c.Path(), collection.ConfigFilename), []string{"means help create"}}, "Initialized collection at "+c.Path()+"\nNext: run means help create to add a document.\n")
 }

@@ -2,13 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestListSearchWithBody(t *testing.T) {
@@ -18,13 +19,13 @@ func TestListSearchWithBody(t *testing.T) {
 	}
 	bodies := map[string]string{}
 	for _, body := range []string{"", "## Heading\n\nUnicode Über **body**.\n"} {
-		doc, err := c.Create(map[string]any{"title": "Matching title"}, body)
+		doc, err := c.Create(context.Background(), collection.CreateOptions{Title: "Matching title", Body: body})
 		if err != nil {
 			t.Fatal(err)
 		}
 		bodies[doc.ID] = body
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "broken.md"), []byte("broken"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "broken.md"), []byte("broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, args := range [][]string{{"list"}, {"search"}, {"search", "matching"}, {"search", "matching", "--literal"}, {"search", "matching", "--limit", "1"}} {
@@ -32,7 +33,7 @@ func TestListSearchWithBody(t *testing.T) {
 			run := func(withBody bool) map[string]any {
 				t.Helper()
 				var out, errs bytes.Buffer
-				flags := append(append([]string{}, args...), "--path", c.Path, "--json")
+				flags := append(append([]string{}, args...), "--path", c.Path(), "--json")
 				if withBody {
 					flags = append(flags, "--with-body")
 				}
@@ -72,7 +73,7 @@ func TestListSearchWithBody(t *testing.T) {
 	}
 	for _, command := range []string{"list", "search"} {
 		var out, errs bytes.Buffer
-		if err := Execute([]string{command, "--path", c.Path, "--with-body"}, nil, &out, &errs, "test"); err == nil || out.Len() != 0 {
+		if err := Execute([]string{command, "--path", c.Path(), "--with-body"}, nil, &out, &errs, "test"); err == nil || out.Len() != 0 {
 			t.Fatal("accepted --with-body without --json")
 		}
 	}

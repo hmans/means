@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func tuiClick(m *tuiModel, x, y int) tea.Cmd {
@@ -37,7 +37,7 @@ func tuiWheel(m *tuiModel, x, y int, down bool) {
 func TestTUIDividerDrag(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "A document", map[string]any{})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 140, Height: 26})
 	tuiRun(t, m, m.Init())
 	for _, grabOffset := range []int{-1, 0, 1} {
@@ -92,7 +92,7 @@ func TestTUIPreviewSplitAndIndependentScrolling(t *testing.T) {
 	c := tuiTestCollection(t)
 	long := tuiCreate(t, c, "Long data", map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")})
 	tuiCreate(t, c, "Short data", map[string]any{})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 140, Height: 36})
 	tuiRun(t, m, m.Init())
 	if m.docs[m.selected].ID != long.ID {
@@ -153,7 +153,7 @@ func TestTUIPreviewSplitAndIndependentScrolling(t *testing.T) {
 func TestTUIPreviewDividerDrag(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Document", map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 140, Height: 36})
 	tuiRun(t, m, m.Init())
 	for _, grabOffset := range []int{-1, 0} {
@@ -211,7 +211,7 @@ func TestTUIDocumentHoverAndEmptyFilterRow(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tuiCreate(t, c, fmt.Sprintf("Document %02d", i), map[string]any{})
 	}
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 26})
 	tuiRun(t, m, m.Init())
 	g := m.geometry()
@@ -249,7 +249,7 @@ func TestTUIMouseSelectionScrollAndFocus(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		tuiCreate(t, c, fmt.Sprintf("Document %02d 日本語", i), map[string]any{})
 	}
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 26})
 	tuiRun(t, m, m.Init())
 	g := m.geometry()
@@ -308,7 +308,7 @@ func TestTUIMouseToolbarSearchAndFilters(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Alpha", map[string]any{"status": "open"})
 	tuiCreate(t, c, "Beta", map[string]any{"status": "closed"})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.Update(tea.WindowSizeMsg{Width: 100, Height: 24})
 	tuiRun(t, m, m.Init())
 	g := m.geometry()
@@ -402,7 +402,7 @@ func TestTUIMousePickerAndDiagnosticScrolling(t *testing.T) {
 func TestTUIFramedLayoutBounds(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Wide 日本語 title", map[string]any{"status": "open"})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.filters["status"] = "open"
 	for _, size := range [][2]int{{140, 35}, {100, 24}, {90, 24}, {80, 24}, {60, 16}, {32, 12}, {20, 8}, {1, 1}} {

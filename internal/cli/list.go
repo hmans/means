@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +49,7 @@ are separate collections; hidden paths and symlinks are ignored.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.ListWithOptions(collection.ListOptions{Filter: filter, DateTime: datetime, Offset: offset, Limit: limit, WithBody: withBody})
+			result, err := c.List(cmd.Context(), collection.ListOptions{Filter: filter, DateTime: datetime, Offset: offset, Limit: limit, WithBody: withBody})
 			if err != nil {
 				return err
 			}

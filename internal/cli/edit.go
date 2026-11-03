@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ Text returns the ID; JSON returns the document and new hash, as update does.`,
 			if err != nil {
 				return err
 			}
-			doc, err := c.Read(args[0])
+			doc, err := c.Read(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}
@@ -78,7 +78,7 @@ Text returns the ID; JSON returns the document and new hash, as update does.`,
 			if err != nil {
 				return recoverError(err)
 			}
-			updated, err := c.WithEmbeddings(opts.config.Embeddings).WithEmbeddingProgress(opts.embeddingProgress(cmd)).ReplaceMarkdown(doc.ID, doc.Hash, content)
+			updated, err := c.WithEmbeddings(opts.config.Embeddings).WithEmbeddingProgress(opts.embeddingProgress(cmd)).ReplaceMarkdown(cmd.Context(), doc.ID, doc.Hash, content)
 			if err != nil {
 				return recoverError(err)
 			}

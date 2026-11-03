@@ -22,7 +22,7 @@ Use stored IDs, not filenames. JSON returns id, hash, frontmatter, body. Errors 
 			if err != nil {
 				return err
 			}
-			doc, err := c.Read(args[0])
+			doc, err := c.Read(cmd.Context(), args[0])
 			if err != nil {
 				return err
 			}

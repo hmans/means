@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +51,7 @@ external writes can still race installation.`,
 			if err != nil {
 				return fmt.Errorf("read schema input: %w", err)
 			}
-			result, err := collection.SetSchema(opts.path, data, force)
+			result, err := collection.SetSchema(cmd.Context(), opts.path, data, force)
 			if err != nil && !errors.Is(err, collection.ErrSchemaIncompatible) {
 				return err
 			}

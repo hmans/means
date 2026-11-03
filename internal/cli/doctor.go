@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/spf13/cobra"
 )
 
@@ -31,9 +31,12 @@ and optional warnings. Validation uses MEANS.md; doctor never repairs documents.
 			if err != nil {
 				return err
 			}
-			result, err := c.Doctor()
+			result, err := c.Doctor(cmd.Context())
 			if err != nil {
 				return err
+			}
+			for i := range result.Warnings {
+				result.Warnings[i].Error = strings.TrimSuffix(result.Warnings[i].Error, "; refresh embeddings") + "; run means embed"
 			}
 			if opts.json {
 				err = opts.write(cmd.OutOrStdout(), result, "")

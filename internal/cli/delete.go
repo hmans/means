@@ -52,7 +52,7 @@ JSON`,
 			if err != nil {
 				return err
 			}
-			result, err := c.Delete(args[0], hash)
+			result, err := c.Delete(cmd.Context(), args[0], hash)
 			if err != nil {
 				return err
 			}

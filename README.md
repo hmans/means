@@ -16,6 +16,7 @@ means is in early development. It includes:
 - An interactive terminal browser with Markdown previews.
 - Schema validation and collection diagnostics.
 - JSON input/output and a stdio MCP server for applications and agents.
+- A public Go package for direct collection access from other Go projects.
 
 ## Install
 
@@ -51,6 +52,7 @@ Use `means edit <id> --path ./notes` to open a note in your editor.
 See the [usage guide](docs/guide.md) for collection design, search, and MCP setup.
 Run `means help <command>` for command details, or `means help agents` for a
 guide to using means from an agent.
+For Go applications, see the [Go integration guide](docs/go.md).
 
 ## This repository
 

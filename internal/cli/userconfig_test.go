@@ -3,7 +3,7 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/hmans/means/internal/userconfig"
 	"net/http"
 	"net/http/httptest"
@@ -77,12 +77,12 @@ func TestUserConfigBootstrapAndFailures(t *testing.T) {
 			t.Fatal(err)
 		}
 		var out, stderr bytes.Buffer
-		if err := Execute([]string{"list", "--path", c.Path, "--json"}, nil, &out, &stderr, "test"); err != nil || !json.Valid(out.Bytes()) || !json.Valid(stderr.Bytes()) || !strings.Contains(stderr.String(), "warning") {
+		if err := Execute([]string{"list", "--path", c.Path(), "--json"}, nil, &out, &stderr, "test"); err != nil || !json.Valid(out.Bytes()) || !json.Valid(stderr.Bytes()) || !strings.Contains(stderr.String(), "warning") {
 			t.Fatalf("offline failure: %v %s %s", err, out.String(), stderr.String())
 		}
 		out.Reset()
 		stderr.Reset()
-		if err := Execute([]string{"embed", "--path", c.Path, "--json"}, nil, &out, &stderr, "test"); err == nil || !json.Valid(stderr.Bytes()) || strings.Contains(stderr.String(), `"warning"`) {
+		if err := Execute([]string{"embed", "--path", c.Path(), "--json"}, nil, &out, &stderr, "test"); err == nil || !json.Valid(stderr.Bytes()) || strings.Contains(stderr.String(), `"warning"`) {
 			t.Fatalf("error framing: %v %s", err, stderr.String())
 		}
 	})
@@ -133,11 +133,11 @@ func TestUserConfigAppliesAcrossCollections(t *testing.T) {
 	}
 	for _, c := range []*collection.Collection{first, second} {
 		var out, stderr bytes.Buffer
-		err := Execute([]string{"create", "--path", c.Path, "--input", "-", "--json"}, strings.NewReader(`{"frontmatter":{"title":"sample"}}`), &out, &stderr, "test")
+		err := Execute([]string{"create", "--path", c.Path(), "--input", "-", "--json"}, strings.NewReader(`{"frontmatter":{"title":"sample"}}`), &out, &stderr, "test")
 		if err != nil || !json.Valid(out.Bytes()) || stderr.Len() != 0 {
 			t.Fatalf("create: %v %s", err, stderr.String())
 		}
-		data, err := os.ReadFile(filepath.Join(c.Path, "MEANS.md"))
+		data, err := os.ReadFile(filepath.Join(c.Path(), "MEANS.md"))
 		if err != nil || strings.Contains(string(data), "embeddings") {
 			t.Fatal("host config leaked into collection")
 		}
@@ -150,7 +150,7 @@ func TestUserConfigAppliesAcrossCollections(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out, stderr bytes.Buffer
-	if err := Execute([]string{"create", "--path", first.Path, "--input", "-", "--json"}, strings.NewReader(`{"frontmatter":{"title":"offline"}}`), &out, &stderr, "test"); err != nil {
+	if err := Execute([]string{"create", "--path", first.Path(), "--input", "-", "--json"}, strings.NewReader(`{"frontmatter":{"title":"offline"}}`), &out, &stderr, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if calls.Load() != 2 {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestSemanticThresholdCLI(t *testing.T) {
@@ -28,7 +29,7 @@ func TestSemanticThresholdCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.Create(map[string]any{"title": "document"}, ""); err != nil {
+	if _, err := c.Create(context.Background(), collection.CreateOptions{Title: "document", Body: ""}); err != nil {
 		t.Fatal(err)
 	}
 	query.Store(true)
@@ -39,7 +40,7 @@ func TestSemanticThresholdCLI(t *testing.T) {
 		{nil, 0}, {[]string{"--min-score", "0"}, 1}, {[]string{"--min-score", "-1"}, 1},
 	} {
 		var out, stderr bytes.Buffer
-		args := append([]string{"search", "query", "--semantic", "--path", c.Path, "--json"}, tt.args...)
+		args := append([]string{"search", "query", "--semantic", "--path", c.Path(), "--json"}, tt.args...)
 		if err := Execute(args, nil, &out, &stderr, "test"); err != nil {
 			t.Fatal(err)
 		}
@@ -49,7 +50,7 @@ func TestSemanticThresholdCLI(t *testing.T) {
 		}
 	}
 	var out, stderr bytes.Buffer
-	if err := Execute([]string{"search", "query", "--semantic", "--min-score", "0", "--path", c.Path}, nil, &out, &stderr, "test"); err != nil {
+	if err := Execute([]string{"search", "query", "--semantic", "--min-score", "0", "--path", c.Path()}, nil, &out, &stderr, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "SCORE") || !strings.Contains(out.String(), "0.000") || !strings.Contains(out.String(), "document") {
@@ -60,7 +61,7 @@ func TestSemanticThresholdCLI(t *testing.T) {
 	} {
 		out.Reset()
 		stderr.Reset()
-		if err := Execute(append([]string{"search", "query", "--path", c.Path, "--json"}, args...), nil, &out, &stderr, "test"); err == nil || !json.Valid(stderr.Bytes()) {
+		if err := Execute(append([]string{"search", "query", "--path", c.Path(), "--json"}, args...), nil, &out, &stderr, "test"); err == nil || !json.Valid(stderr.Bytes()) {
 			t.Fatalf("accepted invalid args: %v %s", args, stderr.String())
 		}
 	}

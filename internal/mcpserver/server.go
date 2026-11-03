@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"github.com/hmans/means/internal/userconfig"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -115,7 +115,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		return nil, err
 	}
 	c = c.WithEmbeddings(cfg.Embeddings)
-	path = c.Path
+	path = c.Path()
 	info := c.Describe()
 	server := mcp.NewServer(&mcp.Implementation{Name: "means", Title: info.Title, Description: info.Description, Version: version},
 		&mcp.ServerOptions{Instructions: collectionStartupInstructions(info)})
@@ -125,8 +125,8 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "Replace the MEANS.md Markdown workflow body using the whole-file hash from info. Supply the complete replacement in instructions; an empty string clears it. Preserves exact frontmatter bytes and permissions. Requires valid collection configuration; does not validate or change documents. Stale hashes fail: call info again and reconcile before retrying. Returns hash, title, description, and exact instructions. Observed concurrent changes reject replacement; external writes can still race the final check and rename. Restart to refresh startup guidance.",
 			schema:      `{"type":"object","properties":{"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Whole MEANS.md hash returned by info."},"instructions":{"type":"string","description":"Complete replacement Markdown body; empty string clears it."}},"required":["hash","instructions"],"additionalProperties":false}`,
 			destructive: true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
-				return c.SetInstructions(args["hash"].(string), args["instructions"].(string))
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
+				return c.SetInstructions(ctx, args["hash"].(string), args["instructions"].(string))
 			},
 		},
 		{
@@ -134,7 +134,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "Validate and install a JSON Schema for this collection. Pass schema as an object or boolean, not a string. Optional force (default false) permits existing document violations but never invalid schemas or filesystem errors. Returns installed, healthy, checked, and diagnostics. Rejection is a tool error with structured diagnostics and leaves the schema unchanged. Checks current data, not abstract schema compatibility. Does not rewrite documents; concurrent edits can race installation. Can repair an invalid or missing schema in otherwise valid MEANS.md frontmatter while this server remains running. Malformed YAML requires a direct edit. Preserves identity and Markdown body; frontmatter may be reformatted. Restart to refresh discovery metadata.",
 			schema:      `{"type":"object","properties":{"schema":{"type":["object","boolean"],"description":"Complete self-contained JSON Schema. Draft 2020-12 by default; external references are unsupported."},"force":{"type":"boolean","default":false}},"required":["schema"],"additionalProperties":false}`,
 			destructive: true,
-			runPath: func(path string, arguments json.RawMessage) (any, error) {
+			runPath: func(ctx context.Context, path string, arguments json.RawMessage) (any, error) {
 				// Keep the raw schema bytes so the supplied key order survives.
 				var args struct {
 					Schema json.RawMessage `json:"schema"`
@@ -143,7 +143,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 				if err := json.Unmarshal(arguments, &args); err != nil {
 					return nil, err
 				}
-				return collection.SetSchema(path, args.Schema, args.Force)
+				return collection.SetSchema(ctx, path, args.Schema, args.Force)
 			},
 		},
 		{
@@ -151,9 +151,9 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "Return current collection identity, schema, path, exact MEANS.md body as instructions, whole-file hash, and tool usage guidance as usage. Call before creating documents or replacing the workflow with instructions_set.",
 			schema:      `{"type":"object","additionalProperties":false}`,
 			readOnly:    true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				current := c.Describe()
-				return map[string]any{"path": c.Path, "schema": c.Schema,
+				return map[string]any{"path": c.Path(), "schema": c.Schema(),
 					"title": current.Title, "description": current.Description,
 					"embeddings": c.Embeddings(),
 					"hash":       current.Hash, "instructions": current.Instructions, "usage": instructions}, nil
@@ -164,7 +164,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "List valid document IDs and frontmatter in filename order, without bodies or hashes. Returns documents, diagnostics, and has_more. offset skips valid documents (default 0) before limit (default 20; 0 returns all remaining). Malformed documents and every duplicate occurrence are excluded and reported in diagnostics regardless of offset or limit. has_more indicates valid documents after this page. Each call scans current files; changes between calls can shift pages. Read an ID before updating it.",
 			schema:      `{"type":"object","properties":{"offset":{"type":"integer","minimum":0,"description":"Valid documents to skip before limit; default 0."},"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all remaining."}},"additionalProperties":false}`,
 			readOnly:    true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				limit, err := limitArg(args)
 				if err != nil {
 					return nil, err
@@ -173,7 +173,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 				if err != nil {
 					return nil, err
 				}
-				return c.ListWithOptions(collection.ListOptions{Offset: offset, Limit: limit})
+				return c.List(ctx, collection.ListOptions{Offset: offset, Limit: limit})
 			},
 		},
 		{
@@ -182,7 +182,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			schema:      `{"type":"object","properties":{"query":{"type":"string","description":"Text query. Full text requires all terms; semantic search ranks similarity."},"min_score":{"type":"number","minimum":-1,"maximum":1,"default":0.3,"description":"Inclusive cosine similarity threshold, applied before limit. Requires semantic:true. Use -1 for all scores."},"semantic":{"type":"boolean","default":false,"description":"Opt-in semantic search: embed only the query, rank stored document vectors, return cosine scores instead of excerpts. Never changes document vectors; skips missing or stale vectors (refresh with CLI means embed). Requires a nonempty query and API credentials; cannot combine with literal. May incur charges."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"datetime":{"type":"array","description":"ANDed datetime comparisons against literal keys directly under data, applied before limits in every mode. Values are RFC 3339 strings with timezone and at most 9 fractional digits (no leap seconds or date-only values). Compare instants across offsets; before/after are exclusive, on_or variants inclusive. Missing, non-string or invalid document values do not match. No schema annotation required; exact filter semantics unchanged.","items":{"type":"object","properties":{"field":{"type":"string","minLength":1},"op":{"type":"string","enum":["before","after","on_or_before","on_or_after"]},"value":{"type":"string"}},"required":["field","op","value"],"additionalProperties":false}},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			openWorld:   true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				limit, err := limitArg(args)
 				if err != nil {
 					return nil, err
@@ -206,7 +206,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 					}
 					minScore = &n
 				}
-				return c.Search(collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
+				return c.Search(ctx, collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
 			},
 		},
 		{
@@ -214,8 +214,8 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "Read by stored ID, independent of filename. Returns frontmatter, exact body, and the content hash required for update. Missing and duplicate IDs fail.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128,"description":"Stored frontmatter.id, not a filename or path."}},"required":["id"],"additionalProperties":false}`,
 			readOnly:    true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
-				return c.Read(args["id"].(string))
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
+				return c.Read(ctx, args["id"].(string))
 			},
 		},
 		{
@@ -223,9 +223,11 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			openWorld:   true,
 			description: "Create a document with a required title, optional application data, and optional Markdown body. Call info for the data schema. Means generates the ID. Each successful call creates another document.",
 			schema:      `{"type":"object","properties":{"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Application fields validated against the schema returned by info. Omit for {}."}},"required":["title"],"additionalProperties":false},"body":{"type":"string","description":"Markdown body, preserved exactly; defaults to empty."}},"required":["frontmatter"],"additionalProperties":false}`,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				body, _ := args["body"].(string)
-				return c.Create(args["frontmatter"].(map[string]any), body)
+				frontmatter := args["frontmatter"].(map[string]any)
+				data, _ := frontmatter["data"].(map[string]any)
+				return c.Create(ctx, collection.CreateOptions{Title: frontmatter["title"].(string), Data: data, Body: body})
 			},
 		},
 		{
@@ -234,14 +236,14 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "Patch title/data or replace the body using the hash from read. Omit unchanged fields; null deletes nested data keys. The ID cannot change. A stale hash fails; read again before retrying.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."},"frontmatter":{"type":"object","properties":{"title":{"type":"string","minLength":1},"data":{"type":"object","description":"Merge patch for application data. Null values delete nested keys; arrays replace."}},"additionalProperties":false},"body":{"type":"string","description":"Replacement Markdown body; omit to retain."}},"required":["id","hash"],"minProperties":3,"additionalProperties":false}`,
 			destructive: true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				patch := collection.Patch{}
 				patch.Frontmatter, _ = args["frontmatter"].(map[string]any)
 				if value, exists := args["body"]; exists {
 					body := value.(string)
 					patch.Body = &body
 				}
-				return c.Update(args["id"].(string), args["hash"].(string), patch)
+				return c.Update(ctx, args["id"].(string), args["hash"].(string), patch)
 			},
 		},
 		{
@@ -249,8 +251,8 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 			description: "Permanently remove one document by ID and the hash from read. Returns the deleted ID. Missing or duplicate IDs, malformed envelopes, and stale hashes fail. Does not validate existing application data. Preserves directories and configuration. No undo; concurrent writes can race removal.",
 			schema:      `{"type":"object","properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_-]*$","maxLength":128},"hash":{"type":"string","pattern":"^[0-9a-f]{64}$","description":"Content hash returned by read."}},"required":["id","hash"],"additionalProperties":false}`,
 			destructive: true,
-			run: func(c *collection.Collection, args map[string]any) (any, error) {
-				return c.Delete(args["id"].(string), args["hash"].(string))
+			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
+				return c.Delete(ctx, args["id"].(string), args["hash"].(string))
 			},
 		},
 	} {
@@ -289,8 +291,8 @@ type toolDefinition struct {
 	readOnly                  bool
 	openWorld                 bool
 	destructive               bool
-	run                       func(*collection.Collection, map[string]any) (any, error)
-	runPath                   func(string, json.RawMessage) (any, error) // Operations that need no valid current schema.
+	run                       func(context.Context, *collection.Collection, map[string]any) (any, error)
+	runPath                   func(context.Context, string, json.RawMessage) (any, error) // Operations that need no valid current schema.
 }
 
 func addTool(server *mcp.Server, path string, tool toolDefinition, progress func(string), embeddings *collection.EmbeddingConfig) error {
@@ -329,12 +331,12 @@ func addTool(server *mcp.Server, path string, tool toolDefinition, progress func
 		}
 		var output any
 		if tool.runPath != nil {
-			output, err = tool.runPath(path, data)
+			output, err = tool.runPath(ctx, path, data)
 		} else {
 			var c *collection.Collection
 			c, err = collection.Load(path)
 			if err == nil {
-				output, err = tool.run(c.WithEmbeddings(embeddings).WithContext(ctx).WithEmbeddingProgress(progress), value.(map[string]any))
+				output, err = tool.run(ctx, c.WithEmbeddings(embeddings).WithEmbeddingProgress(progress), value.(map[string]any))
 			}
 		}
 		rejected := errors.Is(err, collection.ErrSchemaIncompatible)

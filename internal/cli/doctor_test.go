@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestDoctorCommandExitAndOutput(t *testing.T) {
@@ -86,11 +86,11 @@ func TestDoctorMissingEmbeddingsOutput(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "document.md"), []byte("---\nid: doc01\ntitle: Document\ndata: {}\n---\nbody"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "document.md"), []byte("---\nid: doc01\ntitle: Document\ndata: {}\n---\nbody"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, jsonMode := range []bool{false, true} {
-		args := []string{"doctor", "--path", c.Path}
+		args := []string{"doctor", "--path", c.Path()}
 		if jsonMode {
 			args = append(args, "--json")
 		}

@@ -15,7 +15,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 	"go.yaml.in/yaml/v3"
 )
 

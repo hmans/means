@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func tuiTestCollection(t *testing.T) *collection.Collection {
@@ -25,7 +26,7 @@ func tuiTestCollection(t *testing.T) *collection.Collection {
 
 func tuiCreate(t *testing.T, c *collection.Collection, title string, data map[string]any) *collection.Document {
 	t.Helper()
-	doc, err := c.Create(map[string]any{"title": title, "data": data}, "## Preview heading\n\nA **bold** body.\n"+strings.Repeat("More body text.\n\n", 30))
+	doc, err := c.Create(context.Background(), collection.CreateOptions{Title: title, Data: data, Body: "## Preview heading\n\nA **bold** body.\n" + strings.Repeat("More body text.\n\n", 30)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func tuiPress(m *tuiModel, code rune) tea.Cmd {
 func TestTUISnapshotFiltersAndPreviewCache(t *testing.T) {
 	c := tuiTestCollection(t)
 	doc := tuiCreate(t, c, "Alpha", map[string]any{"status": "open", "tags": []any{"cli"}})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	cached := &m.preview[0]
 	m.filterText("Alpha")
@@ -80,7 +81,7 @@ func TestTUISnapshotFiltersAndPreviewCache(t *testing.T) {
 		t.Fatal("width resize did not rerender the preview")
 	}
 	newBody := "Changed body after refresh."
-	if _, err := c.Update(doc.ID, doc.Hash, collection.Patch{Body: &newBody}); err != nil {
+	if _, err := c.Update(context.Background(), doc.ID, doc.Hash, collection.Patch{Body: &newBody}); err != nil {
 		t.Fatal(err)
 	}
 	tuiCreate(t, c, "Beta", map[string]any{"status": "open", "tags": []any{"cli"}})
@@ -124,7 +125,7 @@ func TestTUIYAMLPreviewPanels(t *testing.T) {
 	t.Setenv("NO_COLOR", "1")
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Alpha", map[string]any{"status": "open", "count": json.Number("9007199254740993")})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.Update(tea.WindowSizeMsg{Width: 140, Height: 35})
 	view := m.View().Content
@@ -138,12 +139,12 @@ func TestTUIYAMLPreviewPanels(t *testing.T) {
 
 	// Large metadata must not hide the end of the document permanently.
 	large := tuiTestCollection(t)
-	_, err := large.Create(map[string]any{"title": "Long data", "data": map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")}}, strings.Repeat("More content.\n\n", 30)+"Last content line")
+	_, err := large.Create(context.Background(), collection.CreateOptions{Title: "Long data", Data: map[string]any{"items": strings.Split(strings.Repeat("value\n", 40), "\n")}, Body: strings.Repeat("More content.\n\n", 30) + "Last content line"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, size := range [][2]int{{140, 24}, {60, 16}, {32, 12}} {
-		m = newTUIModel(large.Path)
+		m = newTUIModel(large.Path())
 		tuiRun(t, m, m.Init())
 		m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		m.previewFocus = true
@@ -164,15 +165,15 @@ func TestTUIBrowseRefreshAndBoundaries(t *testing.T) {
 	for i := 0; i < 25; i++ {
 		tuiCreate(t, c, fmt.Sprintf("Document %02d", i), map[string]any{})
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "broken.md"), []byte("broken"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "broken.md"), []byte("broken"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	nested, err := collection.Init(filepath.Join(c.Path, "nested"), []byte(`true`))
+	nested, err := collection.Init(filepath.Join(c.Path(), "nested"), []byte(`true`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	tuiCreate(t, nested, "Nested document", map[string]any{})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	if len(m.docs) != 25 || len(m.diagnostics) != 1 {
 		t.Fatalf("docs=%d diagnostics=%v", len(m.docs), m.diagnostics)
@@ -189,7 +190,7 @@ func TestTUIBrowseRefreshAndBoundaries(t *testing.T) {
 		t.Fatal("refresh lost selection or new document")
 	}
 	// Invalid configuration must leave the last usable results available.
-	if err := os.WriteFile(filepath.Join(c.Path, "MEANS.md"), []byte("broken"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "MEANS.md"), []byte("broken"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	cmd := tuiPress(m, 'r')
@@ -203,7 +204,7 @@ func TestTUIFiltersUseCollectionSemantics(t *testing.T) {
 	c := tuiTestCollection(t)
 	a := tuiCreate(t, c, "Open", map[string]any{"status": "open", "number": json.Number("9007199254740993"), "nullable": nil, "tags": []any{"a", "b"}, "object": map[string]any{"a": true, "b": false}})
 	tuiCreate(t, c, "Closed", map[string]any{"status": "closed", "number": json.Number("9007199254740992"), "tags": []any{"a"}})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	// Drive the actual field/value picker, including a JSON null value.
 	tuiPress(m, 'f')
@@ -257,7 +258,7 @@ func TestTUISearchNavigationAndSizing(t *testing.T) {
 	c := tuiTestCollection(t)
 	tuiCreate(t, c, "Alpha 日本語", map[string]any{})
 	tuiCreate(t, c, "Beta", map[string]any{})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	tuiPress(m, '/')
 	m.Update(tea.PasteMsg{Content: "ALPHA 日本語"})
@@ -318,11 +319,11 @@ func TestTUILiveSearchEditingWithinDataFilters(t *testing.T) {
 	a := tuiCreate(t, c, "Alpha", map[string]any{"status": "open"})
 	tuiCreate(t, c, "Beta", map[string]any{"status": "open"})
 	tuiCreate(t, c, "Alpha closed", map[string]any{"status": "closed"})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	m.filters["status"] = "open"
 	tuiRun(t, m, m.Init())
 	// Typing must use the snapshot, even when the on-disk config becomes invalid.
-	if err := os.WriteFile(filepath.Join(c.Path, "MEANS.md"), []byte("invalid"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "MEANS.md"), []byte("invalid"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	tuiPress(m, '/')
@@ -358,7 +359,7 @@ func TestTUILiveSearchEditingWithinDataFilters(t *testing.T) {
 
 func TestTUIEmptyAndTerminalErrors(t *testing.T) {
 	c := tuiTestCollection(t)
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	t.Setenv("NO_COLOR", "1")
 	if strings.Contains(m.View().Content, "\x1b") {
@@ -372,7 +373,7 @@ func TestTUIEmptyAndTerminalErrors(t *testing.T) {
 	if !strings.Contains(m.View().Content, "No data fields") {
 		t.Fatal(m.View().Content)
 	}
-	for _, args := range [][]string{{"tui", "--path", c.Path}, {"tui", "--path", c.Path, "--json"}} {
+	for _, args := range [][]string{{"tui", "--path", c.Path()}, {"tui", "--path", c.Path(), "--json"}} {
 		var out, errs bytes.Buffer
 		if err := Execute(args, strings.NewReader("q"), &out, &errs, "test"); err == nil {
 			t.Fatal("accepted nonterminal/JSON session")
@@ -395,7 +396,7 @@ func TestTUISchemaChoicesAndRefresh(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.openFields()
 	if len(m.choices) != 5 {
@@ -434,7 +435,7 @@ func TestTUISchemaChoicesAndRefresh(t *testing.T) {
 		t.Fatal("array item enum choices missing")
 	}
 	// Direct edits can leave values outside the current schema. Keep those visible.
-	if err := os.WriteFile(filepath.Join(c.Path, "legacy.md"), []byte("---\nid: old01\ntitle: Legacy\ndata:\n  status: retired\n  extra: yes\n---\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "legacy.md"), []byte("---\nid: old01\ntitle: Legacy\ndata:\n  status: retired\n  extra: yes\n---\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	tuiRun(t, m, m.load())
@@ -452,7 +453,7 @@ func TestTUISchemaChoicesAndRefresh(t *testing.T) {
 	if len(m.choices) != 6 {
 		t.Fatal("stored field not included")
 	}
-	if err := os.WriteFile(filepath.Join(c.Path, "MEANS.md"), []byte("---\nschema:\n  properties:\n    status:\n      enum: [retired, archived]\n---\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), "MEANS.md"), []byte("---\nschema:\n  properties:\n    status:\n      enum: [retired, archived]\n---\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	tuiRun(t, m, m.load())
@@ -472,7 +473,7 @@ func TestTUIPickerTypeAhead(t *testing.T) {
 		t.Fatal(err)
 	}
 	tuiCreate(t, c, "One", map[string]any{"status": "done", "nullable": nil, "number": json.Number("9007199254740993")})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	tuiPress(m, 'f')
 	m.Update(tea.PasteMsg{Content: "WORKFLOW"})
@@ -569,7 +570,7 @@ func TestTUIArrayItemFilters(t *testing.T) {
 	tuiCreate(t, c, "Empty", map[string]any{"tags": []any{}})
 	tuiCreate(t, c, "Missing", map[string]any{})
 	tuiCreate(t, c, "Scalar", map[string]any{"tags": "cli"})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.field = "tags"
 	m.openValues()
@@ -650,7 +651,7 @@ func TestTUIArrayItemTypes(t *testing.T) {
 	c := tuiTestCollection(t)
 	items := []any{json.Number("9007199254740993"), json.Number("1"), json.Number("1.0"), "1", nil, true, []any{"nested"}, map[string]any{"key": "value"}}
 	tuiCreate(t, c, "Mixed", map[string]any{"items": items})
-	m := newTUIModel(c.Path)
+	m := newTUIModel(c.Path())
 	tuiRun(t, m, m.Init())
 	m.field = "items"
 	m.openValues()

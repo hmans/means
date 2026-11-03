@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hmans/means/internal/collection"
+	"github.com/hmans/means/collection"
 )
 
 func TestInitCommand(t *testing.T) {
@@ -36,7 +36,7 @@ func TestInitCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	var schema map[string]any
-	if err := json.Unmarshal(c.Schema, &schema); err != nil {
+	if err := json.Unmarshal(c.Schema(), &schema); err != nil {
 		t.Fatal(err)
 	}
 	if schema["type"] != "object" || !strings.Contains(stdout.String(), "\n  ") {
