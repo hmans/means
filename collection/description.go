@@ -10,9 +10,14 @@ import (
 // Description gives consumers the collection identity, exact Markdown guidance,
 // and SHA-256 hash of the complete configuration snapshot.
 type Description struct {
-	Hash         string `json:"hash"`
-	Title        string `json:"title"`
-	Description  string `json:"description"`
+	// Hash is lowercase hexadecimal SHA-256 of all MEANS.md bytes in the
+	// snapshot. SetInstructions requires this hash, not a document's hash.
+	Hash string `json:"hash"`
+	// Title is the trimmed configuration title, or the directory name if blank.
+	Title string `json:"title"`
+	// Description is the trimmed configuration description, or empty if omitted.
+	Description string `json:"description"`
+	// Instructions is the exact Markdown body of MEANS.md, without frontmatter.
 	Instructions string `json:"instructions"`
 }
 

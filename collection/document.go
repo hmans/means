@@ -21,29 +21,53 @@ import (
 )
 
 var documentID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
+
+// ErrDuplicateID means more than one visible document has the requested ID.
+// Read and mutations wrap it; List and Search report duplicates in diagnostics.
 var ErrDuplicateID = errors.New("duplicate document ID")
 
-// Document includes means-owned id/title and application data in Frontmatter.
-// filename is storage bookkeeping, never the identity exposed to consumers.
+// Document is a complete stored document. Read, Create, Update, and
+// ReplaceMarkdown return its exact source and hash. Changing this value does not
+// change the stored file; use Update or ReplaceMarkdown to save changes.
 type Document struct {
-	ID          string         `json:"id"`
-	Hash        string         `json:"hash"`
+	// ID is the immutable stored ID, independent of the filename.
+	ID string `json:"id"`
+	// Hash is lowercase hexadecimal SHA-256 of the exact stored bytes. Supply
+	// it with ID to Update, ReplaceMarkdown, or Delete.
+	Hash string `json:"hash"`
+	// Frontmatter contains means-owned id/title and an application data object.
+	// Parsed numbers use json.Number; objects and arrays use map[string]any and
+	// []any. Only data is checked against the collection schema.
 	Frontmatter map[string]any `json:"frontmatter"`
-	Body        string         `json:"body"`
-	Markdown    string         `json:"-"`
-	filename    string
+	// Body is the exact Markdown body after the YAML frontmatter.
+	Body string `json:"body"`
+	// Markdown is the complete source, including frontmatter. JSON omits it.
+	Markdown string `json:"-"`
+	filename string
 }
 
+// DocumentSummary is a list or embed result without a content hash.
+// Read the document by ID before updating or deleting it.
 type DocumentSummary struct {
-	Body        *string        `json:"body,omitempty"`
-	ID          string         `json:"id"`
+	// Body is nil unless bodies were requested. A non-nil empty string is an
+	// empty body. Embed includes bodies in its result.
+	Body *string `json:"body,omitempty"`
+	// ID is the stored document ID, independent of its filename.
+	ID string `json:"id"`
+	// Frontmatter has the same id, title, and data representation as Document.
 	Frontmatter map[string]any `json:"frontmatter"`
 }
 
+// ListResult separates valid documents from malformed or duplicate files.
+// A nil error from List or Embed does not imply that Diagnostics is empty.
 type ListResult struct {
-	Documents   []DocumentSummary `json:"documents"`
-	Diagnostics []Diagnostic      `json:"diagnostics"`
-	HasMore     bool              `json:"has_more"`
+	// Documents contains valid documents in relative filename order.
+	Documents []DocumentSummary `json:"documents"`
+	// Diagnostics covers the whole collection, regardless of filters or paging.
+	Diagnostics []Diagnostic `json:"diagnostics"`
+	// HasMore reports valid matches after the requested page. It is false when
+	// Limit is zero and for Embed results.
+	HasMore bool `json:"has_more"`
 }
 
 func normalizeObject(value map[string]any) (map[string]any, error) {
@@ -65,9 +89,15 @@ func normalizeObject(value map[string]any) (map[string]any, error) {
 // CreateOptions supplies a document's title, application data, and Markdown body.
 // Nil Data selects an empty object. Means generates the document ID.
 type CreateOptions struct {
+	// Title is required and must contain non-whitespace text.
 	Title string
-	Data  map[string]any
-	Body  string
+	// Data is the application object checked against the loaded schema. Nil
+	// means {}. JSON-compatible Go values, including int and []string, are
+	// normalized without changing the input map. Use json.Number for exact
+	// large integers or decimals that must not pass through float64.
+	Data map[string]any
+	// Body is a UTF-8 Markdown body, preserved exactly. Empty selects no body.
+	Body string
 }
 
 // Create validates and stores a new document. It is not idempotent: every
@@ -374,11 +404,19 @@ func readDocument(root *os.Root, id string) (*Document, error) {
 }
 
 // ListOptions filters and pages valid documents in relative filename order.
+// Its zero value returns every valid document without bodies. Filters apply
+// before Offset and Limit; malformed and duplicate files never consume a slot.
 type ListOptions struct {
-	Filter   map[string]any
+	// Filter partially matches application data, using SearchOptions.Filter rules.
+	Filter map[string]any
+	// DateTime ANDs timestamp comparisons with Filter.
 	DateTime []DateTimeFilter
-	Offset   int // Skip this many valid matching documents before applying Limit.
-	Limit    int // Zero returns all remaining matches.
+	// Offset skips valid matches before Limit. It must not be negative.
+	Offset int
+	// Limit caps the page size. Zero returns all remaining matches; negative
+	// values fail. Changes between calls can shift pages; there is no cursor.
+	Limit int
+	// WithBody includes exact bodies. False leaves DocumentSummary.Body nil.
 	WithBody bool
 }
 

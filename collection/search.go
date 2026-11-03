@@ -14,43 +14,86 @@ import (
 	"unicode/utf8"
 )
 
+// SearchOptions selects a search mode and filters its results. The zero value
+// lists every valid document in filename order. Filter and DateTime conditions
+// are ANDed and apply before Limit in every mode.
 type SearchOptions struct {
-	DateTime        []DateTimeFilter // ANDed datetime comparisons against data fields.
+	// DateTime compares timestamp strings under data; all comparisons must match.
+	DateTime        []DateTimeFilter
 	dateTimeFilters []compiledDateTimeFilter
-	MinScore        *float64 // Semantic cosine threshold; nil uses DefaultSemanticMinScore.
-	WithBody        bool
-	Query           string
-	Filter          map[string]any // Partial match against frontmatter.data.
-	Limit           int            // Zero returns every match.
-	Literal         bool           // Use the original case-insensitive substring search.
-	Semantic        bool           // Use opt-in OpenAI embeddings and cosine ranking.
+	// MinScore is an inclusive cosine threshold from -1 to 1. It requires
+	// Semantic. Nil selects DefaultSemanticMinScore; a pointer to zero selects 0.
+	MinScore *float64
+	// WithBody includes exact Markdown bodies. False leaves SearchHit.Body nil.
+	WithBody bool
+	// Query searches title and body. By default, all lowercase Unicode tokens
+	// must match; title matches rank higher. There is no query syntax, stemming,
+	// or stop-word removal. Empty Query selects a data-only scan.
+	Query string
+	// Filter is a recursive partial match against frontmatter.data. Arrays match
+	// completely, including objects inside arrays. Nil or empty means no filter.
+	// JSON-compatible Go values are normalized without changing the input map.
+	Filter map[string]any
+	// Limit caps valid matches. Zero returns every match; negative values fail.
+	Limit int
+	// Literal selects a case-insensitive substring match in title or body,
+	// ordered by filename. It cannot be combined with Semantic.
+	Literal bool
+	// Semantic ranks cached document vectors by cosine similarity. It requires
+	// a nonblank Query and settings supplied through Collection.WithEmbeddings.
+	// It can call the embedding provider for the query; missing or stale document
+	// vectors are skipped. Use Collection.Embed to refresh those vectors.
+	Semantic bool
 }
 
+// DefaultSemanticMinScore is the inclusive cosine threshold used when
+// SearchOptions.MinScore is nil. It does not apply to other search modes.
 const DefaultSemanticMinScore = 0.3
 
+// SearchMatch contains a title or body excerpt for a text match.
+// Data-only and semantic searches do not produce excerpts.
 type SearchMatch struct {
-	Field   string `json:"field"` // title or body
+	// Field is "title" or "body".
+	Field string `json:"field"`
+	// Excerpt is nearby text, with whitespace collapsed and ellipses when cut.
 	Excerpt string `json:"excerpt"`
 }
 
+// SearchHit identifies one matching document without a content hash.
+// Call Collection.Read with ID before updating or deleting the document.
 type SearchHit struct {
-	Body        *string        `json:"body,omitempty"`
-	ID          string         `json:"id"`
+	// Body is nil unless WithBody was set. A non-nil empty string is an empty body.
+	Body *string `json:"body,omitempty"`
+	// ID is the stored document ID, independent of its filename.
+	ID string `json:"id"`
+	// Frontmatter contains id, title, and data. Numbers use json.Number.
 	Frontmatter map[string]any `json:"frontmatter"`
-	Match       *SearchMatch   `json:"match,omitempty"`
-	Score       *float64       `json:"score,omitempty"`
+	// Match is an excerpt for a full-text or literal query; otherwise nil.
+	Match *SearchMatch `json:"match,omitempty"`
+	// Score is cosine similarity for semantic search, from -1 to 1; otherwise
+	// nil. Full-text ranking scores are not exposed.
+	Score *float64 `json:"score,omitempty"`
 }
 
+// SearchResult separates valid matches from document diagnostics. A nil error
+// from Search does not imply that Diagnostics is empty.
 type SearchResult struct {
-	Documents   []SearchHit  `json:"documents"`
+	// Documents contains matches in rank order, or filename order for scans.
+	Documents []SearchHit `json:"documents"`
+	// Diagnostics reports malformed documents and duplicate IDs across the
+	// collection, independent of filters and Limit.
 	Diagnostics []Diagnostic `json:"diagnostics"`
-	HasMore     bool         `json:"has_more"`
+	// HasMore reports additional matches after filtering, score threshold, and
+	// Limit. It is false for an unlimited search.
+	HasMore bool `json:"has_more"`
 }
 
 // Search ranks full-text queries using a refreshed collection-local index.
 // Literal and data-only searches scan in filename order. Filter is a recursive partial match of
 // application data; arrays must match completely. Schema-invalid data stays
 // searchable, while malformed and duplicate documents become diagnostics.
+// Full-text and semantic searches sort rank ties by ID. Full-text search writes
+// a disposable .means/ cache; literal and data-only searches remain offline.
 func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchResult, error) {
 	c, err := c.operation(ctx)
 	if err != nil {
@@ -165,8 +208,10 @@ func (c *Collection) searchScan(opts SearchOptions, offset int) (*SearchResult, 
 }
 
 // MatchesFilter reports whether data matches a partial metadata filter using the
-// same rules as List and Search. Inputs must use JSON-compatible values, with
-// json.Number for numbers.
+// same rules as List and Search. Inputs must already use map[string]any, []any,
+// and json.Number for objects, arrays, and numbers. Unlike List and Search,
+// this helper does not normalize native Go values such as int or []string.
+// Nil or empty filter matches every object. It does not apply datetime filters.
 func MatchesFilter(data, filter map[string]any) bool {
 	for key, expected := range filter {
 		actual, exists := data[key]

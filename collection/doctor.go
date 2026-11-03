@@ -11,16 +11,32 @@ import (
 // Diagnostic identifies one problem with a stored document. Path is relative
 // to the collection so files without a readable ID can still be located.
 type Diagnostic struct {
-	ID    string `json:"id"`
-	Path  string `json:"path"`
+	// ID is empty when the file has no readable document ID. Cache warnings may
+	// identify an orphaned vector whose document no longer exists.
+	ID string `json:"id"`
+	// Path is relative to the collection directory, including cache paths.
+	Path string `json:"path"`
+	// Error is a human-readable explanation, not a stable programmatic code.
 	Error string `json:"error"`
 }
 
+// DoctorResult reports document health independently of embedding cache warnings.
+// A completed check can return a nil error while Healthy is false.
 type DoctorResult struct {
-	Healthy     bool         `json:"healthy"`
-	Checked     int          `json:"checked"`
+	// Healthy is true when no document diagnostics were found. Warnings do not
+	// affect it; fatal filesystem or cache-read failures return an error instead.
+	Healthy bool `json:"healthy"`
+	// Checked counts visible document files, including malformed files and
+	// duplicate occurrences. Hidden paths, symlinks, and nested collections are
+	// excluded, as is MEANS.md.
+	Checked int `json:"checked"`
+	// Diagnostics reports malformed envelopes, duplicate IDs, and data that
+	// does not satisfy the loaded schema.
 	Diagnostics []Diagnostic `json:"diagnostics"`
-	Warnings    []Diagnostic `json:"warnings,omitempty"`
+	// Warnings reports missing, stale, orphaned, corrupt, or incompatible
+	// embedding caches when embeddings are enabled. Doctor does not repair them
+	// or call the embedding provider; use Embed to refresh vectors.
+	Warnings []Diagnostic `json:"warnings,omitempty"`
 }
 
 // Doctor inspects every visible document against the loaded schema without

@@ -21,6 +21,9 @@ import (
 
 // WithEmbeddings copies host settings without changing collection files. Nil
 // disables embeddings. Settings are validated and defaulted when used.
+// The original Collection is unchanged. Call EmbeddingConfig.WithDefaults first
+// to check settings immediately. Embeddings returns the attached settings, which
+// can still have zero-value defaults rather than their resolved values.
 func (c *Collection) WithEmbeddings(cfg *EmbeddingConfig) *Collection {
 	copy := *c
 	copy.embeddings = nil
@@ -388,12 +391,20 @@ func (s *embeddingStore) embedBatch(inputs []string) ([][]float32, error) {
 
 // EmbedOptions controls an explicit embedding cache refresh.
 type EmbedOptions struct {
-	Force bool // Clear stored vectors before regenerating all visible documents.
+	// Force clears cached vectors before regenerating all valid visible
+	// documents. This can incur fresh API charges. If rebuilding fails, only
+	// batches completed in this run remain; a normal Embed call resumes them.
+	Force bool
 }
 
 // Embed refreshes derived vectors without changing Markdown. It also prunes
 // deleted, malformed, duplicate, and newly nested documents. Successful batches
 // remain cached if a later batch fails; Force discards previous vectors first.
+// It requires WithEmbeddings settings and provider credentials when vectors need
+// generation. Each vector embeds title plus exact body; data is not embedded.
+// The result lists all valid documents with bodies, including reused vectors,
+// and diagnostics for malformed or duplicate files. It does not enforce the
+// current data schema. It writes disposable cache files under .means/.
 func (c *Collection) Embed(ctx context.Context, opts EmbedOptions) (*ListResult, error) {
 	c, err := c.operation(ctx)
 	if err != nil {

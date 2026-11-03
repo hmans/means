@@ -17,13 +17,25 @@ var ErrSchemaIncompatible = errors.New("proposed schema has document violations"
 
 // SchemaSetResult reports the document check, including when installation is refused.
 type SchemaSetResult struct {
+	// Installed is false when document diagnostics rejected the schema.
+	// When true, the file was replaced; existing Collection snapshots are unchanged.
 	Installed bool `json:"installed"`
+	// DoctorResult checks documents against the proposed schema, including when
+	// installation was refused. Force can install with Healthy false.
 	*DoctorResult
 }
 
 // SetSchema validates and installs a schema in an existing collection. The old
 // schema may be invalid. Force bypasses document diagnostics only. Checks are
 // optimistic: concurrent edits can race validation and the final replacement.
+// Schema must be a self-contained JSON Schema object or boolean in JSON bytes;
+// Draft 2020-12 is the default. Malformed YAML in MEANS.md cannot be repaired here.
+// If document checks reject installation, both a non-nil result with diagnostics
+// and ErrSchemaIncompatible are returned. Other failures return a nil result.
+// Force never bypasses invalid schemas or filesystem failures. It does not
+// migrate documents or prove compatibility for future data. Identity, views,
+// workflow body bytes, and permissions are preserved; frontmatter can reformat.
+// Call Load after installation to use the new schema in a Collection snapshot.
 func SetSchema(ctx context.Context, path string, schema []byte, force bool) (*SchemaSetResult, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("context must not be nil")

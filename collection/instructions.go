@@ -10,6 +10,12 @@ import (
 
 // SetInstructions replaces only the MEANS.md body. The hash covers the complete
 // file, including its frontmatter. External writes can still race replacement.
+// Obtain hash from Describe on a freshly loaded collection. Instructions is the
+// complete UTF-8 replacement body; an empty string clears it. Valid configuration
+// is required, but document data is not checked. Frontmatter bytes and permissions
+// are preserved. Stale hashes return ErrConflict; reload and reconcile before
+// retrying. The returned Description contains the new hash and body, while the
+// receiver retains its old snapshot. Call Load to observe the new instructions.
 func (c *Collection) SetInstructions(ctx context.Context, hash, instructions string) (*Description, error) {
 	c, err := c.operation(ctx)
 	if err != nil {

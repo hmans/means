@@ -8,6 +8,7 @@ import (
 
 // DeleteResult identifies the document that was permanently removed.
 type DeleteResult struct {
+	// ID is the stored ID of the removed document.
 	ID string `json:"id"`
 }
 
@@ -15,6 +16,9 @@ type DeleteResult struct {
 // this is optimistic: a concurrent write can race the final removal.
 // Application data need not satisfy the current schema, but the envelope must
 // be readable and the ID must be unique within the selected collection.
+// Hash comes from Read. Deletion is permanent and removes only the document
+// file; directories and configuration remain. With embeddings enabled, its
+// cached vector is removed first, without a network request.
 func (c *Collection) Delete(ctx context.Context, id, hash string) (*DeleteResult, error) {
 	c, err := c.operation(ctx)
 	if err != nil {

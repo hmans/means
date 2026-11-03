@@ -22,6 +22,9 @@ const ConfigFilename = "MEANS.md"
 var defaultSchema []byte
 
 // Collection is a loaded collection with a compiled application data schema.
+// Use Load, Init, or InitConfig; its zero value is not usable. Configuration is
+// a fixed snapshot while document operations scan current files. No Close is
+// needed. Its accessors return copies, and it is safe for concurrent operations.
 type Collection struct {
 	path              string
 	app               AppConfig       // Optional views from the same MEANS.md snapshot.
@@ -53,6 +56,8 @@ func (c *Collection) App() AppConfig {
 
 // WithEmbeddingProgress returns a copy that reports embedding work to progress.
 // The collection package stays silent unless a caller supplies this callback.
+// Nil disables progress reporting. Concurrent operations can invoke the callback
+// concurrently; the callback must synchronize its own shared state.
 func (c *Collection) WithEmbeddingProgress(progress func(string)) *Collection {
 	copy := *c
 	copy.embeddingProgress = progress
@@ -73,10 +78,16 @@ func (c *Collection) operation(ctx context.Context) (*Collection, error) {
 }
 
 // ErrValidation identifies an invalid document envelope or application data.
-// The underlying validation error remains available through errors.As.
+// Validate and ValidateData wrap it, as do write failures during schema/envelope
+// validation. The underlying validation error remains available through
+// errors.As. Other invalid arguments or source-parsing failures can return
+// errors without this sentinel.
 var ErrValidation = errors.New("document validation failed")
 
 // Validate checks the means envelope and data against the embedded schema.
+// Frontmatter must contain only a valid id, a nonempty title, and a data object.
+// JSON-compatible Go values are normalized without changing the map. It does not
+// read or write documents; failures wrap ErrValidation.
 func (c *Collection) Validate(frontmatter map[string]any) error {
 	normalized, err := normalizeObject(frontmatter)
 	if err != nil {
@@ -94,6 +105,9 @@ func (c *Collection) validate(frontmatter map[string]any) error {
 }
 
 // ValidateData checks application data independently of the means-owned fields.
+// Supply the application object itself, not a frontmatter envelope. Values are
+// normalized like CreateOptions.Data; nil is not an object. It uses the loaded
+// schema without reading or writing documents. Failures wrap ErrValidation.
 func (c *Collection) ValidateData(data map[string]any) error {
 	normalized, err := normalizeObject(data)
 	if err != nil {
@@ -111,6 +125,11 @@ func (c *Collection) validateData(data map[string]any) error {
 
 // Init validates a schema, then creates the directory and writes MEANS.md
 // without overwriting an existing file. A nil schema selects the example schema.
+// Schema is a JSON Schema object or boolean in JSON bytes, not YAML. Schemas are
+// self-contained; external references are rejected. Draft 2020-12 is the default.
+// The example schema allows only optional tags (an array of strings). Init adds
+// a .means/ rule to .gitignore while preserving existing content. Use InitConfig
+// to supply identity and workflow instructions with the schema.
 func Init(path string, schema []byte) (*Collection, error) {
 	if schema == nil {
 		schema = defaultSchema
@@ -131,6 +150,16 @@ func Init(path string, schema []byte) (*Collection, error) {
 }
 
 // InitConfig validates and installs a complete MEANS.md without overwriting it.
+// Content is YAML frontmatter (including schema), followed by optional Markdown
+// instructions. Exact bytes are preserved. Validation occurs before creating
+// files; directory creation and the .gitignore rule follow the Init contract.
+// For example, a minimal content value is:
+//
+//	---
+//	title: Notes
+//	schema: true
+//	---
+//	Review notes before publishing.
 func InitConfig(path string, content []byte) (*Collection, error) {
 	c, err := parseConfig(path, content)
 	if err != nil {
@@ -202,6 +231,10 @@ func InitConfig(path string, content []byte) (*Collection, error) {
 
 // Load reads the exact directory supplied; it does not search parent directories.
 // The returned configuration is a snapshot. Reload after external config edits.
+// It compiles the schema but does not validate existing documents or create files.
+// Missing MEANS.md wraps fs.ErrNotExist. Document operations do not automatically
+// reload this snapshot after SetSchema or SetInstructions; call Load again and
+// reapply any host embedding settings and progress callback.
 func Load(path string) (*Collection, error) {
 	filename := filepath.Join(path, ConfigFilename)
 	stat, err := os.Lstat(filename)

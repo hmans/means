@@ -10,12 +10,20 @@ import (
 // AppConfig describes optional collection views. Expressions are compiled by the
 // TUI, not by collection operations or MCP.
 type AppConfig struct {
+	// Views contains experimental named TUI views in configuration order. Nil
+	// or empty means no custom views; it does not remove the built-in view.
 	Views []AppView `json:"views,omitempty"`
 }
 
+// AppView describes one experimental TUI view from MEANS.md. Collection loading
+// validates its structure but does not compile or evaluate the filter expression.
 type AppView struct {
-	Title   string   `json:"title"`
-	Filter  string   `json:"filter,omitempty"`
+	// Title is a unique, nonblank, single-line name for the view.
+	Title string `json:"title"`
+	// Filter is an optional Expr expression evaluated by the TUI.
+	Filter string `json:"filter,omitempty"`
+	// Columns selects id, title, or data.FIELD columns. An empty list lets the
+	// TUI select its default columns.
 	Columns []string `json:"columns,omitempty"`
 }
 

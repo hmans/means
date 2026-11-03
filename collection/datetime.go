@@ -8,10 +8,19 @@ import (
 )
 
 // DateTimeFilter compares a string field directly under frontmatter.data.
-// Explicit operators leave ordinary exact-value filters unchanged.
+// Comparisons use instants, so different timezone offsets can denote equality.
+// Invalid filter inputs fail the operation. A document with a missing, non-string,
+// or invalid timestamp does not match. All supplied filters must match.
 type DateTimeFilter struct {
+	// Field is a nonempty literal key under data. Dots are part of the key;
+	// they do not select nested fields.
 	Field string `json:"field"`
-	Op    string `json:"op"`
+	// Op is "before", "after", "on_or_before", or "on_or_after". The first
+	// two are exclusive; the on_or variants include equality.
+	Op string `json:"op"`
+	// Value is an RFC 3339 timestamp with a timezone and at most nine fractional
+	// digits, for example "2026-11-03T09:00:00+01:00". Date-only values and leap
+	// seconds are invalid. No schema annotation is required for the field.
 	Value string `json:"value"`
 }
 

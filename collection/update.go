@@ -15,6 +15,8 @@ import (
 )
 
 var (
+	// ErrConflict means an observed document or configuration change made a hash
+	// stale. Reload the current content, reconcile the changes, and use its hash.
 	ErrConflict = errors.New("document content has changed")
 	validHash   = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
@@ -22,13 +24,24 @@ var (
 // Patch merges supplied metadata recursively (null deletes, arrays replace).
 // A nil Frontmatter or Body leaves that portion of the document unchanged.
 type Patch struct {
+	// Frontmatter may contain title and/or data, but never id or custom top-level
+	// fields. Objects merge recursively, null deletes keys, and arrays replace.
+	// Nil leaves metadata unchanged; removing required fields fails validation.
+	// JSON-compatible Go values are normalized without changing the input map.
 	Frontmatter map[string]any
-	Body        *string
+	// Body replaces the complete UTF-8 Markdown body. Nil leaves it unchanged;
+	// a pointer to an empty string clears it.
+	Body *string
 }
 
 // Update checks the exact stored bytes against hash before applying a patch.
 // Replacement uses a temporary file in the same directory. Hash checks are
 // optimistic: a simultaneous write can still race the final replacement.
+// Use ID and Hash from Read, and supply at least one part of Patch. The loaded
+// schema validates the result. The existing filename is kept even if title
+// changes. Body-only edits preserve the original frontmatter bytes.
+// Enabled embeddings are maintained before the file write; provider or cache
+// failures prevent that write. The returned Document has the new content hash.
 func (c *Collection) Update(ctx context.Context, id, hash string, patch Patch) (*Document, error) {
 	c, err := c.operation(ctx)
 	if err != nil {
@@ -40,6 +53,9 @@ func (c *Collection) Update(ctx context.Context, id, hash string, patch Patch) (
 // ReplaceMarkdown validates an edited document and replaces its content using
 // the same hash checks and embedding maintenance as Update. Metadata is replaced,
 // not merge-patched, so removed keys and literal null values are preserved.
+// Markdown must contain the original ID, a nonempty title, a data object, and
+// an optional UTF-8 body. Use the current stored hash from Read, not a hash of
+// the edited bytes. The receiver's loaded schema validates the replacement.
 func (c *Collection) ReplaceMarkdown(ctx context.Context, id, hash string, markdown []byte) (*Document, error) {
 	c, err := c.operation(ctx)
 	if err != nil {
