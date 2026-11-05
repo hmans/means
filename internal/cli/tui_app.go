@@ -15,7 +15,7 @@ import (
 
 const tuiAppLocation = "MEANS.md app.views"
 
-// Both the picker and command bar use the same validation and focus behavior.
+// View selection validates the view and resets focus to the document list.
 func (m *tuiModel) selectView(name string) (tea.Cmd, error) {
 	if name == "All documents" {
 		name = ""

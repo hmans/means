@@ -294,7 +294,7 @@ Back restores the previous query. Browsing actions remain available from the key
 
 | Key | Action |
 | --- | --- |
-| Up/Down or j/k | Select a document, or scroll the focused panel |
+| Up/Down | Select a document, or scroll the focused panel |
 | Tab or Enter | Cycle focus through Documents, Data, and Content |
 | Shift+Tab | Cycle focus backwards |
 | Page Up/Page Down, Home/End | Move within the focused list or panel |
@@ -305,28 +305,8 @@ Back restores the previous query. Browsing actions remain available from the key
 | r | Reload documents and collection configuration from disk |
 | d | Open or close diagnostics; Up/Down scrolls them |
 | Esc | Cancel the current input or picker, return to the list, or leave the active view when browsing documents |
-| : | Open the command bar outside search and pickers |
-| :q or :quit, then Enter | Quit; bare q no longer quits |
+| q | Quit outside search and pickers |
 | Ctrl+C or Ctrl+D | Quit immediately |
-
-The experimental command pane temporarily replaces the search field and takes
-keyboard focus; document panes keep their state with muted borders. It uses Cobra
-for command dispatch and Bubbles for input.
-Commands are `quit` (alias `q`), `views` (alias `view`), `filters` (alias `filter`),
-`clear`, `home`, `diagnostics`, and `help`. `views` without an argument opens the
-picker; `views "Open work"` selects a named view. `views "All documents"` resets it.
-`home` leaves the current view while keeping search and data filters.
-`clear` clears search and data filters while keeping the current view.
-`filters` opens the existing field/value picker; filter arguments are not yet supported.
-Dim text previews a completion. Tab accepts a match and repeated Tab cycles matches;
-Shift+Tab cycles backwards. Completion is available at the end of the input;
-view-name completion inserts quotes and a `--` separator when needed.
-Enter executes the actual input, while Esc or Backspace on empty input dismisses
-the pane. Errors appear below
-the input with a red border and clear when the input changes. Long errors are
-limited to the space available in the pane (at most three lines).
-Input supports quoted arguments, but does not run shell expansions or pipelines.
-Collection-defined commands and scripting are not part of this prototype.
 
 The field picker includes the schema's direct top-level `properties`, even in an
 empty collection, plus fields found in stored documents. Property `title` and

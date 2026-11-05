@@ -61,6 +61,49 @@ func tuiPress(m *tuiModel, code rune) tea.Cmd {
 	return cmd
 }
 
+func TestTUIKeyboardShortcuts(t *testing.T) {
+	c := tuiTestCollection(t)
+	tuiCreate(t, c, "First", map[string]any{})
+	tuiCreate(t, c, "Second", map[string]any{})
+	m := newTUIModel(c.Path())
+	tuiRun(t, m, m.Init())
+	for _, key := range []rune{':', 'j', 'k'} {
+		tuiPress(m, key)
+		if m.mode != "documents" || m.selected != 0 {
+			t.Fatal("removed shortcut changed browsing state")
+		}
+	}
+	tuiPress(m, tea.KeyDown)
+	if m.selected != 1 {
+		t.Fatal("Down did not select the next document")
+	}
+	tuiPress(m, tea.KeyUp)
+	if m.selected != 0 {
+		t.Fatal("Up did not select the previous document")
+	}
+	for _, mode := range []string{"documents", "diagnostics", "loading", "search", "fields", "values", "views"} {
+		t.Run(mode, func(t *testing.T) {
+			m.mode, m.loading = mode, mode == "loading"
+			cmd := tuiPress(m, 'q')
+			if mode == "search" || m.picking() {
+				if cmd != nil {
+					t.Fatal("q must remain text in search and pickers")
+				}
+				if mode == "search" && m.input != "q" || m.picking() && !strings.HasSuffix(m.pickerQuery, "q") {
+					t.Fatal("q was not added to the input")
+				}
+				return
+			}
+			if cmd == nil {
+				t.Fatal("q did not quit")
+			}
+			if _, ok := cmd().(tea.QuitMsg); !ok {
+				t.Fatal("q returned the wrong message")
+			}
+		})
+	}
+}
+
 func TestTUISnapshotFiltersAndPreviewCache(t *testing.T) {
 	c := tuiTestCollection(t)
 	doc := tuiCreate(t, c, "Alpha", map[string]any{"status": "open", "tags": []any{"cli"}})

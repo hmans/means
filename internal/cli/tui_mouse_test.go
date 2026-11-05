@@ -96,7 +96,7 @@ func TestTUIPreviewSplitAndIndependentScrolling(t *testing.T) {
 	m.Update(tea.WindowSizeMsg{Width: 140, Height: 36})
 	tuiRun(t, m, m.Init())
 	if m.docs[m.selected].ID != long.ID {
-		tuiPress(m, 'j')
+		tuiPress(m, tea.KeyDown)
 	}
 	step := 1 - 2*m.selected
 	g := m.geometry()
@@ -117,7 +117,7 @@ func TestTUIPreviewSplitAndIndependentScrolling(t *testing.T) {
 		t.Fatal("content wheel changed data scroll or keyboard focus")
 	}
 	tuiClick(m, g.data.x+3, g.data.y+2)
-	tuiPress(m, 'j')
+	tuiPress(m, tea.KeyDown)
 	if !m.previewFocus || !m.dataFocus || m.dataOffset != 4 || m.offset != 3 {
 		t.Fatal("keyboard did not follow data focus")
 	}
@@ -126,7 +126,7 @@ func TestTUIPreviewSplitAndIndependentScrolling(t *testing.T) {
 		t.Fatal("page down did not use the data panel height")
 	}
 	tuiPress(m, tea.KeyTab)
-	tuiPress(m, 'j')
+	tuiPress(m, tea.KeyDown)
 	if m.dataFocus || m.offset != 4 {
 		t.Fatal("Tab did not focus content")
 	}
@@ -277,7 +277,7 @@ func TestTUIMouseSelectionScrollAndFocus(t *testing.T) {
 	if !m.previewFocus {
 		t.Fatal("click did not focus preview")
 	}
-	tuiPress(m, 'j')
+	tuiPress(m, tea.KeyDown)
 	if m.offset != 4 {
 		t.Fatal("keyboard did not follow mouse focus")
 	}
