@@ -1,5 +1,32 @@
 # means Changelog
 
+## 0.6.0
+
+### Fixes
+
+- Simplify terminal browsing with arrow-key navigation and q to quit. Remove the experimental colon command bar, Vim-style j/k navigation, and the leading slash in the focused search field; search, filters, views, and mouse controls remain available through direct shortcuts. ([fa8c132](https://github.com/hmans/means/commit/fa8c1329d8da67941469e34715781392573b1739))
+- Fix stale TUI content and data previews after external edits when input or
+  resizing occurs during a collection view refresh. ([#46](https://github.com/hmans/means/pull/46))
+
+### Features
+
+- List documents in pages with `--offset` and `--limit`. Offset skips valid matches
+  after filters, while every page reports all malformed and duplicate document
+  diagnostics. MCP `list` also accepts `offset`. ([#42](https://github.com/hmans/means/pull/42))
+- Append text to document bodies with `means append`, using inline text, a file,
+  stdin, or JSON input. Means handles append locking and conflict checks internally
+  and preserves frontmatter formatting. Supply an optional content hash to require
+  a specific version. Go applications can use `Collection.Append` with the same
+  checks. ([#45](https://github.com/hmans/means/pull/45))
+- Go applications can now import `github.com/hmans/means/collection` to create,
+  read, update, delete, search, and validate Markdown collections directly. The
+  public API includes cancellable operations, hash-checked writes, schema and
+  workflow updates, and explicit opt-in embedding settings. ([#44](https://github.com/hmans/means/pull/44))
+- Go applications can watch collections for external changes with
+  `collection.Watch`. Notifications include document and configuration changes,
+  respect nested collection boundaries, and stop when the caller cancels its
+  context. The means TUI uses the same watcher. ([#47](https://github.com/hmans/means/pull/47))
+
 ## 0.5.0
 
 ### Fixes
