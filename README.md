@@ -20,7 +20,17 @@ means is in early development. It includes:
 
 ## Install
 
-Install with Homebrew:
+Install with [mise](https://mise.jdx.dev/) from GitHub Releases:
+
+```sh
+mise use -g github:hmans/means@latest
+```
+
+Follow mise's [shell setup](https://mise.jdx.dev/installing-mise.html#shells)
+instructions to make `means` available on your `PATH`. Omit `-g` to add means to
+the current project's mise configuration instead.
+
+Or install with Homebrew:
 
 ```sh
 brew install --cask hmans/tap/means
@@ -34,6 +44,18 @@ mise deploy
 ```
 
 This installs `means` into `~/.local/bin`; add that directory to your `PATH`.
+
+### Ask your agent
+
+Copy either prompt into your coding agent:
+
+```text
+Please set up project memory using means!
+```
+
+```text
+I want to plan this project using means.
+```
 
 ## Try it
 
