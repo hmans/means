@@ -1,13 +1,14 @@
 # means
 
 means manages collections of Markdown documents with structured metadata.
-Use it for issue tracking, research notes, agent memory, and other document-based
-workflows. It ships as a single Go binary, with no managed daemon.
+Use it for issue tracking, research notes, agent memory, and other document
+workflows. It ships as a single Go binary with a CLI, terminal browser, and MCP
+server for agents.
 
 A collection is a directory of Markdown files with YAML frontmatter. Its
-`MEANS.md` defines a JSON Schema for application data and guidance for working
-with the collection. The files are the source of truth: edit them with means,
-your editor, or other tools.
+`MEANS.md` defines a JSON Schema for application data and provides workflow
+guidance. The files are the source of truth: edit them with means, your editor,
+or other tools. No managed daemon is required.
 
 means is in early development. It includes:
 
@@ -15,8 +16,8 @@ means is in early development. It includes:
 - Full-text search, metadata filters, and opt-in semantic search.
 - An interactive terminal browser with Markdown previews.
 - Schema validation and collection diagnostics.
-- JSON input/output and a stdio MCP server for applications and agents.
-- A public Go package for direct collection access from other Go projects.
+- JSON input/output and a stdio MCP server.
+- A public Go package for direct collection access.
 
 ## Install
 
@@ -57,7 +58,7 @@ Please set up project memory using means!
 I want to plan this project using means.
 ```
 
-## Try it
+## Get started
 
 Create a collection and add your first note:
 
@@ -71,17 +72,19 @@ means tui --path ./notes
 Edit `notes/MEANS.md` to define your collection's schema and workflow.
 Use `means edit <id> --path ./notes` to open a note in your editor.
 
-See the [usage guide](docs/guide.md) for collection design, search, and MCP setup.
-Run `means help <command>` for command details, or `means help agents` for a
-guide to using means from an agent.
-For Go applications, see the [Go integration guide](docs/go.md).
+Learn more:
+
+- [Usage guide](docs/guide.md): collection design, search, and MCP setup.
+- [Go integration guide](docs/go.md): use means from Go applications.
+- `means help <command>`: command details and examples.
+- `means help agents`: guidance for agents working with collections.
 
 ## This repository
 
-means tracks its own work in the [issues collection](issues/), using its
-[configuration and workflow](issues/MEANS.md). Contributors
-should read [AGENTS.md](AGENTS.md). Run `mise test` for the Go test suite.
-See [releasing means](docs/releases.md) to record changes and prepare releases.
+means tracks its own work in the [issues collection](issues/). See
+[AGENTS.md](AGENTS.md) for contributor instructions and run `mise test` for the
+Go test suite. The [release guide](docs/releases.md) explains how to record
+changes and prepare releases.
 
 ## License
 
