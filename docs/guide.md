@@ -52,7 +52,10 @@ Missing or blank title falls back to the directory name; description defaults to
 empty. Schema annotations do not define collection identity. The Markdown body
 provides self-description and workflow and may be empty. Configuration uses the
 same JSON-compatible YAML subset as documents: string keys, exact numbers, no
-aliases, merge keys, custom tags, or non-finite numbers.
+aliases, merge keys, custom tags, or non-finite numbers. Writes store values
+exactly as given or fail: numbers outside the float64 range, such as `1e400`,
+are rejected because YAML reads them back as strings. Digits within that range
+keep their full precision.
 
 Initialize with a starter, complete configuration, or JSON Schema:
 

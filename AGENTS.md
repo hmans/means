@@ -51,6 +51,8 @@ following its [workflow](issues/MEANS.md).
   Creation reserves candidate IDs temporarily to prevent concurrent allocation;
   collisions retry. Direct edits can introduce duplicates, which list reports.
 - Validate the means envelope and application data on creation and after updates.
+  Every write that encodes frontmatter verifies that it reads back as the same
+  value. Quote strings YAML would alter; reject numbers outside the float64 range.
   Reads and lists check the envelope but do not enforce the current data schema,
   allowing retrieval after schema changes. List reports malformed files and
   duplicate IDs separately in diagnostics, with paths, regardless of limits.
