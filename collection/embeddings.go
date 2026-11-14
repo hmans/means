@@ -72,6 +72,9 @@ type embeddingStore struct {
 	lock      *flock.Flock
 	records   map[string]embeddingRecord
 	dirty     bool
+	// foreign marks an intact cache written under another profile. Its vectors
+	// are unusable here, but only Embed may replace them.
+	foreign bool
 }
 
 func (s *embeddingStore) report(format string, args ...any) {
@@ -181,8 +184,13 @@ func (s *embeddingStore) load() error {
 	var h embeddingHeader
 	// Missing, obsolete, and corrupt derived data can be regenerated. Never
 	// treat filesystem errors as corruption or discard a readable valid prefix.
-	if !ok || json.Unmarshal(header, &h) != nil || h.Version != 1 || h.Profile != s.profile || h.Hash != contentHash(string(records)) {
+	if !ok || json.Unmarshal(header, &h) != nil || h.Version != 1 || h.Hash != contentHash(string(records)) {
 		s.dirty = true
+		return nil
+	}
+	if h.Profile != s.profile {
+		s.dirty = true
+		s.foreign = true
 		return nil
 	}
 	decoded := map[string]embeddingRecord{}
@@ -222,7 +230,7 @@ func validVector(vector []float32, dimensions int) bool {
 }
 
 func (s *embeddingStore) save() error {
-	if s == nil || !s.dirty {
+	if s == nil || !s.dirty || s.foreign {
 		return nil
 	}
 	if err := embeddingRegularFile(s.filename); err != nil {
@@ -264,6 +272,12 @@ func (s *embeddingStore) save() error {
 
 func (s *embeddingStore) upsert(id string, frontmatter map[string]any, body string) error {
 	if s == nil {
+		return nil
+	}
+	if s.foreign {
+		// Storing this vector would replace the other profile's cache, so skip
+		// the paid request too. Embed generates it later.
+		s.report("Stored embeddings use a different profile; document %q is not embedded until the next embed", id)
 		return nil
 	}
 	input := embeddingInput(frontmatter, body)
@@ -418,6 +432,8 @@ func (c *Collection) Embed(ctx context.Context, opts EmbedOptions) (*ListResult,
 		return nil, fmt.Errorf("embeddings are not enabled; supply an EmbeddingConfig with WithEmbeddings")
 	}
 	defer s.close()
+	// Embed is the only operation that replaces another profile's cache.
+	s.foreign = false
 	if opts.Force {
 		s.report("Clearing stored embeddings for forced refresh")
 		s.records = map[string]embeddingRecord{}

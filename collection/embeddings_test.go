@@ -727,3 +727,85 @@ func initEmbeddingFixture(path string, data []byte) (*Collection, error) {
 	}
 	return c.WithEmbeddings(settings), nil
 }
+
+func TestEmbeddingProfileMismatchPreservesCache(t *testing.T) {
+	api := fakeEmbeddingAPI(t)
+	c := embeddingCollection(t)
+	ctx := context.Background()
+	var docs []*Document
+	for _, title := range []string{"one", "two", "three"} {
+		doc, err := c.create(ctx, map[string]any{"title": title}, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		docs = append(docs, doc)
+	}
+	cache := filepath.Join(c.Path(), ".means", "embeddings.jsonl")
+	original, err := os.ReadFile(cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests := len(api.inputs)
+	endpoint := os.Getenv("MEANS_EMBEDDING_BASE_URL")
+
+	// The endpoint is part of the profile. Unrelated writes must leave the
+	// other profile's vectors alone and must not pay for vectors they cannot store.
+	other := strings.Replace(endpoint, "127.0.0.1", "localhost", 1)
+	if other == endpoint {
+		t.Fatalf("unexpected test endpoint %q", endpoint)
+	}
+	t.Setenv("MEANS_EMBEDDING_BASE_URL", other)
+	created, err := c.create(ctx, map[string]any{"title": "four"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Update(ctx, docs[0].ID, docs[0].Hash, Patch{Frontmatter: map[string]any{"title": "renamed"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Append(ctx, docs[1].ID, "", "more"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Delete(ctx, docs[2].ID, docs[2].Hash); err != nil {
+		t.Fatal(err)
+	}
+	if after, err := os.ReadFile(cache); err != nil || string(after) != string(original) {
+		t.Fatalf("mismatched write changed the cache: %v", err)
+	}
+	if len(api.inputs) != requests {
+		t.Fatalf("mismatched writes made %d embedding requests", len(api.inputs)-requests)
+	}
+	if hits, err := c.Search(ctx, SearchOptions{Query: "one", Semantic: true}); err != nil || len(hits.Documents) != 0 {
+		t.Fatalf("mismatched vectors were searchable: %v %v", hits, err)
+	}
+	report, err := c.Doctor(ctx)
+	if err != nil || len(report.Warnings) == 0 || report.Warnings[0].Path != ".means/embeddings.jsonl" {
+		t.Fatalf("doctor did not report the incompatible cache: %+v %v", report, err)
+	}
+
+	// Back under the original profile the untouched documents keep their paid
+	// vectors; embed only reconciles what the mismatched writes changed.
+	t.Setenv("MEANS_EMBEDDING_BASE_URL", endpoint)
+	records := embeddingRecords(t, c)
+	if len(records) != 3 {
+		t.Fatalf("got %d records, want 3", len(records))
+	}
+	if _, err := c.Embed(ctx, EmbedOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	records = embeddingRecords(t, c)
+	if len(records) != 3 || records[created.ID].Vector == nil || records[docs[2].ID].Vector != nil {
+		t.Fatalf("embed did not reconcile: %v", records)
+	}
+	if len(api.inputs) != requests+3 {
+		t.Fatalf("embed made %d requests, want 3", len(api.inputs)-requests)
+	}
+
+	// Embed is the one operation that replaces a mismatched cache.
+	t.Setenv("MEANS_EMBEDDING_BASE_URL", other)
+	if _, err := c.Embed(ctx, EmbedOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(embeddingRecords(t, c)) != 3 || len(api.inputs) != requests+6 {
+		t.Fatal("embed did not replace the mismatched cache")
+	}
+}

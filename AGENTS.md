@@ -194,6 +194,9 @@ following its [workflow](issues/MEANS.md).
   that provider. OpenAI text-embedding-3-small/large only (openai/ prefix required
   for OpenRouter). Environment overrides may change endpoint/key; keys never fall
   back across providers. Provider/model/dimension/endpoint changes invalidate vectors.
+  Only embed (including --force) replaces an intact cache stored under another
+  profile. Create/update/append/delete under a mismatched profile leave that cache
+  untouched and make no API call; the document goes without a vector until embed.
   Default to the provider's OpenAI text-embedding-3-small model and 512 dimensions.
   Defaults apply in memory; user config and MEANS.md are not rewritten.
   CLI JSON mode suppresses embedding progress to keep errors valid JSON.
@@ -205,7 +208,8 @@ following its [workflow](issues/MEANS.md).
   Embed title plus exact body into one float vector. Store in a separate versioned,
   checksummed .means/embeddings.jsonl, serialized under embeddings.lock. Create/update
   persist the vector before the document; API/cache failures prevent document writes.
-  Delete removes its vector before the file, without an API call. Failed source
+  Delete removes its vector before the file, without an API call. These guarantees
+  apply when the cache profile matches; mismatched writes skip the cache as above. Failed source
   writes/crashes can leave stale derived data; embed reconciles against visible
   documents, including direct edits and nested boundaries. Search embeds only the
   query and never changes the embedding cache; it skips missing/stale vectors and
