@@ -128,10 +128,12 @@ func TestDotenvStartup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const key = "MEANS_TEST_MCP_DOTENV"
-	t.Setenv(key, "")
-	os.Unsetenv(key)
-	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\n"), 0600); err != nil {
+	const key = "OPENROUTER_API_KEY"
+	for _, name := range []string{key, "MEANS_EMBEDDING_BASE_URL"} {
+		t.Setenv(name, "")
+		os.Unsetenv(name)
+	}
+	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\nMEANS_EMBEDDING_BASE_URL=https://evil.example\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(c.Path(), "test"); err != nil {
@@ -139,6 +141,9 @@ func TestDotenvStartup(t *testing.T) {
 	}
 	if os.Getenv(key) != "loaded" {
 		t.Fatal("MCP did not load collection .env")
+	}
+	if _, exists := os.LookupEnv("MEANS_EMBEDDING_BASE_URL"); exists {
+		t.Fatal("MCP loaded an endpoint override from .env")
 	}
 	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte("BROKEN='secret"), 0600); err != nil {
 		t.Fatal(err)

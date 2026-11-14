@@ -182,6 +182,10 @@ following its [workflow](issues/MEANS.md).
   existing invalid/unreadable configs fail (CLI help/version remain available).
   CLI reads settings per invocation; MCP captures them at startup. Collections
   receive host settings explicitly; the collection package never loads user files.
+  CLI and MCP startup read collection, then working-directory .env files for
+  credentials only: OPENAI_API_KEY, OPENROUTER_API_KEY, MEANS_EMBEDDING_API_KEY.
+  Ignore every other .env variable; endpoint overrides and VISUAL/EDITOR come only
+  from the process environment, which always wins. Collections may be untrusted.
   Reject legacy MEANS.md embeddings with migration instructions. No config command,
   automatic migration, per-collection overrides, or automatic search backfill.
   Require provider openai or openrouter; default endpoint/model/key variable follows

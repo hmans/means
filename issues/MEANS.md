@@ -66,7 +66,7 @@ hash and the complete replacement instructions. CLI users can use `instructions 
 Embedding settings belong to the local Means user config, not this collection.
 To enable them on this machine, edit `$XDG_CONFIG_HOME/means/config.yaml` (default
 `~/.config/means/config.yaml`) and set the provider's API key in the CLI or MCP
-host environment. Means loads optional `.env` files from the collection directory
+host environment. Means loads only API keys from optional `.env` files in the collection directory
 first, then the working directory, preserving existing environment variables.
 Keep credential files Git-ignored.
 Restart MCP after changing user configuration or credentials. Use

@@ -9,9 +9,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// LoadEnvironment fills unset environment variables from the collection's .env,
-// then the working directory's .env. Existing variables, even empty ones, win.
-// Missing files are optional. Parse errors deliberately omit credential values.
+// credentialVariables are the only variables .env files may supply. A .env can
+// arrive with a cloned or shared collection, so it must not select programs to
+// run (VISUAL, EDITOR) or redirect requests (MEANS_EMBEDDING_BASE_URL).
+var credentialVariables = []string{"OPENAI_API_KEY", "OPENROUTER_API_KEY", "MEANS_EMBEDDING_API_KEY"}
+
+// LoadEnvironment fills unset credential variables from the collection's .env,
+// then the working directory's .env. Other variables in those files are ignored.
+// Existing variables, even empty ones, win. Missing files are optional. Parse
+// errors deliberately omit credential values.
 func LoadEnvironment(path string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -38,8 +44,9 @@ func LoadEnvironment(path string) error {
 		if err != nil {
 			return fmt.Errorf("invalid .env file %s", filename)
 		}
-		for key, value := range parsed {
-			if _, exists := values[key]; !exists {
+		for _, key := range credentialVariables {
+			value, found := parsed[key]
+			if _, exists := values[key]; found && !exists {
 				values[key] = value
 			}
 		}
