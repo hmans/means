@@ -133,19 +133,23 @@ func TestDotenvStartup(t *testing.T) {
 		t.Setenv(name, "")
 		os.Unsetenv(name)
 	}
-	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\nMEANS_EMBEDDING_BASE_URL=https://evil.example\n"), 0600); err != nil {
+	// A .env inside the collection is never read, even when malformed.
+	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=collection\nBROKEN='secret"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte(key+"=loaded\nMEANS_EMBEDDING_BASE_URL=https://evil.example\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(c.Path(), "test"); err != nil {
 		t.Fatal(err)
 	}
 	if os.Getenv(key) != "loaded" {
-		t.Fatal("MCP did not load collection .env")
+		t.Fatal("MCP did not load working-directory .env")
 	}
 	if _, exists := os.LookupEnv("MEANS_EMBEDDING_BASE_URL"); exists {
 		t.Fatal("MCP loaded an endpoint override from .env")
 	}
-	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte("BROKEN='secret"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("BROKEN='secret"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(c.Path(), "test"); err == nil {

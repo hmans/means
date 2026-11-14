@@ -1006,17 +1006,22 @@ legacy fallback.
 
 ## Environment files
 
-Collection commands and MCP startup load credentials from optional `.env` files
-before user configuration. Only `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, and
-`MEANS_EMBEDDING_API_KEY` are read; every other variable in a `.env` file is
-ignored. A `.env` can arrive with a cloned or shared collection, so it cannot
-select the editor (`VISUAL`, `EDITOR`) or redirect embedding requests
-(`MEANS_EMBEDDING_BASE_URL`). Set those in the real process environment.
+Collection commands and MCP startup load credentials from an optional `.env` in
+the current working directory before user configuration. Only `OPENAI_API_KEY`,
+`OPENROUTER_API_KEY`, and `MEANS_EMBEDDING_API_KEY` are read; every other
+variable in the file is ignored, so it cannot select the editor (`VISUAL`,
+`EDITOR`) or redirect embedding requests (`MEANS_EMBEDDING_BASE_URL`). Set those
+in the real process environment.
 
-Existing process environment variables win, even when empty. Means reads the
-collection directory selected by `--path` first, then the current working
-directory for variables still unset. When these directories are the same, the
-file is read once. It does not search parent directories.
+Means never reads a `.env` inside a collection, because collections can be
+cloned or shared and are not trusted with credentials. The file is skipped when
+the working directory or any of its parents contains `MEANS.md`, and the
+directory selected by `--path` is not consulted. To use a `.env`, run means from
+a directory outside the collection, such as a project root, with `--path`; or
+set the keys in your shell or MCP host environment.
+
+Existing process environment variables win, even when empty. Means does not
+search parent directories for `.env`.
 
 Use `KEY=value`, optional `export`, comments, and single or double quotes, for example:
 
@@ -1024,6 +1029,6 @@ Use `KEY=value`, optional `export`, comments, and single or double quotes, for e
 OPENROUTER_API_KEY=your-key
 ```
 
-Missing files are ignored; unreadable or malformed files fail startup without
+A missing file is ignored; an unreadable or malformed one fails startup without
 printing their contents. Help, version, and bare invocation do not load `.env`.
 Restart MCP after editing credentials. Keep `.env` files out of version control.

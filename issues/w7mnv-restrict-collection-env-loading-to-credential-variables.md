@@ -30,3 +30,6 @@ Acceptance criteria:
 Updated `docs/guide.md`, AGENTS.md, MCP help, and this collection's workflow text, and added a breaking fix release note.
 
 Validation: `mise test` passes. Tests assert that the three key variables load, that `VISUAL`, `EDITOR`, `MEANS_EMBEDDING_BASE_URL`, `XDG_CONFIG_HOME`, `NO_COLOR`, and an arbitrary variable do not, that process environment values win, and that MCP startup ignores an endpoint override in `.env`.
+
+
+Follow-up (2026-11-15): at the owner's direction, means no longer reads any `.env` inside a collection. Only the working-directory `.env` is read, still limited to the three key variables, and it is skipped when the working directory or one of its parents contains `MEANS.md`; the `--path` directory is not consulted. Validated with `mise test`, including a new test that a collection `.env` (valid or malformed) is never read.
