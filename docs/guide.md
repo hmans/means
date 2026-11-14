@@ -694,7 +694,9 @@ vector. A title or body change generates a replacement. Inputs are not chunked
 or truncated; inputs exceeding the provider's token limit fail. This version
 uses the provider's limit errors rather than a local tokenizer.
 
-Create and update store the vector before writing the document. API or cache-write
+When the cache matches the current embedding profile, create and update store
+the vector before writing the document; a cache stored under a different profile
+is left untouched instead, as described under OpenRouter below. API or cache-write
 errors leave the document unchanged. Delete removes the cached vector before
 removing the document, without an API call. Cache and Markdown are separate files,
 not an atomic transaction: a later document-write failure or crash can leave a
@@ -790,6 +792,15 @@ does not change the provider, model, or credential selection. Missing credential
 fail; means never falls back to another provider's key. Endpoint overrides and
 credentials are never loaded from collection files. Changing the provider, endpoint, model, or dimensions
 invalidates the local vector profile and causes regeneration on the next refresh.
+
+Only `means embed` (including `--force`) replaces an intact cache stored under a
+different profile. While the profiles differ, create, update, append, and delete
+still write documents but leave the cache file untouched and make no embedding
+request, so a temporary endpoint or model override cannot discard vectors you
+already paid for. Semantic search and doctor treat the stored vectors as unusable
+until the settings match again or `embed` regenerates them. Documents written in
+the meantime have missing or stale vectors, and deleted ones leave orphaned
+vectors, until the next `embed`.
 
 ### Updating documents
 

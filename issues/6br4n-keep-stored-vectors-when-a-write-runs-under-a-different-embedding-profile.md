@@ -1,7 +1,7 @@
 ---
 data:
   priority: high
-  status: todo
+  status: done
   tags:
     - embeddings
     - storage
@@ -18,3 +18,21 @@ Acceptance criteria:
 - Search and doctor keep treating mismatched vectors as unusable/stale.
 - A test checks that the old profile vectors survive an unrelated write under a different profile.
 - AGENTS.md and `docs/guide.md` state the behaviour.
+
+## Outcome
+
+Chose the reviewer's option (a); no cache version or file layout change. Loading now
+distinguishes an intact cache stored under another profile from a corrupt or obsolete
+one. Under such a mismatch, create, update, append and delete write the document but
+leave `.means/embeddings.jsonl` byte-for-byte untouched and make no embedding request
+(the vector could not be stored without replacing the other profile's cache). The
+document has a missing, stale or orphaned vector until `embed`, which doctor reports.
+Only `embed` and `embed --force` replace a mismatched cache. Search and doctor still
+treat mismatched vectors as unusable. Corrupt or obsolete caches are still rewritten
+by any write, as before. AGENTS.md and docs/guide.md describe the behaviour; a `fix`
+release note is in `.sweet/ivory-still-owl.md`.
+
+Validation: `TestEmbeddingProfileMismatchPreservesCache` covers create, update, append
+and delete under a different endpoint (cache bytes unchanged, zero API requests,
+semantic search empty, doctor warning), reuse after switching back, and replacement by
+`embed`. It fails without the fix. `gofmt -l .` is clean and `mise test` passes.
