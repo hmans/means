@@ -25,7 +25,7 @@ func newTUICommand(opts *options) *cobra.Command {
 	return &cobra.Command{
 		Use: "tui", Short: "Browse documents and filter data in an interactive terminal",
 		Long: `Open a read-only document browser with a Markdown preview. Requires terminal
-input and output. Up/down or j/k select documents or scroll the focused panel.
+input and output. Up/down select documents or scroll the focused panel.
 Tab or Enter cycles Documents, Data, and Content; Shift+Tab cycles backwards.
 Data starts at one third of the preview height; each preview panel scrolls separately.
 Click toolbar buttons, documents, or filter choices. Click a pane to focus it;
@@ -44,11 +44,8 @@ picker. Stored fields and values remain available, including schema-invalid data
 v opens collection views from MEANS.md app.views (Expr filters and columns).
 Views combine with search/data filters; All documents leaves the selected view.
 The first value option removes that field's filter. x clears all filters and search.
-r reloads the collection; d shows diagnostics. : opens the command bar; :quit or :q
-then Enter quits, as does Ctrl+C or Ctrl+D. Bare q does not quit. Tab completes commands and
-view names; repeated Tab cycles matches, Shift+Tab cycles backwards. Esc cancels.
-Commands: quit (q), views (view) [name], home, filters (filter), clear,
-diagnostics, help. Quote view names containing spaces; completion adds quotes.
+r reloads the collection; d shows diagnostics. q quits outside search and pickers;
+Ctrl+C or Ctrl+D quits from anywhere.
 Esc closes a view.
 All documents are loaded in filename order, without a limit. Array fields offer
 individual items and match arrays containing the selected item (exact JSON equality).
@@ -160,7 +157,6 @@ type tuiChoice struct {
 }
 
 type tuiModel struct {
-	commandBar         tuiCommandBar
 	evaluation         uint64
 	evaluating         bool
 	cancelEvaluation   context.CancelFunc
@@ -252,14 +248,6 @@ func (m *tuiModel) readSnapshot(background bool) tea.Cmd {
 }
 
 func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.commandBar.active {
-		switch msg.(type) {
-		case tea.KeyPressMsg, tea.PasteMsg:
-			return m, m.updateCommandBar(msg)
-		case tea.MouseClickMsg, tea.MouseWheelMsg, tea.MouseMotionMsg, tea.MouseReleaseMsg:
-			return m, nil
-		}
-	}
 	switch msg := msg.(type) {
 	case tuiEvaluated:
 		if msg.generation != m.evaluation {
@@ -402,11 +390,8 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.draggingDivider = false
 		m.draggingPreview = false
 		key := msg.String()
-		if key == "ctrl+c" || key == "ctrl+d" {
+		if key == "ctrl+c" || key == "ctrl+d" || (key == "q" && m.mode != "search" && !m.picking()) {
 			return m, tea.Quit
-		}
-		if key == ":" && m.mode != "search" && !m.picking() {
-			return m, m.openCommandBar()
 		}
 		if m.loading {
 			return m, nil
@@ -472,12 +457,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.choiceTop = tuiKeepVisible(m.choice, m.choiceTop, m.pickerHeight(), len(m.choices))
 			return m, nil
 		}
-		if key != "q" {
-			return m, m.action(key)
-		}
-	}
-	if m.commandBar.active {
-		return m, m.updateCommandInput(msg)
+		return m, m.action(key)
 	}
 	return m, nil
 }
@@ -526,9 +506,9 @@ func (m *tuiModel) action(key string) tea.Cmd {
 		m.previewFocus, m.dataFocus = focus != 0, focus == 1
 		m.mode = "documents"
 		m.renderPreview()
-	case "up", "k":
+	case "up":
 		m.move(-1)
-	case "down", "j":
+	case "down":
 		m.move(1)
 	case "pgup":
 		m.move(-m.navigationHeight())
