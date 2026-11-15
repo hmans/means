@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -25,7 +26,7 @@ func encodeMarkdown(frontmatter map[string]any, body string, order ...string) (s
 	}
 	// Parse JSON directly into YAML nodes to preserve strings and exact numbers.
 	var node yaml.Node
-	if err := yaml.Unmarshal(data, &node); err != nil {
+	if err := yaml.Unmarshal(escapeYAMLControls(data), &node); err != nil {
 		return "", err
 	}
 	if len(order) > 0 {
@@ -50,8 +51,10 @@ func encodeMarkdown(frontmatter map[string]any, body string, order ...string) (s
 	var blockStyle func(*yaml.Node)
 	blockStyle = func(n *yaml.Node) {
 		n.Style = 0
-		// The encoder leaves a plain << unquoted, which YAML reads as a merge key.
-		if n.Kind == yaml.ScalarNode && n.Tag == "!!str" && n.Value == "<<" {
+		// The encoder leaves a plain << unquoted, which YAML reads as a merge key,
+		// folds the non-ASCII line breaks NEL, LS, and PS in other styles, and
+		// writes block scalars with a leading tab that it cannot parse.
+		if n.Kind == yaml.ScalarNode && n.Tag == "!!str" && (n.Value == "<<" || strings.HasPrefix(n.Value, "\t") || strings.ContainsAny(n.Value, "\u0085\u2028\u2029")) {
 			n.Style = yaml.DoubleQuotedStyle
 		}
 		for _, child := range n.Content {
@@ -71,11 +74,67 @@ func encodeMarkdown(frontmatter map[string]any, body string, order ...string) (s
 	}
 	out.WriteString("---\n")
 	out.WriteString(body)
-	// Never write frontmatter that means itself cannot read back.
-	if _, _, err := parseMarkdown(out.Bytes()); err != nil {
+	// Never write frontmatter that means itself would read back differently.
+	stored, _, err := parseMarkdown(out.Bytes())
+	if err != nil {
 		return "", fmt.Errorf("encoded frontmatter does not round-trip: %w", err)
 	}
+	want, err := jsonschema.UnmarshalJSON(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("encode frontmatter: %w", err)
+	}
+	if path, ok := firstDifference(want, stored, "frontmatter"); ok {
+		return "", fmt.Errorf("%s cannot be stored as YAML without changing its value; numbers must fit the float64 range", path)
+	}
 	return out.String(), nil
+}
+
+// escapeYAMLControls escapes the characters JSON permits raw inside strings
+// but a YAML stream rejects, so they reach the encoder, which escapes them.
+func escapeYAMLControls(data []byte) []byte {
+	var out bytes.Buffer
+	for _, r := range string(data) {
+		if r == 0x7f || (r >= 0x80 && r <= 0x9f) || r == 0xfffe || r == 0xffff {
+			fmt.Fprintf(&out, `\u%04x`, r)
+		} else {
+			out.WriteRune(r)
+		}
+	}
+	return out.Bytes()
+}
+
+// firstDifference returns the path of the first value that differs between two
+// decoded JSON values. Numbers compare by their exact text.
+func firstDifference(want, got any, path string) (string, bool) {
+	switch want := want.(type) {
+	case map[string]any:
+		got, ok := got.(map[string]any)
+		if !ok || len(got) != len(want) {
+			return path, true
+		}
+		for _, key := range slices.Sorted(maps.Keys(want)) {
+			value, exists := got[key]
+			if !exists {
+				return fmt.Sprintf("%s key %q", path, key), true
+			}
+			if at, differs := firstDifference(want[key], value, path+"."+key); differs {
+				return at, true
+			}
+		}
+		return "", false
+	case []any:
+		got, ok := got.([]any)
+		if !ok || len(got) != len(want) {
+			return path, true
+		}
+		for i := range want {
+			if at, differs := firstDifference(want[i], got[i], fmt.Sprintf("%s[%d]", path, i)); differs {
+				return at, true
+			}
+		}
+		return "", false
+	}
+	return path, want != got
 }
 
 func parseMarkdown(data []byte) (map[string]any, string, error) {

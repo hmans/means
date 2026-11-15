@@ -158,20 +158,24 @@ func TestUserConfigAppliesAcrossCollections(t *testing.T) {
 	}
 }
 
-func TestDotenvStartupAndHelp(t *testing.T) {
-	dir := t.TempDir()
-	t.Chdir(dir)
-	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("BROKEN='secret"), 0600); err != nil {
+// Means never loads .env files; credentials come from the process environment.
+func TestDotenvIgnored(t *testing.T) {
+	c, err := collection.Init(t.TempDir(), nil)
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, args := range [][]string{{"--help"}, {"help", "embed"}, {"version"}, {"schema"}, {"instructions"}, {}} {
-		var out, stderr bytes.Buffer
-		if err := Execute(args, nil, &out, &stderr, "test"); err != nil {
-			t.Fatalf("%v: %v", args, err)
-		}
+	t.Chdir(c.Path())
+	const key = "OPENAI_API_KEY"
+	t.Setenv(key, "")
+	os.Unsetenv(key)
+	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\nBROKEN='secret"), 0600); err != nil {
+		t.Fatal(err)
 	}
 	var out, stderr bytes.Buffer
-	if err := Execute([]string{"list", "--json"}, nil, &out, &stderr, "test"); err == nil || out.Len() != 0 || !json.Valid(stderr.Bytes()) || strings.Contains(stderr.String(), "secret") {
-		t.Fatalf("startup error: %v %s", err, stderr.String())
+	if err := Execute([]string{"list", "--json"}, nil, &out, &stderr, "test"); err != nil {
+		t.Fatalf("list: %v %s", err, stderr.String())
+	}
+	if value, exists := os.LookupEnv(key); exists {
+		t.Fatalf("CLI loaded %s=%q from .env", key, value)
 	}
 }

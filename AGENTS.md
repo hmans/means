@@ -51,6 +51,8 @@ following its [workflow](issues/MEANS.md).
   Creation reserves candidate IDs temporarily to prevent concurrent allocation;
   collisions retry. Direct edits can introduce duplicates, which list reports.
 - Validate the means envelope and application data on creation and after updates.
+  Every write that encodes frontmatter verifies that it reads back as the same
+  value. Quote strings YAML would alter; reject numbers outside the float64 range.
   Reads and lists check the envelope but do not enforce the current data schema,
   allowing retrieval after schema changes. List reports malformed files and
   duplicate IDs separately in diagnostics, with paths, regardless of limits.
@@ -182,12 +184,17 @@ following its [workflow](issues/MEANS.md).
   existing invalid/unreadable configs fail (CLI help/version remain available).
   CLI reads settings per invocation; MCP captures them at startup. Collections
   receive host settings explicitly; the collection package never loads user files.
+  Never load .env files: credentials, endpoint overrides, and VISUAL/EDITOR come
+  only from the process environment. Collections may be untrusted.
   Reject legacy MEANS.md embeddings with migration instructions. No config command,
   automatic migration, per-collection overrides, or automatic search backfill.
   Require provider openai or openrouter; default endpoint/model/key variable follows
   that provider. OpenAI text-embedding-3-small/large only (openai/ prefix required
   for OpenRouter). Environment overrides may change endpoint/key; keys never fall
   back across providers. Provider/model/dimension/endpoint changes invalidate vectors.
+  Only embed (including --force) replaces an intact cache stored under another
+  profile. Create/update/append/delete under a mismatched profile leave that cache
+  untouched and make no API call; the document goes without a vector until embed.
   Default to the provider's OpenAI text-embedding-3-small model and 512 dimensions.
   Defaults apply in memory; user config and MEANS.md are not rewritten.
   CLI JSON mode suppresses embedding progress to keep errors valid JSON.
@@ -199,7 +206,8 @@ following its [workflow](issues/MEANS.md).
   Embed title plus exact body into one float vector. Store in a separate versioned,
   checksummed .means/embeddings.jsonl, serialized under embeddings.lock. Create/update
   persist the vector before the document; API/cache failures prevent document writes.
-  Delete removes its vector before the file, without an API call. Failed source
+  Delete removes its vector before the file, without an API call. These guarantees
+  apply when the cache profile matches; mismatched writes skip the cache as above. Failed source
   writes/crashes can leave stale derived data; embed reconciles against visible
   documents, including direct edits and nested boundaries. Search embeds only the
   query and never changes the embedding cache; it skips missing/stale vectors and

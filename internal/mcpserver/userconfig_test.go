@@ -121,29 +121,23 @@ func TestMCPBootstrapFailureAllowsOfflineStartup(t *testing.T) {
 	}
 }
 
-func TestDotenvStartup(t *testing.T) {
-	dir := t.TempDir()
-	t.Chdir(dir)
+// Means never loads .env files; credentials come from the process environment.
+func TestDotenvIgnored(t *testing.T) {
 	c, err := collection.Init(t.TempDir(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	const key = "MEANS_TEST_MCP_DOTENV"
+	t.Chdir(c.Path())
+	const key = "OPENROUTER_API_KEY"
 	t.Setenv(key, "")
 	os.Unsetenv(key)
-	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte(key+"=loaded\nBROKEN='secret"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(c.Path(), "test"); err != nil {
 		t.Fatal(err)
 	}
-	if os.Getenv(key) != "loaded" {
-		t.Fatal("MCP did not load collection .env")
-	}
-	if err := os.WriteFile(filepath.Join(c.Path(), ".env"), []byte("BROKEN='secret"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := New(c.Path(), "test"); err == nil {
-		t.Fatal("invalid dotenv accepted")
+	if value, exists := os.LookupEnv(key); exists {
+		t.Fatalf("MCP loaded %s=%q from .env", key, value)
 	}
 }

@@ -52,7 +52,10 @@ Missing or blank title falls back to the directory name; description defaults to
 empty. Schema annotations do not define collection identity. The Markdown body
 provides self-description and workflow and may be empty. Configuration uses the
 same JSON-compatible YAML subset as documents: string keys, exact numbers, no
-aliases, merge keys, custom tags, or non-finite numbers.
+aliases, merge keys, custom tags, or non-finite numbers. Writes store values
+exactly as given or fail: numbers outside the float64 range, such as `1e400`,
+are rejected because YAML reads them back as strings. Digits within that range
+keep their full precision.
 
 Initialize with a starter, complete configuration, or JSON Schema:
 
@@ -674,7 +677,9 @@ vector. A title or body change generates a replacement. Inputs are not chunked
 or truncated; inputs exceeding the provider's token limit fail. This version
 uses the provider's limit errors rather than a local tokenizer.
 
-Create and update store the vector before writing the document. API or cache-write
+When the cache matches the current embedding profile, create and update store
+the vector before writing the document; a cache stored under a different profile
+is left untouched instead, as described under OpenRouter below. API or cache-write
 errors leave the document unchanged. Delete removes the cached vector before
 removing the document, without an API call. Cache and Markdown are separate files,
 not an atomic transaction: a later document-write failure or crash can leave a
@@ -770,6 +775,15 @@ does not change the provider, model, or credential selection. Missing credential
 fail; means never falls back to another provider's key. Endpoint overrides and
 credentials are never loaded from collection files. Changing the provider, endpoint, model, or dimensions
 invalidates the local vector profile and causes regeneration on the next refresh.
+
+Only `means embed` (including `--force`) replaces an intact cache stored under a
+different profile. While the profiles differ, create, update, append, and delete
+still write documents but leave the cache file untouched and make no embedding
+request, so a temporary endpoint or model override cannot discard vectors you
+already paid for. Semantic search and doctor treat the stored vectors as unusable
+until the settings match again or `embed` regenerates them. Documents written in
+the meantime have missing or stale vectors, and deleted ones leave orphaned
+vectors, until the next `embed`.
 
 ### Updating documents
 
@@ -972,18 +986,9 @@ legacy fallback.
 
 ## Environment files
 
-Collection commands and MCP startup load optional `.env` files before user
-configuration and credentials. Existing process environment variables win, even
-when empty. Means reads the collection directory selected by `--path` first, then
-the current working directory for variables still unset. When these directories
-are the same, the file is read once. It does not search parent directories.
-
-Use `KEY=value`, optional `export`, comments, and single or double quotes, for example:
-
-```dotenv
-OPENROUTER_API_KEY=your-key
-```
-
-Missing files are ignored; unreadable or malformed files fail startup without
-printing their contents. Help, version, and bare invocation do not load `.env`.
-Restart MCP after editing credentials. Keep `.env` files out of version control.
+Means does not read `.env` files. Collections can be cloned or shared, so nothing
+in a collection or working directory may supply credentials, select the editor,
+or redirect embedding requests. Set `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
+`MEANS_EMBEDDING_API_KEY`, `MEANS_EMBEDDING_BASE_URL`, `VISUAL`, and `EDITOR` in
+the process environment: your shell, a tool such as mise or direnv, or the MCP
+host's server configuration. Restart MCP after changing credentials.

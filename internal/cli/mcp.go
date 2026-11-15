@@ -23,7 +23,8 @@ errors include explanations. Embed is CLI-only. Register the executable and
 absolute collection path in your client's stdio MCP configuration.
 Stdout is reserved for MCP protocol framing; --json only affects help and startup errors.
 The client owns the process; no daemon or network listener is needed. Schemas
-reload per call. Loads --path/.env, then working-directory .env; existing environment wins.
+reload per call. Does not read .env files; pass API keys through
+the MCP host environment.
 Restart after changing machine settings or startup guidance.
 Use project instructions or a skill to explain when agents should use the collection.`,
 		Example: `  means mcp --path ./issues
