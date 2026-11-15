@@ -1,5 +1,19 @@
 # means Changelog
 
+## 0.7.0
+
+### Fixes
+
+- ⚠️ **BREAKING CHANGE:** Means no longer loads `.env` files. Previously a collection's `.env` could set any environment variable, so a cloned or shared collection could choose the program `means edit` runs or redirect embedding requests, along with your API key, to another host. If you kept `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEANS_EMBEDDING_API_KEY`, `MEANS_EMBEDDING_BASE_URL`, or other variables in a `.env` file, set them in your shell or MCP host environment instead, or load the file with a tool such as mise or direnv. ([#50](https://github.com/hmans/means/pull/50))
+- Creating or updating a document no longer silently changes frontmatter values that YAML reads back differently. Strings containing the Unicode line breaks NEL, LS, or PS (including titles), DEL and C1 control characters, or a leading tab are now stored exactly. Numbers outside the float64 range, such as `1e400`, were previously stored as strings; they are now rejected with an error that names the field, and nothing is written. ([#50](https://github.com/hmans/means/pull/50))
+- Keep stored embeddings when a document is created, updated, appended to, or deleted
+  while the embedding provider, model, dimensions, or endpoint differ from the ones the
+  cache was built with. Previously one such write, for example under a temporary
+  `MEANS_EMBEDDING_BASE_URL`, emptied `.means/embeddings.jsonl` and every vector had to
+  be regenerated. These writes now leave the cache untouched and make no embedding
+  request; only `means embed` replaces vectors from another profile. Run `means embed`
+  afterwards to embed documents written in the meantime. ([#50](https://github.com/hmans/means/pull/50))
+
 ## 0.6.0
 
 ### Fixes
