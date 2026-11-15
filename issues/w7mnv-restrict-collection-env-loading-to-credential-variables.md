@@ -33,3 +33,6 @@ Validation: `mise test` passes. Tests assert that the three key variables load, 
 
 
 Follow-up (2026-11-15): at the owner's direction, means no longer reads any `.env` inside a collection. Only the working-directory `.env` is read, still limited to the three key variables, and it is skipped when the working directory or one of its parents contains `MEANS.md`; the `--path` directory is not consulted. Validated with `mise test`, including a new test that a collection `.env` (valid or malformed) is never read.
+
+
+Final outcome (2026-11-15): at the owner's direction, `.env` loading was removed entirely; this supersedes the allowlist and the follow-up above. Means never reads `.env` files, the `godotenv` dependency is gone, and credentials, endpoint overrides and editor selection come only from the process environment. Validated with `mise test`, including CLI and MCP tests that a `.env` in the collection and working directory is ignored.

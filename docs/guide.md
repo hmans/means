@@ -1006,29 +1006,9 @@ legacy fallback.
 
 ## Environment files
 
-Collection commands and MCP startup load credentials from an optional `.env` in
-the current working directory before user configuration. Only `OPENAI_API_KEY`,
-`OPENROUTER_API_KEY`, and `MEANS_EMBEDDING_API_KEY` are read; every other
-variable in the file is ignored, so it cannot select the editor (`VISUAL`,
-`EDITOR`) or redirect embedding requests (`MEANS_EMBEDDING_BASE_URL`). Set those
-in the real process environment.
-
-Means never reads a `.env` inside a collection, because collections can be
-cloned or shared and are not trusted with credentials. The file is skipped when
-the working directory or any of its parents contains `MEANS.md`, and the
-directory selected by `--path` is not consulted. To use a `.env`, run means from
-a directory outside the collection, such as a project root, with `--path`; or
-set the keys in your shell or MCP host environment.
-
-Existing process environment variables win, even when empty. Means does not
-search parent directories for `.env`.
-
-Use `KEY=value`, optional `export`, comments, and single or double quotes, for example:
-
-```dotenv
-OPENROUTER_API_KEY=your-key
-```
-
-A missing file is ignored; an unreadable or malformed one fails startup without
-printing their contents. Help, version, and bare invocation do not load `.env`.
-Restart MCP after editing credentials. Keep `.env` files out of version control.
+Means does not read `.env` files. Collections can be cloned or shared, so nothing
+in a collection or working directory may supply credentials, select the editor,
+or redirect embedding requests. Set `OPENAI_API_KEY`, `OPENROUTER_API_KEY`,
+`MEANS_EMBEDDING_API_KEY`, `MEANS_EMBEDDING_BASE_URL`, `VISUAL`, and `EDITOR` in
+the process environment: your shell, a tool such as mise or direnv, or the MCP
+host's server configuration. Restart MCP after changing credentials.
