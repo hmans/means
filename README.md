@@ -13,7 +13,7 @@ or other tools. No managed daemon is required.
 means is in early development. It includes:
 
 - Document creation, editing, and deletion with stable IDs and stale-write checks.
-- Full-text search, metadata filters, and opt-in semantic search.
+- Full-text search, metadata filters and sorting, and opt-in semantic search.
 - An interactive terminal browser with Markdown previews.
 - Schema validation and collection diagnostics.
 - JSON input/output and a stdio MCP server.

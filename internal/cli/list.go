@@ -18,6 +18,9 @@ func newListCommand(opts *options) *cobra.Command {
 data, datetime flags to compare RFC 3339 timestamps, or --where for an Expr
 expression (same language as MEANS.md views). Filters combine with AND
 before --offset (default 0) and --limit (default 20; 0 means all remaining).
+--sort KEY[,KEY...] orders by id, title, or data.FIELD (dots for nested fields)
+before paging; prefix - to descend. Missing/null values sort last either way;
+mixed types order booleans, numbers, strings, arrays, objects; ID breaks ties.
 Offset skips valid matching documents; both values must be zero or greater.
 Filter values can be strings or JSON; quote shell arguments containing JSON.
 --json includes metadata; --with-body adds bodies. Malformed documents and duplicate
@@ -31,7 +34,8 @@ are separate collections; hidden paths and symlinks are ignored.`,
 		Example: `  means list --path ./memory --json
   means list --path ./memory --offset 20 --limit 20 --json
   means list --path ./memory --limit 0 --json
-  means list --path ./issues --where 'data.status in ["todo", "in_progress"]' --json`,
+  means list --path ./issues --where 'data.status in ["todo", "in_progress"]' --json
+  means list --path ./issues --sort data.status,-data.created_at,title`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if withBody && !opts.json {
@@ -51,7 +55,7 @@ are separate collections; hidden paths and symlinks are ignored.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.List(cmd.Context(), collection.ListOptions{Filter: filter, DateTime: datetime, Where: filters.where, Offset: offset, Limit: limit, WithBody: withBody})
+			result, err := c.List(cmd.Context(), collection.ListOptions{Filter: filter, DateTime: datetime, Where: filters.where, Sort: filters.sort, Offset: offset, Limit: limit, WithBody: withBody})
 			if err != nil {
 				return err
 			}

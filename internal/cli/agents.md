@@ -92,7 +92,9 @@ not a document; it is excluded from document lists and reads.
 1. Inspect an existing collection with `means info --path DIR` before changing it.
    Read its schema and workflow, then list or search existing documents. For
    conditions beyond exact `--filter` matches, use `--where` (MCP `where`) with an
-   Expr expression such as `data.status in ["todo", "in_progress"]`.
+   Expr expression such as `data.status in ["todo", "in_progress"]`. Order results
+   with `--sort` (MCP `sort`), e.g. `--sort data.status,-data.created_at`; list
+   otherwise uses filename order, which is arbitrary with random IDs.
 2. For a new collection, define its purpose, schema, and workflow. Use
    `means init --path DIR --input FILE` to install a complete `MEANS.md` without
    overwriting an existing one. See `means help init` for other inputs.

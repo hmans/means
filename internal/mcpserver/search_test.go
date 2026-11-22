@@ -45,6 +45,15 @@ func TestSearchTool(t *testing.T) {
 	if docs[0].(map[string]any)["match"].(map[string]any)["field"] != "title" {
 		t.Fatalf("missing match context: %#v", docs[0])
 	}
+	for _, tool := range []string{"list", "search"} {
+		sorted := callTool(t, ctx, session, tool, `{"sort":["-data.priority"],"limit":1}`)
+		if docs := sorted["documents"].([]any); len(docs) != 1 || docs[0].(map[string]any)["id"] != "alpha" || sorted["has_more"] != true {
+			t.Fatalf("%s sort: %#v", tool, sorted)
+		}
+	}
+	if result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "list", Arguments: map[string]any{"sort": []any{"body"}}}); err != nil || !result.IsError {
+		t.Fatalf("invalid sort key: %+v %v", result, err)
+	}
 	result = callTool(t, ctx, session, "search", `{"filter":{"type":"missing"}}`)
 	if len(result["documents"].([]any)) != 0 || len(result["diagnostics"].([]any)) != 1 {
 		t.Fatalf("empty result lost diagnostics: %#v", result)

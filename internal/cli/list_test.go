@@ -102,3 +102,41 @@ func TestListAndSearchWhere(t *testing.T) {
 		}
 	}
 }
+
+func TestListAndSearchSort(t *testing.T) {
+	c, err := collection.Init(t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, p := range []string{"b", "c", "a", "b"} {
+		source := fmt.Sprintf("---\nid: doc%d\ntitle: Document %d\ndata: {p: %s}\n---\nbody", i, i, p)
+		if err := os.WriteFile(filepath.Join(c.Path(), fmt.Sprintf("%d.md", i)), []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{
+		{"list", "--sort", "-data.p,-id"},
+		{"list", "--sort", "-data.p", "--sort", "-id"},
+		{"search", "body", "--sort", "-data.p,-id"},
+	} {
+		var out, stderr bytes.Buffer
+		if err := Execute(append(args, "--path", c.Path(), "--json"), nil, &out, &stderr, "test"); err != nil {
+			t.Fatalf("%v: %v %s", args, err, &stderr)
+		}
+		var result collection.SearchResult
+		if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, doc := range result.Documents {
+			ids = append(ids, doc.ID)
+		}
+		if strings.Join(ids, ",") != "doc1,doc3,doc0,doc2" {
+			t.Fatalf("%v: %v", args, ids)
+		}
+	}
+	var out, stderr bytes.Buffer
+	if err := Execute([]string{"list", "--path", c.Path(), "--sort", "body"}, nil, &out, &stderr, "test"); err == nil || !strings.Contains(err.Error(), "invalid sort key") {
+		t.Fatalf("invalid key: %v", err)
+	}
+}

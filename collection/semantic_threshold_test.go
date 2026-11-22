@@ -57,3 +57,26 @@ func TestSemanticThresholdValidation(t *testing.T) {
 		t.Fatal("accepted min_score without semantic")
 	}
 }
+
+func TestSemanticSort(t *testing.T) {
+	api := fakeEmbeddingAPI(t)
+	c := embeddingCollection(t)
+	for _, title := range []string{"apple crumble", "apple pie", "apple tart"} {
+		if _, err := c.create(context.Background(), map[string]any{"title": title}, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	api.response = `{"data":[{"index":0,"embedding":[-1,0]}]}`
+	if _, err := c.create(context.Background(), map[string]any{"title": "zucchini"}, ""); err != nil {
+		t.Fatal(err)
+	}
+	api.response = ""
+	// The threshold still excludes zucchini before sorting and limiting.
+	r, err := c.Search(context.Background(), SearchOptions{Query: "fruit", Semantic: true, Sort: []string{"-title"}, Limit: 2})
+	if err != nil || len(r.Documents) != 2 || !r.HasMore {
+		t.Fatalf("result: %+v %v", r, err)
+	}
+	if a, b := r.Documents[0].Frontmatter["title"], r.Documents[1].Frontmatter["title"]; a != "apple tart" || b != "apple pie" || r.Documents[0].Score == nil {
+		t.Fatalf("order: %v, %v", a, b)
+	}
+}

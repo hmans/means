@@ -17,7 +17,7 @@ import (
 
 // SearchOptions selects a search mode and filters its results. The zero value
 // lists every valid document in filename order. Filter, DateTime, and Where
-// conditions are ANDed and apply before Limit in every mode.
+// conditions are ANDed and apply before Sort and Limit in every mode.
 type SearchOptions struct {
 	// DateTime compares timestamp strings under data; all comparisons must match.
 	DateTime        []DateTimeFilter
@@ -46,6 +46,16 @@ type SearchOptions struct {
 	// Literal selects a case-insensitive substring match in title or body,
 	// ordered by filename. It cannot be combined with Semantic.
 	Literal bool
+	// Sort orders matches by metadata keys before Limit, replacing relevance
+	// and filename order. Each key is id, title, or data.FIELD (dots address
+	// nested objects), prefixed with - for descending. Later keys break ties.
+	// Missing and null values sort last in either direction. Mixed types order
+	// booleans (false first), numbers (exact), strings (Unicode code points),
+	// arrays, then objects; arrays and objects tie. Remaining ties keep
+	// relevance order for ranked searches and use ID otherwise. Nil or empty
+	// keeps the mode's default order.
+	Sort     []string
+	sortKeys []sortKey
 	// Semantic ranks cached document vectors by cosine similarity. It requires
 	// a nonblank Query and settings supplied through Collection.WithEmbeddings.
 	// It can call the embedding provider for the query; missing or stale document
@@ -85,7 +95,8 @@ type SearchHit struct {
 // SearchResult separates valid matches from document diagnostics. A nil error
 // from Search does not imply that Diagnostics is empty.
 type SearchResult struct {
-	// Documents contains matches in rank order, or filename order for scans.
+	// Documents contains matches in rank order, filename order for scans, or
+	// Sort order when requested.
 	Documents []SearchHit `json:"documents"`
 	// Diagnostics reports malformed documents and duplicate IDs across the
 	// collection, independent of filters and Limit.
@@ -99,7 +110,8 @@ type SearchResult struct {
 // Literal and data-only searches scan in filename order. Filter is a recursive partial match of
 // application data; arrays must match completely. Schema-invalid data stays
 // searchable, while malformed and duplicate documents become diagnostics.
-// Full-text and semantic searches sort rank ties by ID. Full-text search writes
+// Full-text and semantic searches sort rank ties by ID. Sort replaces these
+// orders and applies before Limit and HasMore. Full-text search writes
 // a disposable .means/ cache; literal and data-only searches remain offline.
 func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchResult, error) {
 	c, err := c.operation(ctx)
@@ -151,8 +163,21 @@ func (opts *SearchOptions) prepare() error {
 			return fmt.Errorf("invalid where expression: %w", err)
 		}
 	}
+	if opts.sortKeys, err = compileSortKeys(opts.Sort); err != nil {
+		return err
+	}
 	opts.now = time.Now()
 	return nil
+}
+
+// page sorts matches when requested, then applies offset and Limit.
+func (opts SearchOptions) page(result *SearchResult, offset int, ranked bool) {
+	sortHits(result.Documents, opts.sortKeys, ranked)
+	result.Documents = result.Documents[min(offset, len(result.Documents)):]
+	if opts.Limit > 0 && len(result.Documents) > opts.Limit {
+		result.HasMore = true
+		result.Documents = result.Documents[:opts.Limit]
+	}
 }
 
 // matches applies Filter, DateTime, and Where to one valid document.
@@ -170,7 +195,8 @@ func (opts SearchOptions) matches(frontmatter map[string]any, body string) (bool
 	return match, nil
 }
 
-// searchScan returns matches in filename order and diagnostics for the whole collection.
+// searchScan returns matches in filename order, or Sort order, and diagnostics
+// for the whole collection.
 // Callers prepare options before scanning.
 func (c *Collection) searchScan(opts SearchOptions, offset int) (*SearchResult, error) {
 	var pattern *regexp.Regexp
@@ -226,20 +252,13 @@ func (c *Collection) searchScan(opts SearchOptions, offset int) (*SearchResult, 
 				continue
 			}
 		}
-		if offset > 0 {
-			offset--
-			continue
-		}
-		if opts.Limit > 0 && len(result.Documents) == opts.Limit {
-			result.HasMore = true
-			continue
-		}
 		hit := SearchHit{ID: id, Frontmatter: entry.doc.Frontmatter, Match: match}
 		if opts.WithBody {
 			hit.Body = &entry.doc.Body
 		}
 		result.Documents = append(result.Documents, hit)
 	}
+	opts.page(result, offset, false)
 	return result, nil
 }
 
