@@ -220,6 +220,9 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 		clauses = append(clauses, bleve.NewDisjunctionQuery(title, body))
 	}
 	q := bleve.NewConjunctionQuery(clauses...)
+	// Without Sort, one match beyond Limit proves HasMore.
+	enough := func() bool { return len(opts.sortKeys) == 0 && opts.Limit > 0 && len(result.Documents) > opts.Limit }
+pages:
 	for offset := 0; ; offset += 100 {
 		request := bleve.NewSearchRequestOptions(q, 100, offset, false)
 		request.SortBy([]string{"-_score", "_id"})
@@ -237,22 +240,24 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 			} else if !ok {
 				continue
 			}
-			if opts.Limit > 0 && len(result.Documents) == opts.Limit {
-				result.HasMore = true
-				return result, nil
-			}
-			match, err := fullTextExcerpt(m, doc, terms)
-			if err != nil {
-				return nil, err
-			}
-			hit := SearchHit{ID: doc.ID, Frontmatter: doc.Frontmatter, Match: match}
+			hit := SearchHit{ID: doc.ID, Frontmatter: doc.Frontmatter}
 			if opts.WithBody {
 				hit.Body = &doc.Body
 			}
 			result.Documents = append(result.Documents, hit)
+			if enough() {
+				break pages
+			}
 		}
 		if len(found.Hits) < 100 {
 			break
+		}
+	}
+	opts.page(result, 0, true)
+	// Excerpts are computed only for the returned page.
+	for i := range result.Documents {
+		if result.Documents[i].Match, err = fullTextExcerpt(m, docs[result.Documents[i].ID], terms); err != nil {
+			return nil, err
 		}
 	}
 	return result, nil

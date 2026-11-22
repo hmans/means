@@ -494,10 +494,11 @@ matches. Both values must be zero or greater. For example,
 the end returns an empty documents array with `has_more: false`.
 List accepts the same exact-data, datetime, and `--where` filters as search, combined with AND
 before the offset and limit. For example, `means list --filter status=todo` selects open work.
-List uses filename order and performs no text indexing or embedding API calls.
+List uses filename order unless `--sort` is given (see [Sorting](#sorting)) and
+performs no text indexing or embedding API calls.
 Malformed documents and every duplicate occurrence are excluded from documents
 and reported in diagnostics with ID, path, and error, regardless of offset or limit.
-MCP `list` accepts the same `offset` and `limit` values, plus `where`. Each call scans the current
+MCP `list` accepts the same `offset` and `limit` values, plus `where` and `sort`. Each call scans the current
 files; changes between calls can shift documents between pages.
 `search` uses full-text ranking by default: all
 query terms must occur, in any order, across the title and body. Title matches
@@ -589,6 +590,38 @@ Malformed and duplicate documents are never evaluated; they stay in diagnostics.
 Expressions cannot run commands or write documents. Datetime flags remain
 supported; `date()` comparisons in `--where` cover the same cases but parse more
 formats and fail on invalid values instead of skipping them.
+
+### Sorting
+
+`--sort` on `list` and `search`, and the MCP `sort` array on both tools, order
+results by metadata. Keys use the same field vocabulary as `--where`: `id`,
+`title`, or `data.FIELD`, with dots addressing nested objects (fields whose names
+contain dots cannot be addressed). Prefix a key with `-` to sort descending.
+Later keys break ties. On the CLI, separate keys with commas or repeat the flag.
+
+```sh
+means list --path ./issues --sort data.status,-data.created_at
+means search timeout --sort -data.created_at --limit 5
+```
+
+```json
+{"sort":["data.status","-data.created_at"],"limit":0}
+```
+
+- Sorting happens after all filters and the semantic `min_score` threshold, and
+  before `offset`, `limit`, and `has_more`.
+- Missing fields, `null`, and paths through non-objects sort last in either direction.
+- Mixed types order booleans (false first), numbers (compared exactly), strings
+  (Unicode code points, case-sensitive), arrays, then objects. Descending reverses
+  this order. Two arrays, or two objects, compare as equal.
+- Remaining ties fall back to the mode's own order: relevance (then ID) for
+  full-text and semantic search, and ID for list, literal, and data-only search.
+  Results are deterministic.
+- In full-text and semantic search, sort replaces relevance ordering. Semantic
+  hits keep their `score`.
+- Strings compare literally; schema `enum` order is not used, so
+  `data.priority` sorts `high`, `low`, `normal`, `urgent`. Invalid, empty, or
+  duplicate keys fail the request.
 
 Malformed documents and every occurrence of duplicate IDs are excluded and reported
 as diagnostics, regardless of query, filter, or limit. Schema-invalid data remains

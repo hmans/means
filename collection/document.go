@@ -61,7 +61,7 @@ type DocumentSummary struct {
 // ListResult separates valid documents from malformed or duplicate files.
 // A nil error from List or Embed does not imply that Diagnostics is empty.
 type ListResult struct {
-	// Documents contains valid documents in relative filename order.
+	// Documents contains valid documents in relative filename order or Sort order.
 	Documents []DocumentSummary `json:"documents"`
 	// Diagnostics covers the whole collection, regardless of filters or paging.
 	Diagnostics []Diagnostic `json:"diagnostics"`
@@ -403,9 +403,10 @@ func readDocument(root *os.Root, id string) (*Document, error) {
 	return match.doc, nil
 }
 
-// ListOptions filters and pages valid documents in relative filename order.
-// Its zero value returns every valid document without bodies. Filters apply
-// before Offset and Limit; malformed and duplicate files never consume a slot.
+// ListOptions filters, sorts, and pages valid documents. Its zero value returns
+// every valid document in relative filename order without bodies. Filters and
+// Sort apply before Offset and Limit; malformed and duplicate files never
+// consume a slot.
 type ListOptions struct {
 	// Filter partially matches application data, using SearchOptions.Filter rules.
 	Filter map[string]any
@@ -413,6 +414,9 @@ type ListOptions struct {
 	DateTime []DateTimeFilter
 	// Where ANDs an Expr condition, using SearchOptions.Where rules.
 	Where string
+	// Sort orders documents using SearchOptions.Sort rules, with ID as the final
+	// tie-breaker. Nil or empty keeps relative filename order.
+	Sort []string
 	// Offset skips valid matches before Limit. It must not be negative.
 	Offset int
 	// Limit caps the page size. Zero returns all remaining matches; negative
@@ -422,7 +426,7 @@ type ListOptions struct {
 	WithBody bool
 }
 
-// List returns frontmatter in relative filename order. Invalid documents and
+// List returns frontmatter in relative filename order or Sort order. Invalid documents and
 // duplicate IDs produce individual diagnostics regardless of offset or limit.
 func (c *Collection) List(ctx context.Context, opts ListOptions) (*ListResult, error) {
 	c, err := c.operation(ctx)
@@ -436,7 +440,7 @@ func (c *Collection) List(ctx context.Context, opts ListOptions) (*ListResult, e
 		return nil, fmt.Errorf("offset must be zero or greater")
 	}
 	search := SearchOptions{
-		Filter: opts.Filter, DateTime: opts.DateTime, Where: opts.Where,
+		Filter: opts.Filter, DateTime: opts.DateTime, Where: opts.Where, Sort: opts.Sort,
 		Limit: opts.Limit, WithBody: opts.WithBody,
 	}
 	if err := search.prepare(); err != nil {

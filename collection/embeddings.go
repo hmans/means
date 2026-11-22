@@ -559,10 +559,7 @@ func (c *Collection) searchSemantic(opts SearchOptions) (*SearchResult, error) {
 		}
 		return *a.Score > *b.Score
 	})
-	if opts.Limit > 0 && len(result.Documents) > opts.Limit {
-		result.HasMore = true
-		result.Documents = result.Documents[:opts.Limit]
-	}
+	opts.page(result, 0, true)
 	return result, nil
 }
 
