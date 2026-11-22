@@ -443,7 +443,7 @@ func (c *Collection) List(ctx context.Context, opts ListOptions) (*ListResult, e
 		Filter: opts.Filter, DateTime: opts.DateTime, Where: opts.Where, Sort: opts.Sort,
 		Limit: opts.Limit, WithBody: opts.WithBody,
 	}
-	if err := search.prepare(); err != nil {
+	if err := search.prepare(c.schema); err != nil {
 		return nil, err
 	}
 	scanned, err := c.searchScan(search, opts.Offset)

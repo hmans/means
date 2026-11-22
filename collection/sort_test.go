@@ -126,3 +126,48 @@ func TestSearchSort(t *testing.T) {
 		t.Fatalf("data-only sort = %v, %v", ids, more)
 	}
 }
+
+func TestEnumSort(t *testing.T) {
+	c, err := Init(t.TempDir(), []byte(`{
+		"$defs": {"priority": {"enum": ["low", "normal", "high", "urgent"]}},
+		"type": "object",
+		"properties": {
+			"priority": {"$ref": "#/$defs/priority"},
+			"meta": {"properties": {"size": {"type": "number", "enum": [3, 1, 2]}}},
+			"combined": {"allOf": [{"enum": ["b", "a"]}]}
+		}
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for filename, source := range map[string]string{
+		"1.md": "---\nid: a\ntitle: A\ndata: {priority: high, meta: {size: 1}, combined: b}\n---\n",
+		"2.md": "---\nid: b\ntitle: B\ndata: {priority: low, meta: {size: 2}, combined: a}\n---\n",
+		"3.md": "---\nid: c\ntitle: C\ndata: {priority: urgent, meta: {size: 3}}\n---\n",
+		"4.md": "---\nid: d\ntitle: D\ndata: {priority: aaa}\n---\n",
+		"5.md": "---\nid: e\ntitle: E\ndata: {priority: normal, meta: {size: 9}}\n---\n",
+		"6.md": "---\nid: f\ntitle: F\ndata: {}\n---\n",
+	} {
+		if err := os.WriteFile(filepath.Join(c.Path(), filename), []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct {
+		sort []string
+		ids  []string
+	}{
+		// Enum order through $ref; values outside the enum follow; missing last.
+		{[]string{"data.priority"}, []string{"b", "e", "a", "c", "d", "f"}},
+		{[]string{"-data.priority"}, []string{"d", "c", "a", "e", "b", "f"}},
+		// Nested properties and non-string enums.
+		{[]string{"data.meta.size"}, []string{"c", "a", "b", "e", "d", "f"}},
+		// Combinators are not followed: literal order.
+		{[]string{"data.combined"}, []string{"b", "a", "c", "d", "e", "f"}},
+	} {
+		t.Run(strings.Join(tc.sort, ","), func(t *testing.T) {
+			if ids, _ := listIDs(t, c, ListOptions{Sort: tc.sort}); !reflect.DeepEqual(ids, tc.ids) {
+				t.Fatalf("ids = %v, want %v", ids, tc.ids)
+			}
+		})
+	}
+}

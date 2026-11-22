@@ -21,6 +21,7 @@ before --offset (default 0) and --limit (default 20; 0 means all remaining).
 --sort KEY[,KEY...] orders by id, title, or data.FIELD (dots for nested fields)
 before paging; prefix - to descend. Missing/null values sort last either way;
 mixed types order booleans, numbers, strings, arrays, objects; ID breaks ties.
+Fields with a schema enum sort in enum order (other values follow).
 Offset skips valid matching documents; both values must be zero or greater.
 Filter values can be strings or JSON; quote shell arguments containing JSON.
 --json includes metadata; --with-body adds bodies. Malformed documents and duplicate

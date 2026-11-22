@@ -648,9 +648,14 @@ means search timeout --sort -data.created_at --limit 5
   Results are deterministic.
 - In full-text and semantic search, sort replaces relevance ordering. Semantic
   hits keep their `score`.
-- Strings compare literally; schema `enum` order is not used, so
-  `data.priority` sorts `high`, `low`, `normal`, `urgent`. Invalid, empty, or
-  duplicate keys fail the request.
+- A `data` field whose schema declares an `enum` sorts by enum position, so
+  `enum: [low, normal, high, urgent]` makes `--sort -data.priority` put `urgent`
+  first. Values outside the enum sort after enum values (before them when
+  descending), using the type order above. Means finds the enum through
+  `properties` and local `$ref` pointers; fields described only through
+  `allOf`, `anyOf`, `oneOf`, or conditionals sort literally. Declare enums from
+  lowest to highest to make ascending order meaningful.
+- Invalid, empty, or duplicate keys fail the request.
 
 Malformed documents and every occurrence of duplicate IDs are excluded and reported
 as diagnostics, regardless of query, filter, or limit. Schema-invalid data remains
