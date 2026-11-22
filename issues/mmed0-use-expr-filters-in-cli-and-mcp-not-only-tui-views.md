@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-22T16:31:40Z"
 data:
   priority: high
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: mmed0
 title: Use Expr filters in CLI and MCP, not only TUI views
+updated_at: "2026-11-22T16:45:42Z"
 ---
 MEANS.md views already use Expr (`data.status in ["todo", "in_progress"]`), but Expr is compiled only in the TUI (`internal/cli/tui_app.go`). CLI and MCP offer exact `--filter KEY=VALUE` plus four datetime operators. Two filter languages, and the non-TUI one cannot express "in", "not", ranges, or nested conditions.
 

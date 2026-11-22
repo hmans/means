@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-24T05:01:24Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: 1q88b
 title: Set up releases with Sweet Release
+updated_at: "2026-10-24T05:01:24Z"
 ---
 Configure Sweet Release 0.2.0 for the root Go package. Add a first-release note, reproducible release commands, GitHub binary publishing, and contributor documentation. Verify release preparation and builds locally without publishing a release.
 

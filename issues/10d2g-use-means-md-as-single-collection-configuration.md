@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-24T05:27:48Z"
 data:
   priority: normal
   status: done
@@ -10,6 +11,7 @@ data:
   type: feature
 id: 10d2g
 title: Use MEANS.md as single collection configuration
+updated_at: "2026-10-24T05:27:48Z"
 ---
 Implement the agreed single-file configuration plan: YAML title, description, and JSON Schema in MEANS.md frontmatter; Markdown guidance body. Clean break from means.schema.json. Add init --input, preserve schema-only commands, migrate the issues collection, update documentation, and verify parsing, CLI, MCP, boundaries, and schema replacement with mise test and doctor.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-14T19:07:56Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: p7vye
 title: Document mise installation and agent setup prompts
+updated_at: "2026-11-14T19:07:56Z"
 ---
 Add a released-binary mise installation command and short, copyable agent prompts to README.md. Keep source-build instructions and the README concise.
 

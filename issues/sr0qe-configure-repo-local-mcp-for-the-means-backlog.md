@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:28Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: sr0qe
 title: Configure repo-local MCP for the means backlog
+updated_at: "2026-10-22T09:18:46Z"
 ---
 Configure Codex at the repository root to launch means against the actual issues/ collection. Add a mise task bound to the repository root, document MCP usage and CLI fallback, and preserve the example's fictional issues/memory configuration.
 

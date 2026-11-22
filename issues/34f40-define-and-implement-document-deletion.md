@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 34f40
 title: Define and implement document deletion
+updated_at: "2026-10-22T07:17:11Z"
 ---
 Deletion completes the basic CRUD surface. It requires the stored document ID and current SHA-256 content hash. Missing or duplicate IDs, malformed envelopes, and stale or invalid hashes fail. Only the document file is permanently removed; directories, configuration, and unrelated files remain. Existing application data need not satisfy the current schema. There is no trash, force option, confirmation prompt, or successful replay after removal.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T05:53:35Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 1t1y7
 title: Serve a concise collection guide through means help agents
+updated_at: "2026-10-29T05:53:35Z"
 ---
 Implemented an embedded collection authoring guide at means help agents. Covers collection structure, MEANS.md, schemas, workflows, discovery, and paired configuration/document examples. The guide uses the standard help JSON fields; legacy command-specific agents help remains supported. Added root/init help pointers, README and guide documentation, and an AGENTS.md rule to keep the embedded instructions concise and current. Related history: wgxy8 and mn257.
 

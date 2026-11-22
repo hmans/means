@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-21T05:38:29Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: 3j4kp
 title: Remove obsolete example collections
+updated_at: "2026-10-21T05:38:29Z"
 ---
 The repository's own issues collection now exercises means through CLI and MCP, so the separate fictional example directory is redundant.
 

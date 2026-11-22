@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-24T18:45:44Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: qbt4w
 title: Use shared Sweet Release workflows
+updated_at: "2026-11-02T11:42:28Z"
 ---
 Use Sweet's shared bump and tag workflows. Means owns its tag-triggered GitHub publication workflow and GoReleaser configuration.
 

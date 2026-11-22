@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T09:58:34Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: pkq0y
 title: Render terminal tables and add Markdown show command
+updated_at: "2026-10-22T09:58:34Z"
 ---
 Use Charm libraries for colored ID/title tables in list/search and Markdown-rendered means show <id>. Preserve list/search JSON contracts and provide show --json equivalent to read --json. Keep read as exact stored Markdown. Preserve diagnostics and limit notices; disable styling for pipes and NO_COLOR.
 

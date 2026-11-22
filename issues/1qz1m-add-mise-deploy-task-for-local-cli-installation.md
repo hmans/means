@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-21T14:55:19Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: 1qz1m
 title: Add mise deploy task for local CLI installation
+updated_at: "2026-10-21T14:55:19Z"
 ---
 Add a mise deploy task that builds the current checkout and installs means into ~/.local/bin with go install. Add a short README note. Verify mise deploy and the installed means --help command.
 

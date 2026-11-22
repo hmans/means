@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-22T16:31:40Z"
 data:
   priority: normal
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: agxw9
 title: Validate document ID references with an x-means-ref schema keyword
+updated_at: "2026-11-22T16:55:14Z"
 ---
 Issue tracking and agent memory need relationships ("parent", "blocked by", "supersedes"). Links should stay application data, not a means primitive: the schema marks which data fields hold document IDs, and means verifies them.
 

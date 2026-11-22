@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: 27a24
 title: Establish means-owned document identity and nested application data
+updated_at: "2026-10-20T14:44:18Z"
 ---
 Implement reserved frontmatter fields id and title, with collection-schema validation limited to data. Generate short collection-scoped IDs and ID/title-based filenames; resolve documents by stored ID regardless of filename. Keep IDs immutable and hash-checked updates lock-free. Update CLI/MCP help, tests, and migrate repository collections without losing content.
 

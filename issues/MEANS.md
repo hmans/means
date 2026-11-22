@@ -38,9 +38,11 @@ app:
       filter: '"tui" in (data.tags ?? [])'
       columns: [title, data.status]
     - title: Recently created
-      # Dates are optional; this view stays empty until documents have created_at.
-      filter: data.created_at != nil and date(data.created_at) > now() - duration("168h")
-      columns: [title, data.created_at]
+      filter: created_at != nil and date(created_at) > now() - duration("168h")
+      columns: [title, created_at]
+    - title: Recently updated
+      filter: updated_at != nil and date(updated_at) > now() - duration("168h")
+      columns: [title, data.status, updated_at]
 ---
 # Working with means issues
 

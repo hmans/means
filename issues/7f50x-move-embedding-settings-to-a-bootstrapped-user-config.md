@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-26T15:52:39Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 7f50x
 title: Move embedding settings to a bootstrapped user config
+updated_at: "2026-10-26T15:52:39Z"
 ---
 Keep collection configuration portable and machine setup local. Bootstrap a commented, disabled ~/.config/means/config.yaml (respect XDG_CONFIG_HOME) on CLI invocation/MCP startup without overwriting existing files. Users edit it manually; no configuration command. Embedding settings apply to every collection on the machine. Credentials remain environment variables. Retain per-collection disposable caches and explicit embed refresh. Remove collection embedding settings with actionable migration errors. Bootstrap write failures must not break offline commands; preserve structured CLI errors and MCP stdout. Cover config parsing/bootstrap, CLI/MCP automatic maintenance, disabled behavior, migration, and isolated tests; update help/docs and release note.
 

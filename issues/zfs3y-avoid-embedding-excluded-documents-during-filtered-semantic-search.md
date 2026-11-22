@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:01:40Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: bug
 id: zfs3y
 title: Avoid embedding excluded documents during filtered semantic search
+updated_at: "2026-10-25T08:01:40Z"
 ---
 Adversarial review of 9rxzp. Severity P2. internal/collection/embeddings.go:524 reconciles the entire collection before applying opts.Filter at line 531. Reproduced with a current wanted document and an excluded document missing a vector: a filtered search sends the excluded document to the provider and fails when that embedding request returns HTTP 400. Thus an over-limit or otherwise unembeddable excluded document can block searches for healthy eligible documents, and narrow searches unnecessarily pay for unrelated refresh work. Apply eligibility filtering before generating vectors for semantic queries while preserving collection-wide malformed/duplicate diagnostics and safe pruning. Explicit embed should still refresh the entire collection. Add a regression test for failure on an excluded document.
 

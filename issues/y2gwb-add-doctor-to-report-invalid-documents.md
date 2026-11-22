@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: y2gwb
 title: Add doctor to report invalid documents
+updated_at: "2026-10-20T14:51:46Z"
 ---
 Add a diagnostic command that identifies malformed Markdown/frontmatter and documents that do not satisfy the current collection schema.
 

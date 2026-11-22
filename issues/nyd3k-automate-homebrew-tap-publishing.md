@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T07:38:37Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: nyd3k
 title: Automate Homebrew tap publishing
+updated_at: "2026-11-02T11:42:28Z"
 ---
 Generate a Homebrew cask with release archives and publish it to hmans/homebrew-tap after stable GitHub releases. Support retries without rebuilding cask checksums or downgrading the tap. Document the scoped Actions token and installation.
 

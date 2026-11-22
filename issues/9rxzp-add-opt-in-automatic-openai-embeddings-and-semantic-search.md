@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:01:40Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 9rxzp
 title: Add opt-in automatic OpenAI embeddings and semantic search
+updated_at: "2026-10-25T08:01:40Z"
 ---
 Implement the first embedding-backed search feature. Collections explicitly opt in. Create/update/delete maintain vectors automatically through the shared collection package, for both CLI and MCP. Store vectors in a separate local JSONL file without SQLite. Use OpenAI embedding models, with configurable OpenAI-compatible endpoint support for OpenRouter. Include document titles and bodies in embedding input. The user confirmed that descriptions need no support. Semantic searches reconcile direct file edits and retain filtering, diagnostics, and collection boundaries. Preserve ordinary offline behavior when disabled. Verify lifecycle failure handling, freshness, API validation, concurrency, and CLI/MCP contracts with a mock API; document configuration and limitations. Related completed search work: 4fx7d and taarx.
 

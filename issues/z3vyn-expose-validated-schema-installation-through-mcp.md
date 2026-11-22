@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T07:41:53Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: z3vyn
 title: Expose validated schema installation through MCP
+updated_at: "2026-10-22T07:41:53Z"
 ---
 Add schema_set backed by collection.SetSchema, with an explicit optional force boolean. Preserve validation diagnostics on rejection and forced installation, JSON number precision, and recovery after an external invalid-schema edit. Test both supported protocol versions and structured-only responses.
 

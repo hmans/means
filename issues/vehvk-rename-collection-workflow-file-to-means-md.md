@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-21T15:20:34Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: vehvk
 title: Rename collection workflow file to MEANS.md
+updated_at: "2026-10-21T15:20:34Z"
 ---
 Use MEANS.md as the collection-local workflow file instead of instructions.md.
 

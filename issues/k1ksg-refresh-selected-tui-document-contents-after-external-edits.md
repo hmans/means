@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-03T12:08:38Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: bug
 id: k1ksg
 title: Refresh selected TUI document contents after external edits
+updated_at: "2026-11-03T12:08:38Z"
 ---
 The TUI detects document changes, but the selected document preview can retain old contents. Related work: 7mpm7 (filesystem refresh) and dn9vx (asynchronous collection views).
 

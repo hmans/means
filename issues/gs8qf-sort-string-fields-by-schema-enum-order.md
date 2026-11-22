@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-22T16:55:44Z"
 data:
   priority: low
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: gs8qf
 title: Sort string fields by schema enum order
+updated_at: "2026-11-22T17:01:23Z"
 ---
 Follow-up to h3brd. `--sort data.priority` compares strings literally (high, low, normal, urgent), so enum-like fields such as priority cannot be sorted by their meaning.
 

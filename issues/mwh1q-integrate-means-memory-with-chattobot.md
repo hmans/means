@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: todo
@@ -7,6 +8,7 @@ data:
   type: task
 id: mwh1q
 title: Integrate means memory with ChattoBot
+updated_at: "2026-10-20T14:44:18Z"
 ---
 ChattoBot is built in TypeScript and needs durable memory. Exercise means through its structured CLI interface; the integration does not require a TypeScript implementation or SDK.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-28T19:59:52Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: xv0wr
 title: Add a basic terminal collection browser
+updated_at: "2026-10-28T19:59:52Z"
 ---
 Build means tui with a document list, rendered Markdown preview, text search, and a picker for data field values. Include refresh, diagnostics, keyboard help, terminal checks, and tests. Keep scripting and collection-defined views out of scope.
 

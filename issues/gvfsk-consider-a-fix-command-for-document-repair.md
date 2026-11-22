@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: low
   status: todo
@@ -8,6 +9,7 @@ data:
   type: task
 id: gvfsk
 title: Consider a fix command for document repair
+updated_at: "2026-10-20T14:44:18Z"
 ---
 Later / under consideration: a fix command could rewrite documents that doctor identifies as invalid. Automatic document repair is deferred.
 

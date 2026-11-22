@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-22T16:31:40Z"
 data:
   priority: high
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: re2j2
 title: Add a set command for quick field edits
+updated_at: "2026-11-22T16:44:49Z"
 ---
 Changing one field today requires `show --json`, copying the hash, and composing a JSON merge patch. This is the most common edit and should be one command.
 

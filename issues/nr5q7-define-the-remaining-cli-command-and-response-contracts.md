@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: nr5q7
 title: Define the remaining CLI command and response contracts
+updated_at: "2026-10-23T15:25:01Z"
 ---
 Initialization, creation, reading, listing, and hash-checked patch updates are implemented. Define the remaining command surface as deletion, search/filtering, and doctor are designed.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-21T16:42:01Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: 6xyq0
 title: Treat nested schemas as collection boundaries
+updated_at: "2026-10-21T16:42:01Z"
 ---
 A directory containing means.schema.json starts a separate collection. Parent operations must not cross that boundary, even when the child schema is invalid. Ordinary subdirectories remain part of the selected collection.
 

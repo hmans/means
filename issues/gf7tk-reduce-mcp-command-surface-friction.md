@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T15:25:36Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: gf7tk
 title: Reduce MCP command surface friction
+updated_at: "2026-10-20T15:37:15Z"
 ---
 Improve the command surface based on using the repository issues MCP server.
 

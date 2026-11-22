@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T10:15:39Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: bug
 id: rs3rn
 title: Improve show reading width and bullet styling
+updated_at: "2026-10-22T10:15:39Z"
 ---
 User screenshot showed overly long prose and plain bullet markers in means show taarx. Reproduced full-terminal-width wrapping in the installed binary at 40/80/160 columns; could not reproduce a complete absence of wrapping. Glamour default dark style inherits gray bullet color.
 
