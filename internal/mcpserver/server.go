@@ -25,7 +25,8 @@ and filters frontmatter.data by value. Set literal:true for substring matching.
 List and search accept where, an Expr boolean expression such as
 data.status in ["todo", "in_progress"], ANDed with other filters before limits,
 and sort, an array of keys such as ["data.status", "-title"] (- descends) that
-orders results before limits; in search it replaces relevance order.
+orders results before limits; in search it replaces relevance order. view names a
+MEANS.md app.views entry by exact title (listed by info) and ANDs its filter.
 With embeddings configured in the machine-local Means user config, create/update/delete maintain local
 title/body embeddings automatically. API/cache errors prevent document mutations.
 Set semantic:true on search for cosine ranking of stored document vectors; this
@@ -149,21 +150,25 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 		},
 		{
 			name:        "info",
-			description: "Return current collection identity, schema, path, exact MEANS.md body as instructions, whole-file hash, and tool usage guidance as usage. Call before creating documents or replacing the workflow with instructions_set.",
+			description: "Return current collection identity, schema, path, views (MEANS.md app.views titles, filters, and TUI columns, usable as list/search view), exact MEANS.md body as instructions, whole-file hash, and tool usage guidance as usage. Call before creating documents or replacing the workflow with instructions_set.",
 			schema:      `{"type":"object","additionalProperties":false}`,
 			readOnly:    true,
 			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				current := c.Describe()
+				views := c.App().Views
+				if views == nil {
+					views = []collection.AppView{}
+				}
 				return map[string]any{"path": c.Path(), "schema": c.Schema(),
 					"title": current.Title, "description": current.Description,
-					"embeddings": c.Embeddings(),
-					"hash":       current.Hash, "instructions": current.Instructions, "usage": instructions}, nil
+					"embeddings": c.Embeddings(), "views": views,
+					"hash": current.Hash, "instructions": current.Instructions, "usage": instructions}, nil
 			},
 		},
 		{
 			name:        "list",
 			description: "List valid document IDs and frontmatter in filename order (or sort order), without bodies or hashes. Returns documents, diagnostics, and has_more. where filters with an Expr expression; offset skips valid matching documents (default 0) before limit (default 20; 0 returns all remaining). Malformed documents and every duplicate occurrence are excluded and reported in diagnostics regardless of offset or limit. has_more indicates valid documents after this page. Each call scans current files; changes between calls can shift pages. Read an ID before updating it.",
-			schema:      `{"type":"object","properties":{"sort":{"type":"array","items":{"type":"string","minLength":1},"description":"Metadata sort keys applied before offset/limit: id, title, or data.FIELD (dots address nested fields); prefix - for descending, e.g. [\"data.status\", \"-data.created_at\"]. Missing/null values sort last in either direction; mixed types order booleans, numbers, strings, arrays, objects; fields with a schema enum sort in enum order. Final ties use ID (search: relevance order, then ID). In search, sort replaces relevance order; min_score still applies first."},"where":{"type":"string","description":"Expr boolean expression (same language as MEANS.md app.views) over id, title, body, data, and now(); ANDed with other filters before offset/limit. Example: data.status in [\"todo\", \"in_progress\"] and not (\"tui\" in (data.tags ?? [])). Integers are int64, other numbers float64. Compile errors, evaluation errors on any candidate, and non-boolean results fail the call; guard optional fields with ?? or != nil."},"offset":{"type":"integer","minimum":0,"description":"Valid documents to skip before limit; default 0."},"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all remaining."}},"additionalProperties":false}`,
+			schema:      `{"type":"object","properties":{"view":{"type":"string","description":"Exact title of a MEANS.md app.views entry (see info views); ANDs its Expr filter with other filters before offset/limit. Unknown titles fail and list available views; filter errors fail the call like where. Columns are ignored."},"sort":{"type":"array","items":{"type":"string","minLength":1},"description":"Metadata sort keys applied before offset/limit: id, title, or data.FIELD (dots address nested fields); prefix - for descending, e.g. [\"data.status\", \"-data.created_at\"]. Missing/null values sort last in either direction; mixed types order booleans, numbers, strings, arrays, objects; fields with a schema enum sort in enum order. Final ties use ID (search: relevance order, then ID). In search, sort replaces relevance order; min_score still applies first."},"where":{"type":"string","description":"Expr boolean expression (same language as MEANS.md app.views) over id, title, body, data, and now(); ANDed with other filters before offset/limit. Example: data.status in [\"todo\", \"in_progress\"] and not (\"tui\" in (data.tags ?? [])). Integers are int64, other numbers float64. Compile errors, evaluation errors on any candidate, and non-boolean results fail the call; guard optional fields with ?? or != nil."},"offset":{"type":"integer","minimum":0,"description":"Valid documents to skip before limit; default 0."},"limit":{"type":"integer","minimum":0,"description":"Maximum documents; default 20, 0 for all remaining."}},"additionalProperties":false}`,
 			readOnly:    true,
 			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
 				limit, err := limitArg(args)
@@ -175,13 +180,14 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 					return nil, err
 				}
 				where, _ := args["where"].(string)
-				return c.List(ctx, collection.ListOptions{Where: where, Sort: stringsArg(args, "sort"), Offset: offset, Limit: limit})
+				view, _ := args["view"].(string)
+				return c.List(ctx, collection.ListOptions{Where: where, View: view, Sort: stringsArg(args, "sort"), Offset: offset, Limit: limit})
 			},
 		},
 		{
 			name:        "search",
 			description: "Find documents by ranked full text and/or a partial data filter. All lowercase Unicode query tokens must match across title/body; no stemming, stop-word removal, or query syntax. Title matches are boosted; score ties sort by ID. literal:true uses case-insensitive substring matching in filename order. No query uses filename order. Full-text queries refresh .means/search/ from file hashes, then close it; no daemon. Returns IDs, frontmatter, excerpts, and diagnostics, without bodies or hashes. Filters apply before limit (default 20, 0 for all).",
-			schema:      `{"type":"object","properties":{"sort":{"type":"array","items":{"type":"string","minLength":1},"description":"Metadata sort keys applied before offset/limit: id, title, or data.FIELD (dots address nested fields); prefix - for descending, e.g. [\"data.status\", \"-data.created_at\"]. Missing/null values sort last in either direction; mixed types order booleans, numbers, strings, arrays, objects; fields with a schema enum sort in enum order. Final ties use ID (search: relevance order, then ID). In search, sort replaces relevance order; min_score still applies first."},"where":{"type":"string","description":"Expr boolean expression (same language as MEANS.md app.views) over id, title, body, data, and now(); ANDed with other filters before offset/limit. Example: data.status in [\"todo\", \"in_progress\"] and not (\"tui\" in (data.tags ?? [])). Integers are int64, other numbers float64. Compile errors, evaluation errors on any candidate, and non-boolean results fail the call; guard optional fields with ?? or != nil."},"query":{"type":"string","description":"Text query. Full text requires all terms; semantic search ranks similarity."},"min_score":{"type":"number","minimum":-1,"maximum":1,"default":0.3,"description":"Inclusive cosine similarity threshold, applied before limit. Requires semantic:true. Use -1 for all scores."},"semantic":{"type":"boolean","default":false,"description":"Opt-in semantic search: embed only the query, rank stored document vectors, return cosine scores instead of excerpts. Never changes document vectors; skips missing or stale vectors (refresh with CLI means embed). Requires a nonempty query and API credentials; cannot combine with literal. May incur charges."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"datetime":{"type":"array","description":"ANDed datetime comparisons against literal keys directly under data, applied before limits in every mode. Values are RFC 3339 strings with timezone and at most 9 fractional digits (no leap seconds or date-only values). Compare instants across offsets; before/after are exclusive, on_or variants inclusive. Missing, non-string or invalid document values do not match. No schema annotation required; exact filter semantics unchanged.","items":{"type":"object","properties":{"field":{"type":"string","minLength":1},"op":{"type":"string","enum":["before","after","on_or_before","on_or_after"]},"value":{"type":"string"}},"required":["field","op","value"],"additionalProperties":false}},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
+			schema:      `{"type":"object","properties":{"view":{"type":"string","description":"Exact title of a MEANS.md app.views entry (see info views); ANDs its Expr filter with other filters before offset/limit. Unknown titles fail and list available views; filter errors fail the call like where. Columns are ignored."},"sort":{"type":"array","items":{"type":"string","minLength":1},"description":"Metadata sort keys applied before offset/limit: id, title, or data.FIELD (dots address nested fields); prefix - for descending, e.g. [\"data.status\", \"-data.created_at\"]. Missing/null values sort last in either direction; mixed types order booleans, numbers, strings, arrays, objects; fields with a schema enum sort in enum order. Final ties use ID (search: relevance order, then ID). In search, sort replaces relevance order; min_score still applies first."},"where":{"type":"string","description":"Expr boolean expression (same language as MEANS.md app.views) over id, title, body, data, and now(); ANDed with other filters before offset/limit. Example: data.status in [\"todo\", \"in_progress\"] and not (\"tui\" in (data.tags ?? [])). Integers are int64, other numbers float64. Compile errors, evaluation errors on any candidate, and non-boolean results fail the call; guard optional fields with ?? or != nil."},"query":{"type":"string","description":"Text query. Full text requires all terms; semantic search ranks similarity."},"min_score":{"type":"number","minimum":-1,"maximum":1,"default":0.3,"description":"Inclusive cosine similarity threshold, applied before limit. Requires semantic:true. Use -1 for all scores."},"semantic":{"type":"boolean","default":false,"description":"Opt-in semantic search: embed only the query, rank stored document vectors, return cosine scores instead of excerpts. Never changes document vectors; skips missing or stale vectors (refresh with CLI means embed). Requires a nonempty query and API credentials; cannot combine with literal. May incur charges."},"literal":{"type":"boolean","default":false,"description":"Use the original literal substring search without an index."},"datetime":{"type":"array","description":"ANDed datetime comparisons against literal keys directly under data, applied before limits in every mode. Values are RFC 3339 strings with timezone and at most 9 fractional digits (no leap seconds or date-only values). Compare instants across offsets; before/after are exclusive, on_or variants inclusive. Missing, non-string or invalid document values do not match. No schema annotation required; exact filter semantics unchanged.","items":{"type":"object","properties":{"field":{"type":"string","minLength":1},"op":{"type":"string","enum":["before","after","on_or_before","on_or_after"]},"value":{"type":"string"}},"required":["field","op","value"],"additionalProperties":false}},"filter":{"type":"object","description":"Partial match against frontmatter.data; e.g. {\"priority\":\"normal\",\"type\":\"feature\"}."},"limit":{"type":"integer","minimum":0,"description":"Maximum matches; default 20, 0 for all."}},"additionalProperties":false}`,
 			readOnly:    true,
 			openWorld:   true,
 			run: func(ctx context.Context, c *collection.Collection, args map[string]any) (any, error) {
@@ -191,6 +197,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 				}
 				query, _ := args["query"].(string)
 				where, _ := args["where"].(string)
+				view, _ := args["view"].(string)
 				filter, _ := args["filter"].(map[string]any)
 				var dateTime []collection.DateTimeFilter
 				if values, ok := args["datetime"].([]any); ok {
@@ -209,7 +216,7 @@ func NewWithEmbeddingProgress(path, version string, progress func(string)) (*mcp
 					}
 					minScore = &n
 				}
-				return c.Search(ctx, collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Where: where, Sort: stringsArg(args, "sort"), Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
+				return c.Search(ctx, collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Where: where, View: view, Sort: stringsArg(args, "sort"), Limit: limit, Literal: literal, Semantic: semantic, MinScore: minScore})
 			},
 		},
 		{

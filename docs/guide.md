@@ -421,8 +421,9 @@ loading and bootstrap rules.
 
 Add an optional `app.views` block to the frontmatter of `MEANS.md` to define TUI
 views without writing Go. Keep the existing `schema` and workflow body in that
-same file. Collection commands and MCP validate the app structure; only the TUI
-compiles and evaluates filters. This prototype format may change as the app model evolves.
+same file. Collection commands and MCP validate the app structure; the TUI,
+`list`/`search --view`, and MCP `view` compile and evaluate filters. This
+prototype format may change as the app model evolves.
 
 ```yaml
 app:
@@ -485,6 +486,25 @@ reported as errors. Existing metadata filters retain their exact JSON semantics.
 Schema replacement preserves `app` and the workflow body. If you used the earlier
 `MEANS.app.yaml` prototype, move its `views` block under `app` in `MEANS.md` and
 remove the separate file; it is no longer read.
+
+#### Views from the CLI and MCP
+
+`list` and `search` accept `--view TITLE` (MCP `view`) to apply a view's filter
+outside the TUI. Titles match exactly; an unknown title fails and lists the
+configured views. `info --json` and MCP `info` return `views` (title, filter,
+columns) for discovery.
+
+```sh
+means list --path ./issues --view "Open work" --sort -data.priority
+means search timeout --path ./issues --view "Open bugs" --json
+```
+
+The view filter is ANDed with `--where`, `--filter`, datetime flags, and the text
+query before sorting, offset, limit, and `has_more`, in every search mode. It
+follows [`--where`](#expression-filters) rules, not the TUI's: an invalid filter
+or a runtime error on any candidate fails the whole call instead of disabling the
+view or skipping the document. `columns` are TUI-only; CLI tables and JSON output
+are unchanged. **All documents** is not a configured view; omit `--view` instead.
 
 ## Finding and updating documents
 
@@ -590,6 +610,7 @@ Each comparison requires `field`, `op`, and `value`.
 
 ### Expression filters
 
+To reuse a filter defined in `MEANS.md`, see [views from the CLI and MCP](#views-from-the-cli-and-mcp).
 `--where` on `list` and `search`, and the MCP `where` field on `list` and
 `search`, accept an [Expr](https://expr-lang.org/docs/language-definition)
 boolean expression. It uses the same language and environment as

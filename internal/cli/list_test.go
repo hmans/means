@@ -103,6 +103,50 @@ func TestListAndSearchWhere(t *testing.T) {
 	}
 }
 
+func TestListAndSearchView(t *testing.T) {
+	path := t.TempDir()
+	config := "---\nschema: {type: object}\napp:\n  views:\n    - title: Open work\n      filter: data.status in [\"todo\", \"in_progress\"]\n---\n"
+	c, err := collection.InitConfig(path, []byte(config))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, status := range []string{"todo", "done", "in_progress"} {
+		source := fmt.Sprintf("---\nid: doc%d\ntitle: Document %d\ndata: {status: %s}\n---\nbody %d", i, i, status, i)
+		if err := os.WriteFile(filepath.Join(c.Path(), fmt.Sprintf("%d.md", i)), []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{
+		{"list", "--view", "Open work", "--offset", "1"},
+		{"search", "document", "--view", "Open work", "--filter", "status=in_progress"},
+		{"search", "--view", "Open work", "--where", `id != "doc0"`},
+	} {
+		var out, stderr bytes.Buffer
+		if err := Execute(append(args, "--path", c.Path(), "--json"), nil, &out, &stderr, "test"); err != nil {
+			t.Fatalf("%v: %v %s", args, err, &stderr)
+		}
+		var result collection.SearchResult
+		if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Documents) != 1 || result.Documents[0].ID != "doc2" {
+			t.Fatalf("%v: %s", args, &out)
+		}
+	}
+	var out, stderr bytes.Buffer
+	if err := Execute([]string{"list", "--path", c.Path(), "--view", "Closed", "--json"}, nil, &out, &stderr, "test"); err == nil || !strings.Contains(stderr.String(), `available views: \"Open work\"`) {
+		t.Errorf("unknown view: %v %s", err, &stderr)
+	}
+	out.Reset()
+	if err := Execute([]string{"info", "--path", c.Path(), "--json"}, nil, &out, &stderr, "test"); err != nil {
+		t.Fatal(err)
+	}
+	var info struct{ Views []collection.AppView }
+	if err := json.Unmarshal(out.Bytes(), &info); err != nil || len(info.Views) != 1 || info.Views[0].Title != "Open work" {
+		t.Fatalf("info views: %s %v", &out, err)
+	}
+}
+
 func TestListAndSearchSort(t *testing.T) {
 	c, err := collection.Init(t.TempDir(), nil)
 	if err != nil {

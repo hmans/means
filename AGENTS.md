@@ -115,6 +115,10 @@ following its [workflow](issues/MEANS.md).
   by the collection package with the same environment as app.views (id, title,
   body, data, now()). It ANDs with other filters before offsets/limits in all modes.
   Compile errors, runtime errors, and non-boolean results fail the operation.
+  List/search also accept a view title (CLI --view, MCP view): exact app.views lookup,
+  unknown titles fail listing available views. Its filter ANDs like where with the
+  same strict errors (the TUI instead skips and reports). Columns stay TUI-only.
+  CLI info --json and MCP info expose views for discovery.
   List/search accept sort keys (CLI --sort comma-separated/repeatable, MCP sort
   array): id, title, or data.FIELD (dots nest), - prefix descends. Sorting runs
   after filters and min_score, before offset/limit/has_more, and replaces

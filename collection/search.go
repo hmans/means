@@ -16,8 +16,8 @@ import (
 )
 
 // SearchOptions selects a search mode and filters its results. The zero value
-// lists every valid document in filename order. Filter, DateTime, and Where
-// conditions are ANDed and apply before Sort and Limit in every mode.
+// lists every valid document in filename order. Filter, DateTime, View, and
+// Where conditions are ANDed and apply before Sort and Limit in every mode.
 type SearchOptions struct {
 	// DateTime compares timestamp strings under data; all comparisons must match.
 	DateTime        []DateTimeFilter
@@ -42,7 +42,12 @@ type SearchOptions struct {
 	// and non-boolean results fail the operation.
 	Where string
 	where *Expression
-	now   time.Time
+	// View names a MEANS.md app.views entry by exact title and ANDs its filter,
+	// following Where rules. Unknown titles fail and list the configured views.
+	// Blank means no view. Only the filter applies; columns are TUI-only.
+	View string
+	view *Expression
+	now  time.Time
 	// Literal selects a case-insensitive substring match in title or body,
 	// ordered by filename. It cannot be combined with Semantic.
 	Literal bool
@@ -120,7 +125,7 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	if err != nil {
 		return nil, err
 	}
-	if err := opts.prepare(c.schema); err != nil {
+	if err := opts.prepare(c.schema, c.app); err != nil {
 		return nil, err
 	}
 	if opts.MinScore != nil {
@@ -149,8 +154,9 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	return c.searchScan(opts, 0)
 }
 
-// prepare normalizes Filter and compiles DateTime and Where conditions.
-func (opts *SearchOptions) prepare(schema json.RawMessage) error {
+// prepare normalizes Filter, resolves View in app, and compiles DateTime,
+// View, and Where conditions.
+func (opts *SearchOptions) prepare(schema json.RawMessage, app AppConfig) error {
 	var err error
 	if opts.Filter != nil {
 		if opts.Filter, err = normalizeObject(opts.Filter); err != nil {
@@ -163,6 +169,17 @@ func (opts *SearchOptions) prepare(schema json.RawMessage) error {
 	if strings.TrimSpace(opts.Where) != "" {
 		if opts.where, err = CompileExpression(opts.Where); err != nil {
 			return fmt.Errorf("invalid where expression: %w", err)
+		}
+	}
+	if opts.View != "" {
+		view, err := app.View(opts.View)
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(view.Filter) != "" {
+			if opts.view, err = CompileExpression(view.Filter); err != nil {
+				return fmt.Errorf("invalid filter in view %q: %w", view.Title, err)
+			}
 		}
 	}
 	if opts.sortKeys, err = compileSortKeys(opts.Sort, schema); err != nil {
@@ -182,10 +199,19 @@ func (opts SearchOptions) page(result *SearchResult, offset int, ranked bool) {
 	}
 }
 
-// matches applies Filter, DateTime, and Where to one valid document.
+// matches applies Filter, DateTime, View, and Where to one valid document.
 func (opts SearchOptions) matches(frontmatter map[string]any, body string) (bool, error) {
 	if !opts.matchesData(frontmatter["data"].(map[string]any)) {
 		return false, nil
+	}
+	if opts.view != nil {
+		match, err := opts.view.Match(frontmatter, body, opts.now)
+		if err != nil {
+			return false, fmt.Errorf("view %q filter failed for document %v: %w", opts.View, frontmatter["id"], err)
+		}
+		if !match {
+			return false, nil
+		}
 	}
 	if opts.where == nil {
 		return true, nil

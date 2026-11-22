@@ -58,7 +58,8 @@ Mark fields that hold IDs of other documents in the same collection with
 `$defs` and reuse it with `$ref`. Writes reject values that are not ID strings;
 `doctor` reports references to missing documents.
 
-Optional `app.views` configures experimental TUI views. Unknown configuration
+Optional `app.views` configures experimental named filters for the TUI and
+list/search `--view`. Unknown configuration
 fields are rejected. Embedding settings and credentials belong in machine-local
 configuration and the environment, never in `MEANS.md`.
 
@@ -92,7 +93,9 @@ not a document; it is excluded from document lists and reads.
 1. Inspect an existing collection with `means info --path DIR` before changing it.
    Read its schema and workflow, then list or search existing documents. For
    conditions beyond exact `--filter` matches, use `--where` (MCP `where`) with an
-   Expr expression such as `data.status in ["todo", "in_progress"]`. Order results
+   Expr expression such as `data.status in ["todo", "in_progress"]`. To reuse a
+   MEANS.md view's filter, pass `--view TITLE` (MCP `view`); `info --json` lists
+   views. Order results
    with `--sort` (MCP `sort`), e.g. `--sort -data.priority,title`; schema enum
    fields sort in declared enum order, so list enums from lowest to highest; list
    otherwise uses filename order, which is arbitrary with random IDs.

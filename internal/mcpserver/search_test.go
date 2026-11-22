@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,5 +77,55 @@ func TestSearchTool(t *testing.T) {
 	bad, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "search", Arguments: json.RawMessage(`{"limit":-1}`)})
 	if err != nil || !bad.IsError {
 		t.Fatalf("invalid limit accepted: %+v %v", bad, err)
+	}
+}
+
+func TestViewArgumentAndInfo(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	path := t.TempDir()
+	if _, err := collection.Init(path, []byte(`{"type":"object"}`)); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(path, collection.ConfigFilename), "---\nschema: {type: object}\napp:\n  views:\n    - title: Open\n      filter: data.status == \"todo\"\n      columns: [title]\n---\n")
+	writeFile(t, filepath.Join(path, "a.md"), "---\nid: alpha\ntitle: Schema work\ndata: {status: todo, priority: high}\n---\nbody")
+	writeFile(t, filepath.Join(path, "b.md"), "---\nid: beta\ntitle: Schema other\ndata: {status: done, priority: high}\n---\nbody")
+	writeFile(t, filepath.Join(path, "c.md"), "---\nid: gamma\ntitle: Schema low\ndata: {status: todo, priority: low}\n---\nbody")
+	server, err := New(path, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	ss, err := server.Connect(ctx, serverTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ss.Close()
+	session, err := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil).Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	info := callTool(t, ctx, session, "info", `{}`)
+	views := info["views"].([]any)
+	if len(views) != 1 || views[0].(map[string]any)["title"] != "Open" || views[0].(map[string]any)["filter"] != `data.status == "todo"` {
+		t.Fatalf("info views: %#v", info["views"])
+	}
+	for _, args := range []string{
+		`{"view":"Open","where":"data.priority == \"high\""}`,
+		`{"view":"Open","filter":{"priority":"high"},"query":"schema"}`,
+	} {
+		tool := "list"
+		if strings.Contains(args, "query") {
+			tool = "search"
+		}
+		result := callTool(t, ctx, session, tool, args)
+		if docs := result["documents"].([]any); len(docs) != 1 || docs[0].(map[string]any)["id"] != "alpha" {
+			t.Fatalf("%s %s: %#v", tool, args, result)
+		}
+	}
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "search", Arguments: map[string]any{"view": "Missing"}})
+	if err != nil || !result.IsError || !strings.Contains(result.Content[0].(*mcp.TextContent).Text, `available views: "Open"`) {
+		t.Fatalf("unknown view: %+v %v", result, err)
 	}
 }
