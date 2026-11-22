@@ -1,5 +1,28 @@
 # means Changelog
 
+## 0.7.0
+
+### Fixes
+
+- ⚠️ **BREAKING CHANGE:** Means no longer loads `.env` files. Previously a collection's `.env` could set any environment variable, so a cloned or shared collection could choose the program `means edit` runs or redirect embedding requests, along with your API key, to another host. If you kept `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEANS_EMBEDDING_API_KEY`, `MEANS_EMBEDDING_BASE_URL`, or other variables in a `.env` file, set them in your shell or MCP host environment instead, or load the file with a tool such as mise or direnv. ([#50](https://github.com/hmans/means/pull/50))
+- Creating or updating a document no longer silently changes frontmatter values that YAML reads back differently. Strings containing the Unicode line breaks NEL, LS, or PS (including titles), DEL and C1 control characters, or a leading tab are now stored exactly. Numbers outside the float64 range, such as `1e400`, were previously stored as strings; they are now rejected with an error that names the field, and nothing is written. ([#50](https://github.com/hmans/means/pull/50))
+- Keep stored embeddings when a document is created, updated, appended to, or deleted
+  while the embedding provider, model, dimensions, or endpoint differ from the ones the
+  cache was built with. Previously one such write, for example under a temporary
+  `MEANS_EMBEDDING_BASE_URL`, emptied `.means/embeddings.jsonl` and every vector had to
+  be regenerated. These writes now leave the cache untouched and make no embedding
+  request; only `means embed` replaces vectors from another profile. Run `means embed`
+  afterwards to embed documents written in the meantime. ([#50](https://github.com/hmans/means/pull/50))
+
+### Features
+
+- Sorting by a field whose schema declares an `enum` now follows the enum order instead of alphabetical order. For example, with `enum: [low, normal, high, urgent]`, `--sort -data.priority` lists urgent items first. Values outside the enum sort after the enum values. ([#58](https://github.com/hmans/means/pull/58))
+- Apply a collection view from the command line or MCP: `means list --view "Open work"` and `means search <query> --view ...` (MCP `view`) reuse the filter of a named `app.views` entry in MEANS.md, combined with other filters. `info --json` and MCP `info` now list the available views. ([#59](https://github.com/hmans/means/pull/59))
+- Filter `list` and `search` with Expr expressions, the same language MEANS.md views use. Pass `--where 'data.status in ["todo", "in_progress"] and not ("tui" in (data.tags ?? []))'` on the CLI, or `where` to the MCP `list` and `search` tools. Expressions see `id`, `title`, `body`, `data`, and `now()`, combine with `--filter` and datetime flags using AND, and apply before offsets and limits in every search mode. Invalid expressions, evaluation errors, and non-boolean results fail the request with a clear error. ([#55](https://github.com/hmans/means/pull/55))
+- Add `means set <id> KEY=VALUE` to change data fields or the title in one step, without reading a hash first. Use dots for nested fields, `KEY=null` to delete, and `KEY+=VALUE` / `KEY-=VALUE` to add to or remove from arrays such as tags. Pass `--hash` to require a specific version. ([#54](https://github.com/hmans/means/pull/54))
+- List and search can now sort results by metadata with `--sort` (MCP `sort`): use `id`, `title`, or `data.FIELD` keys, prefix `-` for descending, and combine several keys, e.g. `means list --sort data.status,-data.created_at`. Sorting applies before offset and limit, places missing values last, and keeps results deterministic. In full-text and semantic search, a sort replaces relevance order. ([#57](https://github.com/hmans/means/pull/57))
+- Mark schema fields that hold document IDs with `x-means-ref: true` (for example `parent` or `blocked_by` items). Writes reject values that are not document IDs, and `doctor` reports references to documents that do not exist in the collection. ([#56](https://github.com/hmans/means/pull/56))
+
 ## 0.6.0
 
 ### Fixes
