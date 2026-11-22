@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-02T11:00:50Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 9kwxa
 title: Let agents update collection instructions
+updated_at: "2026-11-02T11:00:50Z"
 ---
 Add CLI and MCP operations to replace the MEANS.md Markdown body. Return a whole-file hash from info and require it for stale-write protection. Preserve exact frontmatter and file permissions, support an empty body, and document the workflow. Verify preservation, conflicts, invalid inputs, and current MCP info after updates.
 

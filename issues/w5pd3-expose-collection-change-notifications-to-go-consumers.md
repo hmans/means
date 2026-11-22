@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-03T16:08:58Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: w5pd3
 title: Expose collection change notifications to Go consumers
+updated_at: "2026-11-03T16:08:58Z"
 ---
 Add a context-owned public collection watcher with coalesced invalidations, nested collection boundaries, atomic replacement support, and recovery after missed events. Keep UI state and app discovery in consumers. Make the means TUI use the library API. Verify filesystem changes, cancellation, and recovery; document the contract and limits.
 

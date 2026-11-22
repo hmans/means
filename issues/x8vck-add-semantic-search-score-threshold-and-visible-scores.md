@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:01:40Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: x8vck
 title: Add semantic search score threshold and visible scores
+updated_at: "2026-10-25T08:01:40Z"
 ---
 Add inclusive --min-score and MCP min_score, default 0.30, with validation and filtering before limits. Semantic text tables show scores. Preserve explicit zero and allow -1 to include all scores. Calibration on issues: openai top 0.349, next 0.287; schema validation top 0.441; unrelated banana bread recipe top 0.184. Verify default, overrides, boundary values, errors, has_more, CLI display, and MCP propagation.
 

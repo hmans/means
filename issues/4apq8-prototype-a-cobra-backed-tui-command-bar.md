@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T09:56:05Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: 4apq8
 title: Prototype a Cobra-backed TUI command bar
+updated_at: "2026-10-29T09:56:05Z"
 ---
 Add a colon prompt with Cobra command dispatch, aliases, Bubbles text input, dim completion previews, and cycling view-name completion. Bare q must no longer quit. Keep scripting and collection-defined commands out of this initial prototype.
 

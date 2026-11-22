@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: gd736
 title: Shorten generated document IDs to five characters
+updated_at: "2026-10-20T14:44:18Z"
 ---
 Use five-character generated IDs with the existing 32-symbol lowercase alphabet and crypto/rand generator. Keep collection-wide collision detection and allocation retries; preserve existing stored IDs. No NanoID dependency is needed for this fixed power-of-two alphabet.
 

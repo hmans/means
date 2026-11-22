@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: 0t3jh
 title: Normalize repository collections to five-character IDs
+updated_at: "2026-10-20T14:44:18Z"
 ---
 Regenerate longer document IDs in issues/, example/issues/, and example/memory/ using means. Use canonical ID/title-slug filenames, preserve already canonical five-character IDs, and update any repository references.
 

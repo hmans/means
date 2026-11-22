@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T08:57:57Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: 5bge8
 title: Improve search excerpts and measure warm-search parsing costs
+updated_at: "2026-10-22T08:57:57Z"
 ---
 Prefer excerpts that cover more distinct query terms, add a representative relevance fixture, and measure parsing cost before introducing a parsed-document cache. Preserve literal mode and full-content hash freshness.
 

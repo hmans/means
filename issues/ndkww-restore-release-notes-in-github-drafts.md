@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-24T06:32:47Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: bug
 id: ndkww
 title: Restore release notes in GitHub drafts
+updated_at: "2026-10-24T06:32:47Z"
 ---
 The 0.1.0 draft had all binary archives but blank release notes. GoReleaser changelog.disable skipped loading the supplied Sweet Release notes.
 

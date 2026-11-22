@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T07:55:28Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: 3pykq
 title: Polish README before Homebrew release
+updated_at: "2026-10-29T07:55:28Z"
 ---
 Tighten the README around purpose, current capabilities, installation, and a short first-use example. Keep detailed command and release contracts in their existing guides.
 

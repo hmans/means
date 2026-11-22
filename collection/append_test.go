@@ -13,7 +13,7 @@ import (
 	"github.com/gofrs/flock"
 )
 
-func TestAppendPreservesSource(t *testing.T) {
+func TestAppendWritesExactText(t *testing.T) {
 	c, err := Init(t.TempDir(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -40,13 +40,9 @@ func TestAppendPreservesSource(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			prefix := current.Markdown[:len(current.Markdown)-len(current.Body)]
-			if !strings.HasSuffix(prefix, "\n") {
-				prefix += "\n"
-			}
-			want := prefix + current.Body + text
+			// Appends bump updated_at, so frontmatter is re-encoded; the body is exact.
 			stored, err := os.ReadFile(filename)
-			if err != nil || string(stored) != want || updated.Markdown != want || updated.Body != current.Body+text || updated.Hash != contentHash(want) {
+			if err != nil || string(stored) != updated.Markdown || !strings.HasSuffix(updated.Markdown, "\n---\n"+current.Body+text) || updated.Body != current.Body+text || updated.Hash != contentHash(updated.Markdown) || updated.Frontmatter[UpdatedAtField] == nil {
 				t.Fatalf("incorrect append: %+v %v; stored %q", updated, err, stored)
 			}
 			stat, err := os.Stat(filename)

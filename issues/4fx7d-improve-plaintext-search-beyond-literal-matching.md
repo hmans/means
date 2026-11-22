@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T15:15:28Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: 4fx7d
 title: Improve plaintext search beyond literal matching
+updated_at: "2026-10-22T08:57:57Z"
 ---
 The current `search` command matches one case-insensitive literal phrase in document titles and bodies. Implement more useful plaintext retrieval, such as multi-term queries, tokenization, ranking, and better excerpts. Evaluate Bleve or other full-text approaches; consider vector embeddings only if a concrete use case calls for semantic matching.
 

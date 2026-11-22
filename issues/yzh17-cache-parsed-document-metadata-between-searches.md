@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T09:16:05Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: yzh17
 title: Cache parsed document metadata between searches
+updated_at: "2026-10-22T09:16:05Z"
 ---
 Add .means/documents.jsonl with document paths, SHA-256 checksums and parsed metadata. Hash all source files on each search; reuse parsing only for unchanged content. Preserve precise numbers, diagnostics, duplicate detection and collection boundaries. Recover from missing, corrupt or obsolete caches; write atomically under the search lock. Test filesystem changes and measure warm scan costs.
 

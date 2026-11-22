@@ -1,10 +1,12 @@
 ---
+created_at: "2026-10-28T08:28:12Z"
 data:
   priority: normal
   status: done
   type: feature
 id: wdrzp
 title: Load dotenv files for CLI and MCP credentials
+updated_at: "2026-10-28T08:28:12Z"
 ---
 Load collection --path/.env first, then working-directory .env. Preserve existing environment variables, including empty values. Support CLI and MCP startup; keep help/version independent. Document precedence and test errors without exposing secrets.
 

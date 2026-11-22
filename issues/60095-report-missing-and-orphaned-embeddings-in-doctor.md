@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:15:06Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: "60095"
 title: Report missing and orphaned embeddings in doctor
+updated_at: "2026-10-25T08:15:06Z"
 ---
 Extend doctor with offline read-only checks for missing/stale document vectors and orphaned vectors. Reuse diagnostics and unhealthy exit behavior. Disabled collections skip embedding checks. Report corrupt/incompatible cache without changing it. Verify no API requests or cache writes and document behavior.
 

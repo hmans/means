@@ -28,7 +28,7 @@ Combine --filter KEY=VALUE, RFC 3339 datetime flags, --view, and --where with AN
 before --limit. --view TITLE applies a MEANS.md app.views filter by exact title;
 unknown titles fail and list available views (info --json shows them).
 Omit the query to filter only by data. Default limit is 20; 0 returns all.
---sort KEY[,KEY...] (id, title, data.FIELD; - prefix descends) replaces relevance
+--sort KEY[,KEY...] (id, title, created_at, updated_at, data.FIELD; - descends) replaces relevance
 or filename order before --limit, after --min-score; ties keep relevance order for
 ranked searches, else ID. Missing/null values sort last; see list --help.
 --json includes metadata and excerpts; --with-body adds bodies. Inspect diagnostics
@@ -38,8 +38,8 @@ and collection-level failures exit 1. Text search requires all words to match.
 Filter keys name fields directly under data; objects match supplied keys recursively,
 arrays match in full, and a missing field never matches. Quote JSON in shell arguments.
 Datetimes need timezone offsets; before/after are exclusive, on-or variants inclusive.
---where takes an Expr expression (as in MEANS.md views) over id, title, body, data,
-and now(), e.g. 'data.priority in ["high", "urgent"] and not ("tui" in (data.tags ?? []))'.
+--where takes an Expr expression (as in MEANS.md views) over id, title, created_at,
+updated_at, body, data, and now(), e.g. 'data.priority in ["high", "urgent"] and not ("tui" in (data.tags ?? []))'.
 Integers are int64, other numbers float64. Compile errors, evaluation errors for any
 candidate document, and non-boolean results fail the command; guard optional
 fields with ?? or != nil. View filters fail the same way (the TUI instead skips

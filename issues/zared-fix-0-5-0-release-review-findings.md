@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-02T11:42:28Z"
 data:
   priority: high
   status: done
@@ -9,6 +10,7 @@ data:
   type: bug
 id: zared
 title: Fix 0.5.0 release review findings
+updated_at: "2026-11-02T11:42:28Z"
 ---
 Apply the release review fixes: quote numeric editor fixture IDs; preserve JSON errors after malformed flag values; reject unknown schema/instructions subcommands; use exact array filter equality, including nested objects and precise numbers. Standardize public CLI examples on show --json and reconcile completed release automation work. Verify regression tests, race tests, vet, and all release snapshot targets before opening the PR.
 

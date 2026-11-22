@@ -143,6 +143,8 @@ func tuiAppRow(doc collection.SearchHit, columns []string, selected, hovered boo
 			value, style = doc.ID, tuiAccent
 		case "title":
 			value, style, units = doc.Frontmatter["title"], tuiTitle, 2
+		case collection.CreatedAtField, collection.UpdatedAtField:
+			value = doc.Frontmatter[column]
 		default:
 			value = doc.Frontmatter["data"].(map[string]any)[strings.TrimPrefix(column, "data.")]
 		}

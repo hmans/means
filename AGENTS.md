@@ -41,8 +41,13 @@ following its [workflow](issues/MEANS.md).
   same-collection document ID fields: writes check ID syntax, doctor reports
   missing targets. Writes do not check existence; means never rewrites references.
 - Means owns the top-level frontmatter fields: id (generated, immutable), title
-  (required nonempty string), and data (application object). Custom fields belong
-  under data. Creation defaults omitted data to {}; explicit null is invalid.
+  (required nonempty string), data (application object), and the timestamps
+  created_at (set on creation, immutable) and updated_at (bumped by every write
+  that changes the document, including body-only edits). Timestamps are RFC 3339
+  UTC seconds, optional when reading (legacy documents), never client-writable;
+  edit ignores edited values. Means never invents created_at for legacy documents.
+  Custom fields belong under data. Creation defaults omitted data to {}; explicit
+  null is invalid.
 - Creation generates a random 5-character lowercase ID and writes
   <id>-<title-slug>.md. Clients reference stored IDs, never filenames. Lookup scans
   visible subdirectories, ignores hidden paths and symlinks, and rejects duplicate
@@ -65,8 +70,8 @@ following its [workflow](issues/MEANS.md).
   and replace the body only when supplied. Preserve IDs, reject stale writes, and
   use same-directory temporary replacements. Updates do not lock files; hash
   checks reject observed changes but cannot exclude a write racing replacement.
-  Lists omit hashes so consumers retrieve full content before updating. Body-only
-  changes preserve frontmatter text; metadata changes may reformat YAML.
+  Lists omit hashes so consumers retrieve full content before updating. Every
+  changing write re-encodes the frontmatter (updated_at changes); the body is exact.
 - Support software consumers as well as humans and agents. Provide structured
   CLI input, output, and errors, a stdio MCP interface, and the public
   github.com/hmans/means/collection Go package. CLI, TUI, and MCP use this package.
@@ -113,14 +118,14 @@ following its [workflow](issues/MEANS.md).
   Combine them with exact filters using AND before limits in all search modes.
   List/search also accept an Expr where expression (CLI --where, MCP where) compiled
   by the collection package with the same environment as app.views (id, title,
-  body, data, now()). It ANDs with other filters before offsets/limits in all modes.
+  created_at, updated_at, body, data, now()). It ANDs with other filters before offsets/limits in all modes.
   Compile errors, runtime errors, and non-boolean results fail the operation.
   List/search also accept a view title (CLI --view, MCP view): exact app.views lookup,
   unknown titles fail listing available views. Its filter ANDs like where with the
   same strict errors (the TUI instead skips and reports). Columns stay TUI-only.
   CLI info --json and MCP info expose views for discovery.
   List/search accept sort keys (CLI --sort comma-separated/repeatable, MCP sort
-  array): id, title, or data.FIELD (dots nest), - prefix descends. Sorting runs
+  array): id, title, created_at, updated_at (compared as instants), or data.FIELD (dots nest), - prefix descends. Sorting runs
   after filters and min_score, before offset/limit/has_more, and replaces
   relevance order. Missing/null sort last either way; mixed types order bool,
   number, string, array, object; ties keep relevance (ranked) or use ID. Data

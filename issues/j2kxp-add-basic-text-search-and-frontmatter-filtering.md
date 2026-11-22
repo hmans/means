@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: j2kxp
 title: Add basic text search and frontmatter filtering
+updated_at: "2026-10-20T15:15:14Z"
 ---
 Consumers currently list metadata and filter results themselves. Add a basic way to find relevant documents by text and metadata.
 

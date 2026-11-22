@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T07:05:32Z"
 data:
   priority: normal
   status: done
@@ -7,5 +8,6 @@ data:
   type: feature
 id: eb99p
 title: Highlight hovered TUI documents and hide empty filters
+updated_at: "2026-10-29T07:05:32Z"
 ---
 Hide the empty data-filter row and highlight hovered documents with a subtle background, with a distinct selected background. Implemented for default and custom views using all-motion mouse reporting. Hover does not change selection or focus, follows scrolled content, and is suppressed during divider dragging and overlays. Verified with mise test, git diff --check, and a PTY mouse-motion smoke test with rendered screenshot inspection.

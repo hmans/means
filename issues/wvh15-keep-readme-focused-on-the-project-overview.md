@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-21T06:35:30Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: wvh15
 title: Keep README focused on the project overview
+updated_at: "2026-10-21T06:35:30Z"
 ---
 The root README is a long command reference. Keep it concise and focused on what means is, its current state, and where to start.
 

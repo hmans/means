@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-05T19:21:06Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: y8kfy
 title: Simplify TUI keyboard controls and remove command mode
+updated_at: "2026-11-05T19:21:06Z"
 ---
 Remove the experimental colon command bar and Vim-style navigation. Restore direct keyboard shortcuts, including q to quit outside text input, while retaining arrow navigation, search, filters, views, and mouse controls. Update help, guide, release notes, and relevant tests. Supersedes the command-bar prototype in 4apq8.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T12:54:34Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: bug
 id: vs4xe
 title: Align list and search diagnostics and limits
+updated_at: "2026-10-22T12:54:34Z"
 ---
 Aligned list with search: responses contain documents, diagnostics and has_more. Malformed files and every duplicate occurrence are excluded from documents. Limits count valid documents only; scanning continues to report all diagnostics. Empty responses use arrays, and has_more only indicates further valid documents. CLI and MCP share this behavior; --with-body applies only to valid documents.
 

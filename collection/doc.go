@@ -16,8 +16,8 @@
 //
 // MEANS.md contains YAML frontmatter with a required schema and optional title,
 // description, and app views, followed by Markdown workflow instructions.
-// Documents contain only id, title, and data in their YAML frontmatter, followed
-// by a free-form body. The schema validates data, not the means-owned fields.
+// Documents contain only id, title, created_at, updated_at, and data in their
+// YAML frontmatter, followed by a free-form body. The schema validates data, not the means-owned fields.
 // Visible Markdown files in subdirectories belong to the collection, except
 // below another MEANS.md. Hidden paths and symlinks are ignored. MEANS.md itself
 // is configuration, not a document.

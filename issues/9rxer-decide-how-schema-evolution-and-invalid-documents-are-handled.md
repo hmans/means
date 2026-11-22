@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: 9rxer
 title: Decide how schema evolution and invalid documents are handled
+updated_at: "2026-10-22T07:34:00Z"
 ---
 Consumers can edit means.schema.json directly. Reads and lists parse existing documents without validating against the current schema; creation and updates validate resulting frontmatter. Decide how consumers discover and resolve invalid documents after schema changes or direct edits.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-15T00:11:52Z"
 data:
   priority: high
   status: done
@@ -7,6 +8,7 @@ data:
   type: bug
 id: 8zzj1
 title: Reject frontmatter values that YAML does not round-trip
+updated_at: "2026-11-15T00:11:52Z"
 ---
 Found in the codebase review of 4c63f85 (confirmed by reproduction through the public API).
 

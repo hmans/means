@@ -52,6 +52,11 @@ to explain meaning, enums for fixed choices, and `required` for mandatory fields
 Schema defaults do not fill in data. Put process rules and body requirements in
 the Markdown workflow; means does not enforce that prose.
 
+Means maintains `created_at` and `updated_at` (RFC 3339 UTC) on every document
+it writes; do not supply them or duplicate them in data. Use them with `--where`
+(`date(created_at) > now() - duration("168h")`) and `--sort -updated_at`.
+Documents created before means maintained timestamps may lack them.
+
 Mark fields that hold IDs of other documents in the same collection with
 `x-means-ref: true`, for example `parent: {type: string, x-means-ref: true}`, or
 `items: {type: string, x-means-ref: true}` for an array. Define it once under

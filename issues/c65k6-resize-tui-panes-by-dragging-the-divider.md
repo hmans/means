@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T05:48:07Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: c65k6
 title: Resize TUI panes by dragging the divider
+updated_at: "2026-10-29T05:48:07Z"
 ---
 Allow dragging the gap and adjacent borders between the document list and preview. Keep minimum pane widths, reflow the preview, and retain the preferred width for the session.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:18:45Z"
 data:
   priority: normal
   status: canceled
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 04par
 title: Explore opt-in quantized embeddings in document frontmatter
+updated_at: "2026-10-26T15:52:39Z"
 ---
 Selected for an experimental implementation on 2026-10-26.
 

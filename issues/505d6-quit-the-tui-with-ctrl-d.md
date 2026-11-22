@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-02T11:00:30Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: 505d6
 title: Quit the TUI with Ctrl-D
+updated_at: "2026-11-02T11:00:30Z"
 ---
 Add Ctrl-D as an immediate quit shortcut throughout the TUI, including search, pickers, loading, and the command bar. Keep the existing quit shortcuts and update command help and the guide.
 

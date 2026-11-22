@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-21T16:42:01Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: sgeat
 title: Use means.schema.json as the collection schema filename
+updated_at: "2026-10-21T16:42:01Z"
 ---
 Use means.schema.json and MEANS.md as the reserved collection filenames with ordinary filesystem lookup. Update initialization, loading, nested boundaries, help, docs, and repository configuration. Verify that unrelated schema.json files do not establish collection boundaries. No case-insensitive matching or legacy fallback.
 

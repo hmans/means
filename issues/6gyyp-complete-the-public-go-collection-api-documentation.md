@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-03T08:55:52Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: 6gyyp
 title: Complete the public Go collection API documentation
+updated_at: "2026-11-03T08:55:52Z"
 ---
 Follow up on m12zm and PR #44. Consumers should be able to use the public collection package through Go documentation and editor tooltips.
 

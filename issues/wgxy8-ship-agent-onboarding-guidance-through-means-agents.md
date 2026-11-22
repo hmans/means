@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T10:43:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: wgxy8
 title: Ship agent onboarding guidance through means agents
+updated_at: "2026-10-22T10:43:18Z"
 ---
 Added means agents with an embedded Markdown guide covering the collection model, schema/workflow design, discovery through project instructions or skills, optional MCP setup, and safe routine operations. Works without a collection and makes no filesystem changes. --json returns the identical guide in a guide field. Root/init help and successful init output point to it; init JSON adds next_steps. Updated README and usage guide.
 

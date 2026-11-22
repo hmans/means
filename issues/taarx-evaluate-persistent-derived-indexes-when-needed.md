@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: low
   status: done
@@ -7,6 +8,7 @@ data:
   type: task
 id: taarx
 title: Evaluate persistent derived indexes when needed
+updated_at: "2026-10-22T08:57:57Z"
 ---
 Implemented at the user's request as part of ranked full-text search (4fx7d). The index is derived; Markdown and means.schema.json remain authoritative.
 

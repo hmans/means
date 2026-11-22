@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-27T08:43:30Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: mn257
 title: Simplify CLI workflows and command discovery
+updated_at: "2026-10-27T08:43:30Z"
 ---
 Implemented the approved CLI review in PR #20: info; create --title with optional --body-file; editor workflow with hash checks, current-schema validation and recovery copies; delete --hash; show --raw with hidden read compatibility; shared list/search metadata filters; grouped command help; side-effect-free informational commands. Existing structured document inputs remain supported.
 

@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-22T09:58:53Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: fdyzn
 title: Always return structured JSON from MCP tools
+updated_at: "2026-10-22T09:58:53Z"
 ---
 Make successful MCP results structuredContent-only regardless of --json. Preserve error reporting and exact JSON numbers on the wire. Remove the server output-mode option and the registration flag; --json only formats CLI help and startup errors. Update help, guide and protocol tests.
 

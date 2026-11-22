@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-20T14:44:18Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: task
 id: m12zm
 title: Use integrations to decide what SDK support is needed
+updated_at: "2026-11-03T08:55:52Z"
 ---
 Go consumers need in-process access to means collections without starting the CLI or speaking MCP. The user chose to expose the existing collection implementation as a public Go package in the same module.
 

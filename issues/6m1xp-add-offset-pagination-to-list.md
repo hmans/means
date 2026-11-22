@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-02T19:25:16Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 6m1xp
 title: Add offset pagination to list
+updated_at: "2026-11-02T19:25:16Z"
 ---
 Add list offset support while retaining the existing limit default of 20 and unlimited value 0. Skip valid matching documents in filename order after exact-data and datetime filters. Report collection-wide diagnostics on every page. Expose offset through CLI and MCP, reject negative or invalid values, document pagination, and verify page boundaries, filters, bodies, and has_more.
 

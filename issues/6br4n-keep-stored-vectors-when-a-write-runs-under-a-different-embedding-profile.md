@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-15T00:11:52Z"
 data:
   priority: high
   status: done
@@ -8,6 +9,7 @@ data:
   type: bug
 id: 6br4n
 title: Keep stored vectors when a write runs under a different embedding profile
+updated_at: "2026-11-15T00:11:52Z"
 ---
 Found in the codebase review of 4c63f85 (confirmed by reproduction: 5 records before, 0 after a single delete under another endpoint).
 

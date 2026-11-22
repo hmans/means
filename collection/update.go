@@ -10,7 +10,6 @@ import (
 	"path"
 	"reflect"
 	"regexp"
-	"strings"
 	"unicode/utf8"
 )
 
@@ -39,7 +38,8 @@ type Patch struct {
 // optimistic: a simultaneous write can still race the final replacement.
 // Use ID and Hash from Read, and supply at least one part of Patch. The loaded
 // schema validates the result. The existing filename is kept even if title
-// changes. Body-only edits preserve the original frontmatter bytes.
+// changes. Changing writes bump updated_at and re-encode the frontmatter; a
+// write that changes nothing leaves the file untouched.
 // Enabled embeddings are maintained before the file write; provider or cache
 // failures prevent that write. The returned Document has the new content hash.
 func (c *Collection) Update(ctx context.Context, id, hash string, patch Patch) (*Document, error) {
@@ -86,6 +86,12 @@ func (c *Collection) update(id, hash string, patch Patch, replace bool) (*Docume
 		return nil, fmt.Errorf("id is immutable; omit it from the frontmatter patch")
 	}
 	for key := range patch.Frontmatter {
+		if isTimestampField(key) {
+			if !replace {
+				return nil, fmt.Errorf("%s is maintained by means; omit it from the frontmatter patch", key)
+			}
+			continue
+		}
 		if key != "title" && key != "data" {
 			return nil, fmt.Errorf("unknown means frontmatter field %q; application fields belong under data", key)
 		}
@@ -114,13 +120,22 @@ func (c *Collection) update(id, hash string, patch Patch, replace bool) (*Docume
 	if current.Hash != hash {
 		return nil, conflict(id)
 	}
-	frontmatter := current.Frontmatter
+	frontmatter := mergeObject(current.Frontmatter, nil)
 	if patch.Frontmatter != nil {
 		if replace {
 			frontmatter = patch.Frontmatter
 			frontmatter["id"] = id
 		} else {
 			frontmatter = mergeObject(frontmatter, patch.Frontmatter)
+		}
+	}
+	// Timestamps are maintained by means: keep the stored values (edited
+	// values are ignored) and bump updated_at below when anything changes.
+	for _, key := range []string{CreatedAtField, UpdatedAtField} {
+		if value, exists := current.Frontmatter[key]; exists {
+			frontmatter[key] = value
+		} else {
+			delete(frontmatter, key)
 		}
 	}
 	if err := c.validate(frontmatter); err != nil {
@@ -139,8 +154,7 @@ func (c *Collection) update(id, hash string, patch Patch, replace bool) (*Docume
 	if err := embeddings.save(); err != nil {
 		return nil, err
 	}
-	metadataChanged := !reflect.DeepEqual(frontmatter, current.Frontmatter)
-	if !metadataChanged && body == current.Body {
+	if reflect.DeepEqual(frontmatter, current.Frontmatter) && body == current.Body {
 		if embeddings != nil {
 			latest, err := readDocument(root, id)
 			if err != nil {
@@ -152,18 +166,10 @@ func (c *Collection) update(id, hash string, patch Patch, replace bool) (*Docume
 		}
 		return current, nil
 	}
-	var markdown string
-	if metadataChanged {
-		markdown, err = encodeMarkdown(frontmatter, body)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		prefix := current.Markdown[:len(current.Markdown)-len(current.Body)]
-		if body != "" && !strings.HasSuffix(prefix, "\n") {
-			prefix += "\n"
-		}
-		markdown = prefix + body
+	frontmatter[UpdatedAtField] = timestamp()
+	markdown, err := encodeMarkdown(frontmatter, body)
+	if err != nil {
+		return nil, err
 	}
 	fileInfo, err := root.Lstat(current.filename)
 	if err != nil {

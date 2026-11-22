@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-03T11:00:56Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: x1xw3
 title: Append text to a document body
+updated_at: "2026-11-03T11:00:56Z"
 ---
 Add means append to append exact UTF-8 text to a document body by ID. Accept inline text, a body file or stdin, and structured JSON. Hashes are optional; means handles collection-local append locking and optimistic conflict checks internally. Preserve frontmatter and file permissions, validate the resulting document, and use existing embedding maintenance.
 

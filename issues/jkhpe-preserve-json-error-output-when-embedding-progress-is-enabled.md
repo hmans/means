@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:01:40Z"
 data:
   priority: high
   status: done
@@ -8,6 +9,7 @@ data:
   type: bug
 id: jkhpe
 title: Preserve JSON error output when embedding progress is enabled
+updated_at: "2026-10-25T08:01:40Z"
 ---
 Adversarial review of 9rxzp. Severity P1. internal/cli/output.go:11 writes progress to stderr unconditionally. Execute later writes the JSON error to that same stream. Reproduced with an embedding endpoint returning HTTP 503 during create --json: stdout empty; stderr starts with means: Embedding document and then a JSON error, so json.Valid(stderr) is false. This violates the structured CLI error contract. Keep human progress, but make JSON error consumption reliable (for example suppress progress by default in JSON mode or route it separately). Add a regression test for an API failure after progress has started; existing tests only checked successful JSON output.
 

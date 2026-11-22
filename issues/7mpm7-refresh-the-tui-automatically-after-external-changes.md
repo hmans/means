@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-28T20:42:37Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: 7mpm7
 title: Refresh the TUI automatically after external changes
+updated_at: "2026-10-28T20:42:37Z"
 ---
 Check for external collection changes while the TUI runs. Preserve active search, filters, selection, picker input, and scroll state; handle additions, edits, removals, schema changes, and recoverable errors without blocking input.
 

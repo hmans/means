@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -32,13 +33,13 @@ func compileSortKeys(keys []string, schema json.RawMessage) ([]sortKey, error) {
 		key.path = strings.Split(name, ".")
 		valid := false
 		switch key.path[0] {
-		case "id", "title":
+		case "id", "title", CreatedAtField, UpdatedAtField:
 			valid = len(key.path) == 1
 		case "data":
 			valid = len(key.path) > 1 && !slices.Contains(key.path[1:], "")
 		}
 		if !valid {
-			return nil, fmt.Errorf("invalid sort key %q: use id, title, or data.FIELD (dots address nested fields), with - for descending", raw)
+			return nil, fmt.Errorf("invalid sort key %q: use id, title, created_at, updated_at, or data.FIELD (dots address nested fields), with - for descending", raw)
 		}
 		if seen[name] {
 			return nil, fmt.Errorf("duplicate sort key %q", name)
@@ -156,6 +157,14 @@ func compareSortValues(x, y any) int {
 // compareKeyValues orders enum values by schema position, before values outside
 // the enum, which use compareSortValues.
 func compareKeyValues(key sortKey, x, y any) int {
+	if isTimestampField(key.path[0]) {
+		// Compare instants so differing offsets in edited files still order correctly.
+		a, aErr := time.Parse(time.RFC3339Nano, fmt.Sprint(x))
+		b, bErr := time.Parse(time.RFC3339Nano, fmt.Sprint(y))
+		if aErr == nil && bErr == nil {
+			return a.Compare(b)
+		}
+	}
 	if key.enum != nil {
 		ix, iy := enumIndex(key.enum, x), enumIndex(key.enum, y)
 		if ix != iy {

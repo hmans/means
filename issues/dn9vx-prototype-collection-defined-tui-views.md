@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-29T05:37:39Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: feature
 id: dn9vx
 title: Prototype collection-defined TUI views
+updated_at: "2026-10-29T05:37:39Z"
 ---
 Add an optional collection-local YAML app definition with named Expr-filtered views and field columns. Provide a searchable view picker, live config reload, useful errors, and a playable issues example; no editing or action execution.
 

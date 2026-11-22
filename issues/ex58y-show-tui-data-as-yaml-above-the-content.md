@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-02T11:00:41Z"
 data:
   priority: normal
   status: done
@@ -7,6 +8,7 @@ data:
   type: feature
 id: ex58y
 title: Show TUI data as YAML above the content
+updated_at: "2026-11-02T11:00:41Z"
 ---
 Display application data as syntax-highlighted YAML in its own bordered panel above Markdown content. Default to a one-third/two-thirds height split, independent scrolling, and a draggable horizontal separator. Preserve numeric precision, terminal bounds, and resize behavior.
 

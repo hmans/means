@@ -85,6 +85,11 @@ to an empty body clears it. IDs cannot be patched. `ReplaceMarkdown` accepts a
 complete edited document and replaces metadata instead of merge-patching it,
 preserving literal null values. It requires the original ID and content hash.
 
+Means maintains `created_at` and `updated_at` (`collection.CreatedAtField`,
+`collection.UpdatedAtField`) in the frontmatter: creation sets both, and every
+write that changes a document bumps `updated_at`. Patches containing them fail;
+`ReplaceMarkdown` ignores edited values. Legacy documents may lack them.
+
 `Append(ctx, id, hash, text)` adds exact text to the end of the body. It inserts
 no spaces or newlines. Pass an empty hash to append to the latest stored version,
 or a hash from `Read` to require that version. The returned document has the new

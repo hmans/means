@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-22T16:31:40Z"
 data:
   priority: normal
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: h3brd
 title: Sort list and search results by metadata
+updated_at: "2026-11-22T16:55:44Z"
 ---
 `list` returns documents in filename order, which with random IDs is effectively arbitrary. Data-only searches have the same problem.
 

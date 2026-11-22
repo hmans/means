@@ -1,4 +1,5 @@
 ---
+created_at: "2026-10-25T08:01:40Z"
 data:
   priority: normal
   status: done
@@ -8,6 +9,7 @@ data:
   type: bug
 id: 31adj
 title: Release the embedding cache lock before query-only API requests
+updated_at: "2026-10-25T08:01:40Z"
 ---
 Adversarial review of 9rxzp. Severity P2. internal/collection/embeddings.go:515 searchSemantic defers closing the store until after embedding the query. Even with a fully current cache, a slow query API request holds the exclusive lock needed by create/update/delete. Reproduced by blocking the query endpoint: deletion of an unchanged document (which needs no API call) fails after 5 seconds with lock embeddings: context deadline exceeded. Release the lock once reconciliation and the in-memory snapshot are complete, before calling the query endpoint. Preserve snapshot consistency and serialize actual cache mutations. Add a concurrency regression test.
 

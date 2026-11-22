@@ -20,8 +20,8 @@ editing is complete. Editor output goes to stderr, including in --json mode.
 
 Keep the document ID unchanged. Title and data replace the original metadata;
 removed keys are removed and literal null values are retained. Validate the
-complete document against the current schema before saving. Metadata edits may
-reformat YAML; body-only edits preserve original frontmatter formatting.
+complete document against the current schema before saving. Saving re-encodes YAML
+frontmatter; created_at/updated_at are maintained by means and edited values ignored.
 The original content hash protects against observed concurrent edits; no force
 or automatic retry. As with update, an external write can still race replacement.
 Embedding API/cache failures prevent saving. On any editor or save failure,

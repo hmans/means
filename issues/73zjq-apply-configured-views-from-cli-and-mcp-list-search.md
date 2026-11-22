@@ -1,4 +1,5 @@
 ---
+created_at: "2026-11-22T16:45:42Z"
 data:
   priority: normal
   status: done
@@ -9,6 +10,7 @@ data:
   type: feature
 id: 73zjq
 title: Apply configured views from CLI and MCP list/search
+updated_at: "2026-11-22T17:03:33Z"
 ---
 MEANS.md `app.views` define named Expr filters, but only the TUI can use them. Since mmed0, CLI and MCP evaluate the same Expr language through `--where`/`where`, so a filter written once in a view must be retyped elsewhere.
 
