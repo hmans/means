@@ -11,7 +11,7 @@ import (
 func newInfoCommand(opts *options) *cobra.Command {
 	return &cobra.Command{
 		Use: "info", Short: "Show collection identity, schema, and workflow",
-		Long:    "Read the selected collection's path, title, description, schema, and complete Markdown instructions. Requires a valid MEANS.md. JSON returns path, title, description, schema, instructions, and hash (SHA-256 of the complete MEANS.md file). Instructions preserve the exact workflow body. Use this hash with instructions set to replace the body safely.",
+		Long:    "Read the selected collection's path, title, description, schema, and complete Markdown instructions. Requires a valid MEANS.md. JSON returns path, title, description, schema, views (MEANS.md app.views titles, filters, and columns for list/search --view), instructions, and hash (SHA-256 of the complete MEANS.md file). Instructions preserve the exact workflow body. Use this hash with instructions set to replace the body safely.",
 		Example: "  means info --path ./issues\n  means info --json",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -19,11 +19,16 @@ func newInfoCommand(opts *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			views := c.App().Views
+			if views == nil {
+				views = []collection.AppView{}
+			}
 			result := struct {
-				Path   string          `json:"path"`
-				Schema json.RawMessage `json:"schema"`
+				Path   string               `json:"path"`
+				Schema json.RawMessage      `json:"schema"`
+				Views  []collection.AppView `json:"views"`
 				*collection.Description
-			}{c.Path(), c.Schema(), c.Describe()}
+			}{c.Path(), c.Schema(), views, c.Describe()}
 			schema, err := json.MarshalIndent(result.Schema, "", "  ")
 			if err != nil {
 				return err

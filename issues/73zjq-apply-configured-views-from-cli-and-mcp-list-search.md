@@ -1,7 +1,7 @@
 ---
 data:
   priority: normal
-  status: todo
+  status: done
   tags:
     - cli
     - mcp
@@ -21,3 +21,7 @@ Acceptance criteria:
 - Decide whether view `columns` affect CLI table output or are TUI-only.
 - MCP `info` (or a separate listing) exposes view titles so agents can discover them.
 - Views remain marked experimental unless this issue promotes them.
+
+## Outcome
+
+Implemented in the collection package as `ListOptions.View`/`SearchOptions.View` (resolved via `AppConfig.View`), exposed as CLI `--view TITLE` on list/search and MCP `view`. The view filter ANDs with where/filter/datetime/query before sort, offset, limit, and has_more in all search modes. Errors follow `--where` semantics (compile and runtime errors fail the call); the guide documents that the TUI instead disables invalid views and skips failing documents. Columns stay TUI-only. CLI `info --json` and MCP `info` now return `views` (title, filter, columns). Views remain experimental; no view sort field was added.

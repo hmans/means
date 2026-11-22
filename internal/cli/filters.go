@@ -11,11 +11,13 @@ type filterFlags struct {
 	exact    []string
 	datetime map[string]*[]string
 	where    string
+	view     string
 	sort     []string
 }
 
 func (f *filterFlags) bind(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&f.exact, "filter", nil, "Match a data field as KEY=VALUE (repeatable; values may be JSON)")
+	cmd.Flags().StringVar(&f.view, "view", "", "Apply the filter of a MEANS.md app.views entry by exact title (see info --json)")
 	cmd.Flags().StringVar(&f.where, "where", "", "Match an Expr boolean expression over id, title, body, data, and now()")
 	cmd.Flags().StringSliceVar(&f.sort, "sort", nil, "Order by id, title, or data.FIELD before paging; - prefix descends (comma-separated or repeatable)")
 	f.datetime = map[string]*[]string{}

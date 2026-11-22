@@ -414,6 +414,8 @@ type ListOptions struct {
 	DateTime []DateTimeFilter
 	// Where ANDs an Expr condition, using SearchOptions.Where rules.
 	Where string
+	// View ANDs a MEANS.md view's filter, using SearchOptions.View rules.
+	View string
 	// Sort orders documents using SearchOptions.Sort rules, with ID as the final
 	// tie-breaker. Nil or empty keeps relative filename order.
 	Sort []string
@@ -440,10 +442,10 @@ func (c *Collection) List(ctx context.Context, opts ListOptions) (*ListResult, e
 		return nil, fmt.Errorf("offset must be zero or greater")
 	}
 	search := SearchOptions{
-		Filter: opts.Filter, DateTime: opts.DateTime, Where: opts.Where, Sort: opts.Sort,
+		Filter: opts.Filter, DateTime: opts.DateTime, Where: opts.Where, View: opts.View, Sort: opts.Sort,
 		Limit: opts.Limit, WithBody: opts.WithBody,
 	}
-	if err := search.prepare(c.schema); err != nil {
+	if err := search.prepare(c.schema, c.app); err != nil {
 		return nil, err
 	}
 	scanned, err := c.searchScan(search, opts.Offset)

@@ -3,12 +3,14 @@ package collection
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 )
 
 // AppConfig describes optional collection views. Collection loading does not
-// compile view filters; the TUI compiles them with CompileExpression.
+// compile view filters; the TUI compiles them with CompileExpression, and List
+// and Search apply one by title through their View options.
 type AppConfig struct {
 	// Views contains experimental named TUI views in configuration order. Nil
 	// or empty means no custom views; it does not remove the built-in view.
@@ -25,6 +27,22 @@ type AppView struct {
 	// Columns selects id, title, or data.FIELD columns. An empty list lets the
 	// TUI select its default columns.
 	Columns []string `json:"columns,omitempty"`
+}
+
+// View returns the view with exactly this title. Unknown titles fail and list
+// the configured titles.
+func (a AppConfig) View(title string) (AppView, error) {
+	titles := make([]string, len(a.Views))
+	for i, view := range a.Views {
+		if view.Title == title {
+			return view, nil
+		}
+		titles[i] = strconv.Quote(view.Title)
+	}
+	if len(titles) == 0 {
+		return AppView{}, fmt.Errorf("unknown view %q; MEANS.md defines no app.views", title)
+	}
+	return AppView{}, fmt.Errorf("unknown view %q; available views: %s", title, strings.Join(titles, ", "))
 }
 
 func parseApp(value any) (AppConfig, error) {

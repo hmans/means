@@ -24,7 +24,9 @@ Use --literal for a case-insensitive substring or --semantic for embedding simil
 these modes are exclusive. Semantic search requires configured embeddings and a
 nonempty query, sends the query to the provider, and skips stale/missing vectors.
 Run embed to refresh vectors. --min-score applies only to semantic search.
-Combine --filter KEY=VALUE, RFC 3339 datetime flags, and --where with AND before --limit.
+Combine --filter KEY=VALUE, RFC 3339 datetime flags, --view, and --where with AND
+before --limit. --view TITLE applies a MEANS.md app.views filter by exact title;
+unknown titles fail and list available views (info --json shows them).
 Omit the query to filter only by data. Default limit is 20; 0 returns all.
 --sort KEY[,KEY...] (id, title, data.FIELD; - prefix descends) replaces relevance
 or filename order before --limit, after --min-score; ties keep relevance order for
@@ -40,13 +42,15 @@ Datetimes need timezone offsets; before/after are exclusive, on-or variants incl
 and now(), e.g. 'data.priority in ["high", "urgent"] and not ("tui" in (data.tags ?? []))'.
 Integers are int64, other numbers float64. Compile errors, evaluation errors for any
 candidate document, and non-boolean results fail the command; guard optional
-fields with ?? or != nil. See docs/guide.md for the language reference.`,
+fields with ?? or != nil. View filters fail the same way (the TUI instead skips
+and reports failing documents). See docs/guide.md for the language reference.`,
 		Example: `  means search schema --path ./issues --json
   means search openai --semantic --min-score 0.3 --path ./issues
   means search "deployment timeout" --literal --path ./memory --json
   means search --path ./issues --filter priority=normal --filter type=feature --json
   means search --after created_at=2026-10-01T00:00:00Z --before created_at=2026-11-01T00:00:00Z --json
   means search memory --filter 'tags=["important"]' --limit 0 --json
+  means search timeout --view "Open work" --path ./issues
   means search timeout --sort -data.created_at --path ./memory
   means search --where 'data.created_at != nil and date(data.created_at) > now() - duration("168h")' --json`,
 		Args: cobra.MaximumNArgs(1),
@@ -70,7 +74,7 @@ fields with ?? or != nil. See docs/guide.md for the language reference.`,
 			if cmd.Flags().Changed("min-score") {
 				threshold = &minScore
 			}
-			result, err := c.Search(cmd.Context(), collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Where: filters.where, Sort: filters.sort, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
+			result, err := c.Search(cmd.Context(), collection.SearchOptions{Query: query, Filter: filter, DateTime: dateTime, Where: filters.where, View: filters.view, Sort: filters.sort, Limit: limit, Literal: literal, Semantic: semantic, WithBody: withBody, MinScore: threshold})
 			if err != nil {
 				return err
 			}

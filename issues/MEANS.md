@@ -52,7 +52,8 @@ Use means to create, read, list, search, and update issues. From the repository 
 ```sh
 mise means list --path ./issues --limit 0 --json
 mise means search --path ./issues --filter status=todo --filter priority=normal --json
-mise means list --path ./issues --where 'data.status in ["todo", "in_progress"]' --limit 0 --json
+mise means list --path ./issues --view "Open work" --limit 0 --json
+mise means list --path ./issues --where 'data.priority in ["high", "urgent"]' --limit 0 --json
 mise means read <id> --path ./issues --json
 mise means create --path ./issues --input - --json
 mise means update <id> --path ./issues --input - --json
