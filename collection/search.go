@@ -51,7 +51,9 @@ type SearchOptions struct {
 	// nested objects), prefixed with - for descending. Later keys break ties.
 	// Missing and null values sort last in either direction. Mixed types order
 	// booleans (false first), numbers (exact), strings (Unicode code points),
-	// arrays, then objects; arrays and objects tie. Remaining ties keep
+	// arrays, then objects; arrays and objects tie. A data field whose schema
+	// declares an enum (reached through properties and local $ref) orders
+	// enum values by position, before other values. Remaining ties keep
 	// relevance order for ranked searches and use ID otherwise. Nil or empty
 	// keeps the mode's default order.
 	Sort     []string
@@ -118,7 +120,7 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	if err != nil {
 		return nil, err
 	}
-	if err := opts.prepare(); err != nil {
+	if err := opts.prepare(c.schema); err != nil {
 		return nil, err
 	}
 	if opts.MinScore != nil {
@@ -148,7 +150,7 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 }
 
 // prepare normalizes Filter and compiles DateTime and Where conditions.
-func (opts *SearchOptions) prepare() error {
+func (opts *SearchOptions) prepare(schema json.RawMessage) error {
 	var err error
 	if opts.Filter != nil {
 		if opts.Filter, err = normalizeObject(opts.Filter); err != nil {
@@ -163,7 +165,7 @@ func (opts *SearchOptions) prepare() error {
 			return fmt.Errorf("invalid where expression: %w", err)
 		}
 	}
-	if opts.sortKeys, err = compileSortKeys(opts.Sort); err != nil {
+	if opts.sortKeys, err = compileSortKeys(opts.Sort, schema); err != nil {
 		return err
 	}
 	opts.now = time.Now()

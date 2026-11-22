@@ -1,22 +1,29 @@
 package collection
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 // sortKey is one compiled SearchOptions.Sort or ListOptions.Sort entry.
 type sortKey struct {
 	path       []string // "id", "title", or "data" followed by nested keys
 	descending bool
+	enum       []any // schema enum values in declared order, if any
 }
 
-// compileSortKeys parses keys of the form [-]id, [-]title, or [-]data.FIELD[.FIELD...].
-func compileSortKeys(keys []string) ([]sortKey, error) {
+// compileSortKeys parses keys of the form [-]id, [-]title, or [-]data.FIELD[.FIELD...]
+// and attaches enum order from the collection schema.
+func compileSortKeys(keys []string, schema json.RawMessage) ([]sortKey, error) {
 	compiled := make([]sortKey, 0, len(keys))
+	var root any
 	seen := map[string]bool{}
 	for _, raw := range keys {
 		key := sortKey{}
@@ -37,6 +44,15 @@ func compileSortKeys(keys []string) ([]sortKey, error) {
 			return nil, fmt.Errorf("duplicate sort key %q", name)
 		}
 		seen[name] = true
+		if key.path[0] == "data" {
+			if root == nil {
+				var err error
+				if root, err = jsonschema.UnmarshalJSON(bytes.NewReader(schema)); err != nil {
+					return nil, err
+				}
+			}
+			key.enum = fieldEnum(root, key.path[1:])
+		}
 		compiled = append(compiled, key)
 	}
 	return compiled, nil
@@ -77,7 +93,7 @@ func sortHits(hits []SearchHit, keys []sortKey, ranked bool) {
 			case !yOK:
 				return -1
 			}
-			if order := compareSortValues(x, y); order != 0 {
+			if order := compareKeyValues(key, x, y); order != 0 {
 				if key.descending {
 					return -order
 				}
@@ -135,4 +151,67 @@ func compareSortValues(x, y any) int {
 		return strings.Compare(x, y.(string))
 	}
 	return 0
+}
+
+// compareKeyValues orders enum values by schema position, before values outside
+// the enum, which use compareSortValues.
+func compareKeyValues(key sortKey, x, y any) int {
+	if key.enum != nil {
+		ix, iy := enumIndex(key.enum, x), enumIndex(key.enum, y)
+		if ix != iy {
+			return ix - iy
+		}
+		if ix < len(key.enum) {
+			return 0
+		}
+	}
+	return compareSortValues(x, y)
+}
+
+func enumIndex(enum []any, value any) int {
+	for i, candidate := range enum {
+		if reflect.DeepEqual(candidate, value) {
+			return i
+		}
+	}
+	return len(enum)
+}
+
+// fieldEnum follows properties and local $ref pointers from the schema root to
+// the field at path and returns its enum. Fields described only through
+// combinators such as allOf or oneOf have no enum order.
+func fieldEnum(root any, path []string) []any {
+	node := root
+	for _, segment := range path {
+		properties, _ := schemaKeyword(root, node, "properties").(map[string]any)
+		node = properties[segment]
+	}
+	enum, _ := schemaKeyword(root, node, "enum").([]any)
+	return enum
+}
+
+// schemaKeyword returns keyword from node, following local "#/..." $ref
+// pointers when node lacks it. Cycles and other reference forms yield nil.
+func schemaKeyword(root, node any, keyword string) any {
+	for range 32 {
+		object, ok := node.(map[string]any)
+		if !ok {
+			return nil
+		}
+		if value, ok := object[keyword]; ok {
+			return value
+		}
+		ref, _ := object["$ref"].(string)
+		pointer, ok := strings.CutPrefix(ref, "#")
+		if !ok || (pointer != "" && !strings.HasPrefix(pointer, "/")) {
+			return nil
+		}
+		node = root
+		for _, token := range strings.Split(pointer, "/")[1:] {
+			token = strings.ReplaceAll(strings.ReplaceAll(token, "~1", "/"), "~0", "~")
+			child, _ := node.(map[string]any)
+			node = child[token]
+		}
+	}
+	return nil
 }

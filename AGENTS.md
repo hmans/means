@@ -119,8 +119,9 @@ following its [workflow](issues/MEANS.md).
   array): id, title, or data.FIELD (dots nest), - prefix descends. Sorting runs
   after filters and min_score, before offset/limit/has_more, and replaces
   relevance order. Missing/null sort last either way; mixed types order bool,
-  number, string, array, object; ties keep relevance (ranked) or use ID. No schema
-  enum ordering.
+  number, string, array, object; ties keep relevance (ranked) or use ID. Data
+  fields with a schema enum (via properties and local $ref, not combinators) sort
+  by enum position, with values outside the enum after them.
   Require timezone offsets and at most nine fractional digits; reject invalid
   filter inputs and skip missing, non-string, or invalid document values.
   CLI exposes repeatable --before/--after/--on-or-before/--on-or-after KEY=TIMESTAMP;

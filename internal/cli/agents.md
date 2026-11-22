@@ -93,7 +93,8 @@ not a document; it is excluded from document lists and reads.
    Read its schema and workflow, then list or search existing documents. For
    conditions beyond exact `--filter` matches, use `--where` (MCP `where`) with an
    Expr expression such as `data.status in ["todo", "in_progress"]`. Order results
-   with `--sort` (MCP `sort`), e.g. `--sort data.status,-data.created_at`; list
+   with `--sort` (MCP `sort`), e.g. `--sort -data.priority,title`; schema enum
+   fields sort in declared enum order, so list enums from lowest to highest; list
    otherwise uses filename order, which is arbitrary with random IDs.
 2. For a new collection, define its purpose, schema, and workflow. Use
    `means init --path DIR --input FILE` to install a complete `MEANS.md` without
