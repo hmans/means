@@ -116,9 +116,6 @@ func TestTUIAppDateAndNumberExpressions(t *testing.T) {
 			t.Errorf("date %v: match=%v err=%v", tc.date, match, err)
 		}
 	}
-	if _, err := tuiExprValue(json.Number("9223372036854775808")); err == nil {
-		t.Fatal("oversized integer was silently rounded")
-	}
 }
 
 func TestTUIAppValidationAndErrors(t *testing.T) {

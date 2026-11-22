@@ -10,10 +10,12 @@ import (
 type filterFlags struct {
 	exact    []string
 	datetime map[string]*[]string
+	where    string
 }
 
 func (f *filterFlags) bind(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&f.exact, "filter", nil, "Match a data field as KEY=VALUE (repeatable; values may be JSON)")
+	cmd.Flags().StringVar(&f.where, "where", "", "Match an Expr boolean expression over id, title, body, data, and now()")
 	f.datetime = map[string]*[]string{}
 	for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
 		f.datetime[flag] = cmd.Flags().StringArray(flag, nil, "Compare a data datetime as KEY=TIMESTAMP (RFC 3339; repeatable)")
