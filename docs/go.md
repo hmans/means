@@ -130,7 +130,8 @@ Creation and updates validate the means envelope and application data. Reads,
 lists, and searches check the envelope but allow data that no longer satisfies
 the schema. `ValidateData` checks an application object; `Validate` checks a
 complete frontmatter envelope, including ID. `Doctor(ctx)` checks all documents
-against the loaded schema. Its warnings about embedding caches do not make the
+against the loaded schema and reports `RefKeyword` (`x-means-ref`) values that
+name no document in the collection. Its warnings about embedding caches do not make the
 collection unhealthy.
 
 Use `errors.Is` with `collection.ErrConflict`, `collection.ErrDuplicateID`,

@@ -37,7 +37,9 @@ following its [workflow](issues/MEANS.md).
   and permissions; frontmatter may be reformatted. Observed changes to the whole
   configuration file reject replacement.
   Documents use YAML frontmatter and free-form Markdown bodies. The schema
-  validates only frontmatter.data.
+  validates only frontmatter.data. The `x-means-ref: true` schema keyword marks
+  same-collection document ID fields: writes check ID syntax, doctor reports
+  missing targets. Writes do not check existence; means never rewrites references.
 - Means owns the top-level frontmatter fields: id (generated, immutable), title
   (required nonempty string), and data (application object). Custom fields belong
   under data. Creation defaults omitted data to {}; explicit null is invalid.

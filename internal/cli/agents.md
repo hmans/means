@@ -52,6 +52,12 @@ to explain meaning, enums for fixed choices, and `required` for mandatory fields
 Schema defaults do not fill in data. Put process rules and body requirements in
 the Markdown workflow; means does not enforce that prose.
 
+Mark fields that hold IDs of other documents in the same collection with
+`x-means-ref: true`, for example `parent: {type: string, x-means-ref: true}`, or
+`items: {type: string, x-means-ref: true}` for an array. Define it once under
+`$defs` and reuse it with `$ref`. Writes reject values that are not ID strings;
+`doctor` reports references to missing documents.
+
 Optional `app.views` configures experimental TUI views. Unknown configuration
 fields are rejected. Embedding settings and credentials belong in machine-local
 configuration and the environment, never in `MEANS.md`.
