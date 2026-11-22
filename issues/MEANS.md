@@ -52,6 +52,7 @@ Use means to create, read, list, search, and update issues. From the repository 
 ```sh
 mise means list --path ./issues --limit 0 --json
 mise means search --path ./issues --filter status=todo --filter priority=normal --json
+mise means list --path ./issues --where 'data.status in ["todo", "in_progress"]' --limit 0 --json
 mise means read <id> --path ./issues --json
 mise means create --path ./issues --input - --json
 mise means update <id> --path ./issues --input - --json
@@ -117,6 +118,9 @@ merge recursively, null deletes a field, and arrays replace entirely. Omit `body
 to preserve it; when supplied, it replaces the full body, so retain useful context.
 Updates validate the means envelope and resulting data. Search can match issue
 titles/bodies and filter `frontmatter.data` fields such as `type`, `status`, and
-`priority`; inspect its diagnostics for malformed files. Doctor checks all
+`priority`; inspect its diagnostics for malformed files. List and search accept
+`--where` (MCP `where`) with the same Expr language as the views above, e.g.
+`data.type == "bug" and data.priority in ["high", "urgent"]`. Guard optional
+fields such as `data.tags` with `?? []`; an expression error fails the call. Doctor checks all
 documents against the current schema. Delete permanently removes a document by
 ID and current hash. Prefer status `done` or `canceled` to retain issue history.

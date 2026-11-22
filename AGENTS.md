@@ -18,7 +18,7 @@ following its [workflow](issues/MEANS.md).
   title/description and required schema (JSON Schema object or boolean expressed
   as YAML, Draft 2020-12 by default), and optional app.views for experimental TUI
   views, followed by Markdown guidance. App structure is validated on collection
-  load; Expr filters are compiled only by the TUI. Schema replacement preserves app.
+  load; view filters are compiled only by the TUI. Schema replacement preserves app.
   Unknown configuration fields are rejected. Embedding settings belong in the user config, not MEANS.md (see docs/guide.md). Missing/blank title defaults to the directory
   name. Schema annotations do not define collection identity.
   `init` generates an example, accepts a complete file through `--input FILE|-`,
@@ -109,6 +109,10 @@ following its [workflow](issues/MEANS.md).
   Datetime search filters compare RFC 3339 string fields directly under data by
   instant, with before/after and inclusive on_or_before/on_or_after operators.
   Combine them with exact filters using AND before limits in all search modes.
+  List/search also accept an Expr where expression (CLI --where, MCP where) compiled
+  by the collection package with the same environment as app.views (id, title,
+  body, data, now()). It ANDs with other filters before offsets/limits in all modes.
+  Compile errors, runtime errors, and non-boolean results fail the operation.
   Require timezone offsets and at most nine fractional digits; reject invalid
   filter inputs and skip missing, non-string, or invalid document values.
   CLI exposes repeatable --before/--after/--on-or-before/--on-or-after KEY=TIMESTAMP;

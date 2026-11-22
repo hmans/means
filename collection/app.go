@@ -7,8 +7,8 @@ import (
 	"unicode"
 )
 
-// AppConfig describes optional collection views. Expressions are compiled by the
-// TUI, not by collection operations or MCP.
+// AppConfig describes optional collection views. Collection loading does not
+// compile view filters; the TUI compiles them with CompileExpression.
 type AppConfig struct {
 	// Views contains experimental named TUI views in configuration order. Nil
 	// or empty means no custom views; it does not remove the built-in view.
@@ -20,7 +20,7 @@ type AppConfig struct {
 type AppView struct {
 	// Title is a unique, nonblank, single-line name for the view.
 	Title string `json:"title"`
-	// Filter is an optional Expr expression evaluated by the TUI.
+	// Filter is an optional Expr expression; see Expression.
 	Filter string `json:"filter,omitempty"`
 	// Columns selects id, title, or data.FIELD columns. An empty list lets the
 	// TUI select its default columns.

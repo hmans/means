@@ -15,7 +15,8 @@ func newListCommand(opts *options) *cobra.Command {
 		Use:   "list",
 		Short: "List document IDs and titles, or metadata as JSON",
 		Long: `List documents in filename order. Use --filter KEY=VALUE to select application
-data, or datetime flags to compare RFC 3339 timestamps. Filters combine with AND
+data, datetime flags to compare RFC 3339 timestamps, or --where for an Expr
+expression (same language as MEANS.md views). Filters combine with AND
 before --offset (default 0) and --limit (default 20; 0 means all remaining).
 Offset skips valid matching documents; both values must be zero or greater.
 Filter values can be strings or JSON; quote shell arguments containing JSON.
@@ -29,7 +30,8 @@ errors exit 1. Nested MEANS.md directories
 are separate collections; hidden paths and symlinks are ignored.`,
 		Example: `  means list --path ./memory --json
   means list --path ./memory --offset 20 --limit 20 --json
-  means list --path ./memory --limit 0 --json`,
+  means list --path ./memory --limit 0 --json
+  means list --path ./issues --where 'data.status in ["todo", "in_progress"]' --json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if withBody && !opts.json {
@@ -49,7 +51,7 @@ are separate collections; hidden paths and symlinks are ignored.`,
 			if err != nil {
 				return err
 			}
-			result, err := c.List(cmd.Context(), collection.ListOptions{Filter: filter, DateTime: datetime, Offset: offset, Limit: limit, WithBody: withBody})
+			result, err := c.List(cmd.Context(), collection.ListOptions{Filter: filter, DateTime: datetime, Where: filters.where, Offset: offset, Limit: limit, WithBody: withBody})
 			if err != nil {
 				return err
 			}

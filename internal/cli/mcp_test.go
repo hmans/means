@@ -277,6 +277,15 @@ func TestMCPToolsOverStdio(t *testing.T) {
 				t.Fatalf("literal: %v", literal)
 			}
 			call("search", `{"query":"timeout","literal":"yes"}`, true)
+			where := call("search", `{"query":"deployment timeout","where":"title == 'Search fixture' and body contains 'Timeout'"}`, false)
+			if len(where["documents"].([]any)) != 1 {
+				t.Fatalf("where: %v", where)
+			}
+			if listed := call("list", `{"where":"title == 'Search fixture'","limit":0}`, false); len(listed["documents"].([]any)) != 1 {
+				t.Fatalf("list where: %v", listed)
+			}
+			call("list", `{"where":"title =="}`, true)
+			call("search", `{"where":42}`, true)
 			// External edits are observed by the next call on the same connection.
 			changed := strings.Replace(fixture.Markdown, "Timeout", "Latency", 1)
 			if err := os.WriteFile(filepath.Join(path, fixture.ID+"-search-fixture.md"), []byte(changed), 0o644); err != nil {

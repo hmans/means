@@ -229,7 +229,12 @@ func (c *Collection) searchFullText(opts SearchOptions) (result *SearchResult, e
 		}
 		for _, hit := range found.Hits {
 			doc := docs[hit.ID]
-			if doc == nil || !opts.matchesData(doc.Frontmatter["data"].(map[string]any)) {
+			if doc == nil {
+				continue
+			}
+			if ok, err := opts.matches(doc.Frontmatter, doc.Body); err != nil {
+				return nil, err
+			} else if !ok {
 				continue
 			}
 			if opts.Limit > 0 && len(result.Documents) == opts.Limit {

@@ -8,8 +8,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/expr-lang/expr"
-	"github.com/expr-lang/expr/vm"
 	"github.com/hmans/means/collection"
 )
 
@@ -50,7 +48,7 @@ type tuiApp struct {
 
 type tuiAppView struct {
 	collection.AppView
-	program    *vm.Program
+	program    *collection.Expression
 	compileErr error
 }
 
@@ -68,12 +66,7 @@ func compileTUIApp(config collection.AppConfig, previous *tuiApp) *tuiApp {
 		if len(view.Columns) == 0 {
 			view.Columns = []string{"title"}
 		}
-		if strings.TrimSpace(view.Filter) == "" {
-			view.Filter = "true"
-		}
-		program, err := expr.Compile(view.Filter, expr.Env(map[string]any{
-			"id": "", "title": "", "body": "", "data": map[string]any{}, "now": func() time.Time { return time.Time{} },
-		}), expr.AsBool(), expr.MaxNodes(1000), expr.Optimize(false))
+		program, err := collection.CompileExpression(view.Filter)
 		if err != nil {
 			view.compileErr = err
 			app.errors = append(app.errors, collection.Diagnostic{Path: tuiAppLocation, Error: fmt.Sprintf("view %q: %v", view.Title, err)})
@@ -84,61 +77,12 @@ func compileTUIApp(config collection.AppConfig, previous *tuiApp) *tuiApp {
 	return &app
 }
 
-// Adapt a copy for Expr; collection filters retain their exact JSON semantics.
-func tuiExprValue(value any) (any, error) {
-	switch value := value.(type) {
-	case json.Number:
-		if n, err := value.Int64(); err == nil {
-			return n, nil
-		}
-		if !strings.ContainsAny(string(value), ".eE") {
-			return nil, fmt.Errorf("integer %s exceeds Expr's int64 range", value)
-		}
-		return value.Float64()
-	case map[string]any:
-		out := make(map[string]any, len(value))
-		for k, v := range value {
-			converted, err := tuiExprValue(v)
-			if err != nil {
-				return nil, err
-			}
-			out[k] = converted
-		}
-		return out, nil
-	case []any:
-		out := make([]any, len(value))
-		for i, v := range value {
-			converted, err := tuiExprValue(v)
-			if err != nil {
-				return nil, err
-			}
-			out[i] = converted
-		}
-		return out, nil
-	default:
-		return value, nil
-	}
-}
-
 func (v *tuiAppView) matches(doc collection.SearchHit, now time.Time) (bool, error) {
-	data, err := tuiExprValue(doc.Frontmatter["data"])
-	if err != nil {
-		return false, err
-	}
 	body := ""
 	if doc.Body != nil {
 		body = *doc.Body
 	}
-	machine := vm.VM{MemoryBudget: 100000}
-	result, err := machine.Run(v.program, map[string]any{"id": doc.ID, "title": doc.Frontmatter["title"], "data": data, "body": body, "now": func() time.Time { return now }})
-	if err != nil {
-		return false, err
-	}
-	match, ok := result.(bool)
-	if !ok {
-		return false, fmt.Errorf("filter returned %T, expected boolean", result)
-	}
-	return match, nil
+	return v.program.Match(doc.Frontmatter, body, now)
 }
 
 func (m *tuiModel) currentView() *tuiAppView {

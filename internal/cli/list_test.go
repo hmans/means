@@ -65,3 +65,40 @@ func TestListOffset(t *testing.T) {
 		}
 	}
 }
+
+func TestListAndSearchWhere(t *testing.T) {
+	c, err := collection.Init(t.TempDir(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, status := range []string{"todo", "done", "in_progress"} {
+		source := fmt.Sprintf("---\nid: doc%d\ntitle: Document %d\ndata: {status: %s}\n---\nbody %d", i, i, status, i)
+		if err := os.WriteFile(filepath.Join(c.Path(), fmt.Sprintf("%d.md", i)), []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	where := `data.status in ["todo", "in_progress"]`
+	for _, args := range [][]string{
+		{"list", "--where", where, "--offset", "1"},
+		{"search", "document", "--where", where, "--filter", "status=in_progress"},
+		{"search", "--where", where + ` and id != "doc0"`},
+	} {
+		var out, stderr bytes.Buffer
+		if err := Execute(append(args, "--path", c.Path(), "--json"), nil, &out, &stderr, "test"); err != nil {
+			t.Fatalf("%v: %v %s", args, err, &stderr)
+		}
+		var result collection.SearchResult
+		if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Documents) != 1 || result.Documents[0].ID != "doc2" {
+			t.Fatalf("%v: %s", args, &out)
+		}
+	}
+	for _, where := range []string{"data.status ==", "data.status"} {
+		var out, stderr bytes.Buffer
+		if err := Execute([]string{"list", "--path", c.Path(), "--where", where, "--json"}, nil, &out, &stderr, "test"); err == nil || !strings.Contains(stderr.String(), "where expression") {
+			t.Errorf("%q: %v %s", where, err, &stderr)
+		}
+	}
+}

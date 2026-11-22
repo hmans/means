@@ -11,12 +11,13 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
 // SearchOptions selects a search mode and filters its results. The zero value
-// lists every valid document in filename order. Filter and DateTime conditions
-// are ANDed and apply before Limit in every mode.
+// lists every valid document in filename order. Filter, DateTime, and Where
+// conditions are ANDed and apply before Limit in every mode.
 type SearchOptions struct {
 	// DateTime compares timestamp strings under data; all comparisons must match.
 	DateTime        []DateTimeFilter
@@ -36,6 +37,12 @@ type SearchOptions struct {
 	Filter map[string]any
 	// Limit caps valid matches. Zero returns every match; negative values fail.
 	Limit int
+	// Where is an Expr boolean expression over id, title, body, data, and now();
+	// see Expression. Blank means no condition. Compile errors, runtime errors,
+	// and non-boolean results fail the operation.
+	Where string
+	where *Expression
+	now   time.Time
 	// Literal selects a case-insensitive substring match in title or body,
 	// ordered by filename. It cannot be combined with Semantic.
 	Literal bool
@@ -99,8 +106,7 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	if err != nil {
 		return nil, err
 	}
-	opts.dateTimeFilters, err = compileDateTimeFilters(opts.DateTime)
-	if err != nil {
+	if err := opts.prepare(); err != nil {
 		return nil, err
 	}
 	if opts.MinScore != nil {
@@ -117,12 +123,6 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	if !utf8.ValidString(opts.Query) {
 		return nil, fmt.Errorf("query must be valid UTF-8")
 	}
-	if opts.Filter != nil {
-		opts.Filter, err = normalizeObject(opts.Filter)
-		if err != nil {
-			return nil, fmt.Errorf("invalid filter: %w", err)
-		}
-	}
 	if opts.Semantic {
 		if opts.Literal || strings.TrimSpace(opts.Query) == "" {
 			return nil, fmt.Errorf("semantic search requires a nonempty query and cannot be combined with literal search")
@@ -135,8 +135,43 @@ func (c *Collection) Search(ctx context.Context, opts SearchOptions) (*SearchRes
 	return c.searchScan(opts, 0)
 }
 
+// prepare normalizes Filter and compiles DateTime and Where conditions.
+func (opts *SearchOptions) prepare() error {
+	var err error
+	if opts.Filter != nil {
+		if opts.Filter, err = normalizeObject(opts.Filter); err != nil {
+			return fmt.Errorf("invalid filter: %w", err)
+		}
+	}
+	if opts.dateTimeFilters, err = compileDateTimeFilters(opts.DateTime); err != nil {
+		return err
+	}
+	if strings.TrimSpace(opts.Where) != "" {
+		if opts.where, err = CompileExpression(opts.Where); err != nil {
+			return fmt.Errorf("invalid where expression: %w", err)
+		}
+	}
+	opts.now = time.Now()
+	return nil
+}
+
+// matches applies Filter, DateTime, and Where to one valid document.
+func (opts SearchOptions) matches(frontmatter map[string]any, body string) (bool, error) {
+	if !opts.matchesData(frontmatter["data"].(map[string]any)) {
+		return false, nil
+	}
+	if opts.where == nil {
+		return true, nil
+	}
+	match, err := opts.where.Match(frontmatter, body, opts.now)
+	if err != nil {
+		return false, fmt.Errorf("where expression failed for document %v: %w", frontmatter["id"], err)
+	}
+	return match, nil
+}
+
 // searchScan returns matches in filename order and diagnostics for the whole collection.
-// Callers validate options and compile datetime filters before scanning.
+// Callers prepare options before scanning.
 func (c *Collection) searchScan(opts SearchOptions, offset int) (*SearchResult, error) {
 	var pattern *regexp.Regexp
 	if opts.Query != "" {
@@ -175,8 +210,9 @@ func (c *Collection) searchScan(opts SearchOptions, offset int) (*SearchResult, 
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{ID: id, Path: path.Clean(entry.filename), Error: entry.err.Error()})
 			continue
 		}
-		data := entry.doc.Frontmatter["data"].(map[string]any)
-		if !opts.matchesData(data) {
+		if ok, err := opts.matches(entry.doc.Frontmatter, entry.doc.Body); err != nil {
+			return nil, err
+		} else if !ok {
 			continue
 		}
 		var match *SearchMatch

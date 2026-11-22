@@ -411,6 +411,8 @@ type ListOptions struct {
 	Filter map[string]any
 	// DateTime ANDs timestamp comparisons with Filter.
 	DateTime []DateTimeFilter
+	// Where ANDs an Expr condition, using SearchOptions.Where rules.
+	Where string
 	// Offset skips valid matches before Limit. It must not be negative.
 	Offset int
 	// Limit caps the page size. Zero returns all remaining matches; negative
@@ -433,28 +435,22 @@ func (c *Collection) List(ctx context.Context, opts ListOptions) (*ListResult, e
 	if opts.Offset < 0 {
 		return nil, fmt.Errorf("offset must be zero or greater")
 	}
-	if opts.Filter != nil {
-		opts.Filter, err = normalizeObject(opts.Filter)
-		if err != nil {
-			return nil, fmt.Errorf("invalid filter: %w", err)
-		}
+	search := SearchOptions{
+		Filter: opts.Filter, DateTime: opts.DateTime, Where: opts.Where,
+		Limit: opts.Limit, WithBody: opts.WithBody,
 	}
-	dateTimeFilters, err := compileDateTimeFilters(opts.DateTime)
-	if err != nil {
+	if err := search.prepare(); err != nil {
 		return nil, err
 	}
-	search, err := c.searchScan(SearchOptions{
-		Filter: opts.Filter, dateTimeFilters: dateTimeFilters,
-		Limit: opts.Limit, WithBody: opts.WithBody,
-	}, opts.Offset)
+	scanned, err := c.searchScan(search, opts.Offset)
 	if err != nil {
 		return nil, err
 	}
 	result := &ListResult{
-		Documents:   make([]DocumentSummary, len(search.Documents)),
-		Diagnostics: search.Diagnostics, HasMore: search.HasMore,
+		Documents:   make([]DocumentSummary, len(scanned.Documents)),
+		Diagnostics: scanned.Diagnostics, HasMore: scanned.HasMore,
 	}
-	for i, hit := range search.Documents {
+	for i, hit := range scanned.Documents {
 		result.Documents[i] = DocumentSummary{ID: hit.ID, Frontmatter: hit.Frontmatter, Body: hit.Body}
 	}
 	return result, nil

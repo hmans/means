@@ -423,7 +423,8 @@ columns truncate their displayed text. The preview still shows the full document
 The issues collection includes example views in `issues/MEANS.md` to edit and try.
 
 Filters use [Expr](https://expr-lang.org/docs/language-definition) and must return
-a boolean. Available variables are `id`, `title`, `body`, and `data`; missing data
+a boolean; `list`/`search --where` and MCP `where` share this environment
+(see [Expression filters](#expression-filters)). Available variables are `id`, `title`, `body`, and `data`; missing data
 keys evaluate to `nil`. Guard optional dates as shown above and use `?? []` for
 optional arrays. `now()` returns one shared instant per view evaluation. Relative
 dates are reevaluated when the view is selected, filters change, or the collection
@@ -491,12 +492,12 @@ matches. Both values must be zero or greater. For example,
 `means list --offset 20 --limit 20 --json` returns the second page of 20 documents.
 `has_more` indicates valid matches after the returned page. An offset at or past
 the end returns an empty documents array with `has_more: false`.
-List accepts the same exact-data and datetime filters as search, combined with AND
+List accepts the same exact-data, datetime, and `--where` filters as search, combined with AND
 before the offset and limit. For example, `means list --filter status=todo` selects open work.
 List uses filename order and performs no text indexing or embedding API calls.
 Malformed documents and every duplicate occurrence are excluded from documents
 and reported in diagnostics with ID, path, and error, regardless of offset or limit.
-MCP `list` accepts the same `offset` and `limit` values. Each call scans the current
+MCP `list` accepts the same `offset` and `limit` values, plus `where`. Each call scans the current
 files; changes between calls can shift documents between pages.
 `search` uses full-text ranking by default: all
 query terms must occur, in any order, across the title and body. Title matches
@@ -556,6 +557,38 @@ MCP `search` exposes the same comparisons through `datetime`:
 
 Supported operators are `before`, `after`, `on_or_before`, and `on_or_after`.
 Each comparison requires `field`, `op`, and `value`.
+
+### Expression filters
+
+`--where` on `list` and `search`, and the MCP `where` field on `list` and
+`search`, accept an [Expr](https://expr-lang.org/docs/language-definition)
+boolean expression. It uses the same language and environment as
+[collection views](#experimental-collection-views): `id`, `title`, `body`, and
+`data` variables, plus `now()`. Missing data keys evaluate to `nil`.
+
+```sh
+means list --path ./issues --where 'data.status in ["todo", "in_progress"]'
+means search timeout --where 'data.priority in ["high", "urgent"] and not ("tui" in (data.tags ?? []))'
+means search --where 'data.created_at != nil and date(data.created_at) > now() - duration("168h")'
+```
+
+```json
+{"where":"data.type == \"bug\" and data.status != \"done\"","limit":0}
+```
+
+The expression combines with `--filter`, datetime flags, and the text query using
+AND, before offset, limit, score threshold, and `has_more`, in every search mode.
+`now()` is one instant per call. Integers are signed 64-bit values; fractional or
+exponent-form numbers are float64; oversized integers are errors. Exact
+`--filter` matching keeps its JSON semantics.
+
+Where is strict: a compile error, a runtime error on any candidate document
+(such as `date()` on a malformed string), or a non-boolean result fails the whole
+call and names the document. Guard optional fields with `!= nil` or `??`.
+Malformed and duplicate documents are never evaluated; they stay in diagnostics.
+Expressions cannot run commands or write documents. Datetime flags remain
+supported; `date()` comparisons in `--where` cover the same cases but parse more
+formats and fail on invalid values instead of skipping them.
 
 Malformed documents and every occurrence of duplicate IDs are excluded and reported
 as diagnostics, regardless of query, filter, or limit. Schema-invalid data remains
