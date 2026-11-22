@@ -181,6 +181,35 @@ their precision when stored as YAML. A running server can repair an invalid or
 missing embedded schema in otherwise valid configuration; malformed YAML needs
 a direct edit. Starting a server requires valid configuration.
 
+### Document references
+
+Mark schema locations that hold IDs of other documents in the same collection
+with the `x-means-ref` keyword. Define it once and reuse it with `$ref`:
+
+```yaml
+schema:
+  type: object
+  $defs:
+    docId:
+      type: string
+      x-means-ref: true
+  properties:
+    parent: { $ref: "#/$defs/docId" }
+    blocked_by:
+      type: array
+      items: { $ref: "#/$defs/docId" }
+```
+
+The value must be a boolean; `false` has no effect. Every create and update
+rejects marked values that are not document ID strings. `doctor` (and therefore
+`schema set`) reports marked IDs that name no document in this collection, with
+the referencing document and a JSON Pointer under `data`, such as
+`/blocked_by/1`. Writes do not check that the target exists, and deleting a
+document can leave references to it, so run `doctor` to find them. References
+are relationships in application data: means does not follow, rewrite, or
+delete them, and they cannot point into nested or other collections. Other JSON
+Schema tools ignore the keyword.
+
 ### Subdirectories and collection boundaries
 
 Use the filename `MEANS.md` as written. Means uses ordinary filesystem lookup;

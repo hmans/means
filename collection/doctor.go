@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 )
 
 // Diagnostic identifies one problem with a stored document. Path is relative
@@ -30,8 +31,8 @@ type DoctorResult struct {
 	// duplicate occurrences. Hidden paths, symlinks, and nested collections are
 	// excluded, as is MEANS.md.
 	Checked int `json:"checked"`
-	// Diagnostics reports malformed envelopes, duplicate IDs, and data that
-	// does not satisfy the loaded schema.
+	// Diagnostics reports malformed envelopes, duplicate IDs, data that does
+	// not satisfy the loaded schema, and RefKeyword values naming missing documents.
 	Diagnostics []Diagnostic `json:"diagnostics"`
 	// Warnings reports missing, stale, orphaned, corrupt, or incompatible
 	// embedding caches when embeddings are enabled. Doctor does not repair them
@@ -40,7 +41,8 @@ type DoctorResult struct {
 }
 
 // Doctor inspects every visible document against the loaded schema without
-// changing any files. Malformed envelopes and duplicate IDs are also reported.
+// changing any files. Malformed envelopes, duplicate IDs, and references to
+// documents missing from this collection are also reported.
 func (c *Collection) Doctor(ctx context.Context) (*DoctorResult, error) {
 	c, err := c.operation(ctx)
 	if err != nil {
@@ -75,6 +77,10 @@ func (c *Collection) Doctor(ctx context.Context) (*DoctorResult, error) {
 			result.Warnings = append(result.Warnings, Diagnostic{Path: ".means/embeddings.jsonl", Error: "embedding cache is corrupt or incompatible with the current configuration; refresh embeddings"})
 		}
 	}
+	references, err := c.references()
+	if err != nil {
+		return nil, err
+	}
 	eligible := map[string]bool{}
 	for _, entry := range entries {
 		id := ""
@@ -92,8 +98,16 @@ func (c *Collection) Doctor(ctx context.Context) (*DoctorResult, error) {
 			add(fmt.Errorf("%w %q; resolve the duplicate files", ErrDuplicateID, id))
 		}
 		if entry.err == nil {
-			if err := c.validateData(entry.doc.Frontmatter["data"].(map[string]any)); err != nil {
+			data := entry.doc.Frontmatter["data"].(map[string]any)
+			if err := c.validateData(data); err != nil {
 				add(err)
+			}
+			if references != nil {
+				for _, ref := range references(data) {
+					if counts[ref.id] == 0 {
+						add(fmt.Errorf("reference at '/%s' points to missing document %q", pointer(ref.location), ref.id))
+					}
+				}
 			}
 			if embeddings != nil && counts[id] == 1 {
 				eligible[id] = true
@@ -122,4 +136,13 @@ func (c *Collection) Doctor(ctx context.Context) (*DoctorResult, error) {
 		}
 	}
 	return result, nil
+}
+
+// pointer formats a JSON Pointer relative to frontmatter.data.
+func pointer(location []string) string {
+	escaped := make([]string, len(location))
+	for i, token := range location {
+		escaped[i] = strings.ReplaceAll(strings.ReplaceAll(token, "~", "~0"), "/", "~1")
+	}
+	return strings.Join(escaped, "/")
 }

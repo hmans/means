@@ -30,6 +30,7 @@ type Collection struct {
 	app               AppConfig       // Optional views from the same MEANS.md snapshot.
 	schema            json.RawMessage // The JSON schema compiled for this collection.
 	validator         *jsonschema.Schema
+	usesRefs          bool
 	config            map[string]any
 	body              string
 	configHash        string
@@ -270,18 +271,11 @@ func compile(path string, schema []byte) (*Collection, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse JSON Schema: %w", err)
 	}
-	compiler := jsonschema.NewCompiler()
-	compiler.DefaultDraft(jsonschema.Draft2020)
-	compiler.UseLoader(selfContainedLoader{})
-	location := filepath.Join(path, ConfigFilename)
-	if err := compiler.AddResource(location, doc); err != nil {
-		return nil, fmt.Errorf("register JSON Schema: %w", err)
-	}
-	validator, err := compiler.Compile(location)
+	validator, usesRefs, err := compileSchema(filepath.Join(path, ConfigFilename), doc, nil)
 	if err != nil {
-		return nil, fmt.Errorf("invalid JSON Schema: %w", err)
+		return nil, err
 	}
-	return &Collection{path: path, schema: append(json.RawMessage(nil), schema...), validator: validator}, nil
+	return &Collection{path: path, schema: append(json.RawMessage(nil), schema...), validator: validator, usesRefs: usesRefs}, nil
 }
 
 // Schemas are self-contained for now. The compiler still resolves internal
