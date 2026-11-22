@@ -216,7 +216,7 @@ func TestAppendLockCancellation(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(c.Path(), ".means"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	lock := flock.New(filepath.Join(c.Path(), ".means", "append.lock"))
+	lock := flock.New(filepath.Join(c.Path(), ".means", "edit.lock"))
 	if err := lock.Lock(); err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestAppendLockCancellation(t *testing.T) {
 }
 
 func TestAppendRejectsLockSymlinks(t *testing.T) {
-	for _, name := range []string{".means", ".means/append.lock"} {
+	for _, name := range []string{".means", ".means/edit.lock"} {
 		t.Run(name, func(t *testing.T) {
 			c, err := Init(t.TempDir(), nil)
 			if err != nil {

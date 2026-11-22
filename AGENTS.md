@@ -166,6 +166,9 @@ following its [workflow](issues/MEANS.md).
   List accepts the same metadata filters as search. `create --title` with optional
   `--body-file` uses empty data and is exclusive with structured `--input`.
   `delete --hash` is an alternative to its structured input, with the same checks.
+  `set <id> KEY=VALUE|KEY+=VALUE|KEY-=VALUE` and `--title` edit data/title without
+  a hash (optional `--hash`), sharing append's edit lock and the update path.
+  Set replaces metadata as a whole; null deletes. MCP keeps hash-based update.
   `edit` opens a private temporary copy using VISUAL/EDITOR (executable only),
   reloads the schema, and saves through the shared hash-checked replacement path.
   Edited metadata replaces rather than merge-patches; preserve IDs and literal nulls.
@@ -193,7 +196,7 @@ following its [workflow](issues/MEANS.md).
   for OpenRouter). Environment overrides may change endpoint/key; keys never fall
   back across providers. Provider/model/dimension/endpoint changes invalidate vectors.
   Only embed (including --force) replaces an intact cache stored under another
-  profile. Create/update/append/delete under a mismatched profile leave that cache
+  profile. Create/update/set/append/delete under a mismatched profile leave that cache
   untouched and make no API call; the document goes without a vector until embed.
   Default to the provider's OpenAI text-embedding-3-small model and 512 dimensions.
   Defaults apply in memory; user config and MEANS.md are not rewritten.

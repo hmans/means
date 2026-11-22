@@ -91,9 +91,17 @@ or a hash from `Read` to require that version. The returned document has the new
 hash. Append serializes calls with a collection-local lock and a context-aware
 wait of up to five seconds. It uses the same validation, embedding maintenance,
 and frontmatter and permission preservation as a body-only update. Other commands
-and external editors do not take the append lock; the final replacement retains
+and external editors do not take the edit lock; the final replacement retains
 the external-write race limit described below. Repeating a hashless call appends
 the text again.
+
+`Set(ctx, id, hash, edits...)` applies `FieldEdit` values in order to the latest
+document under the same lock. Each edit has a frontmatter `Path` starting with
+`title` or `data`, an `Op` (`FieldAssign`, `FieldAdd`, or `FieldRemove`), and a
+`Value`. Assigning nil deletes a field; assignment creates missing parent
+objects. `FieldAdd` appends to an array unless an equal element exists, and
+`FieldRemove` removes equal elements. Metadata is replaced as a whole, so
+existing literal nulls survive. An empty hash edits the latest version.
 
 Updates and deletion reject observed content changes with `ErrConflict`.
 Read again and reconcile the change before retrying. These checks do not lock

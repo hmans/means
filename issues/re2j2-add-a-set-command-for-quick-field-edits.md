@@ -1,7 +1,7 @@
 ---
 data:
   priority: high
-  status: todo
+  status: done
   tags:
     - cli
     - mcp
@@ -19,3 +19,14 @@ Acceptance criteria:
 - Uses the shared update path: schema validation, embeddings, round-trip checks.
 - An optional `--hash` keeps strict stale-write protection for agents.
 - Decide whether MCP needs an equivalent or `update` with optional hash suffices.
+
+
+## Outcome
+
+Added `means set <id> KEY=VALUE|KEY+=VALUE|KEY-=VALUE` with `--title` and optional `--hash`, backed by public `Collection.Set(ctx, id, hash, edits...)` and `FieldEdit`.
+
+- Hashless by default; reads the latest version under the collection edit lock, now shared with `append` (`.means/edit.lock`, formerly `append.lock`). Uses the shared update path: schema validation, embeddings, round-trip checks.
+- Dotted keys address nested data; missing parents are created; `null` deletes; `+=` appends unless an equal element exists, `-=` removes equal elements. Metadata is replaced as a whole, so existing literal nulls survive.
+- MCP decision: no new tool. MCP clients already read before writing, and `update` with a hash covers it; revisit if agents need hashless edits.
+
+Validation: `mise test` passes; new collection and CLI tests cover edits, errors, and hash conflicts.
