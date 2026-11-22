@@ -831,6 +831,27 @@ read again and review the intervening changes before retrying. Updates use a
 same-directory temporary replacement, but do not lock the document against a
 write racing the final replacement.
 
+To change data fields or the title without reading a hash first, use `set`:
+
+```sh
+means set <id> status=done --path ./issues
+means set <id> priority=high tags+=urgent tags-=later --path ./issues
+means set <id> owner.name=Ada due=null --title "Renamed" --path ./issues
+```
+
+`KEY` names a field under `data`; dots address nested objects, and missing
+parent objects are created. `VALUE` is parsed as JSON when possible and is
+otherwise a string, so quote JSON strings that look like numbers or booleans
+(`'code="042"'`). `KEY=null` deletes the field. `KEY+=VALUE` appends to an array
+unless an equal element exists, creating the array if the field is missing;
+`KEY-=VALUE` removes all equal elements. Edits apply in order. Set replaces the
+metadata as a whole, so existing literal null values are kept. Body changes use
+`update`, `append`, or `edit`. Set shares append's edit lock (see below), reads
+the latest document under it, and uses the same validation and embedding
+maintenance as `update`. Pass `--hash HASH` from `show --json` to require a
+specific version. JSON returns the updated document and its new hash. MCP
+clients use `update` with a hash.
+
 To add text to the end of the body, use `append`:
 
 ```sh
@@ -842,11 +863,11 @@ Use `--body-file -` to read text from stdin. For structured input, use
 `--input FILE|-` with `{"body":"\n\nMore text.\n"}`.
 Do not combine these input modes. Text is appended exactly, with no added spaces
 or newlines. Empty text leaves the body unchanged. Append preserves frontmatter
-formatting, filenames, and permissions. Means serializes appends using
-`.means/append.lock`, with a context-aware wait of up to five seconds. It reads
+formatting, filenames, and permissions. Means serializes appends and sets using
+`.means/edit.lock`, with a context-aware wait of up to five seconds. It reads
 the latest document under this lock and uses the same hash checks, validation,
 and embedding maintenance as `update`. Other commands and external editors do
-not take the append lock; an external write can still race the final replacement.
+not take the edit lock; an external write can still race the final replacement.
 No prior read is required. To require a specific version, use `--hash HASH` from
 `show --json`, or add `hash` to the JSON input. A supplied hash must be valid
 and match. Repeating a hashless append adds the text again. JSON returns the
