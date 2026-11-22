@@ -18,8 +18,8 @@ type filterFlags struct {
 func (f *filterFlags) bind(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&f.exact, "filter", nil, "Match a data field as KEY=VALUE (repeatable; values may be JSON)")
 	cmd.Flags().StringVar(&f.view, "view", "", "Apply the filter of a MEANS.md app.views entry by exact title (see info --json)")
-	cmd.Flags().StringVar(&f.where, "where", "", "Match an Expr boolean expression over id, title, body, data, and now()")
-	cmd.Flags().StringSliceVar(&f.sort, "sort", nil, "Order by id, title, or data.FIELD before paging; - prefix descends (comma-separated or repeatable)")
+	cmd.Flags().StringVar(&f.where, "where", "", "Match an Expr boolean expression over id, title, created_at, updated_at, body, data, and now()")
+	cmd.Flags().StringSliceVar(&f.sort, "sort", nil, "Order by id, title, created_at, updated_at, or data.FIELD before paging; - prefix descends (comma-separated or repeatable)")
 	f.datetime = map[string]*[]string{}
 	for _, flag := range []string{"before", "after", "on-or-before", "on-or-after"} {
 		f.datetime[flag] = cmd.Flags().StringArray(flag, nil, "Compare a data datetime as KEY=TIMESTAMP (RFC 3339; repeatable)")

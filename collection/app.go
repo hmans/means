@@ -24,7 +24,7 @@ type AppView struct {
 	Title string `json:"title"`
 	// Filter is an optional Expr expression; see Expression.
 	Filter string `json:"filter,omitempty"`
-	// Columns selects id, title, or data.FIELD columns. An empty list lets the
+	// Columns selects id, title, created_at, updated_at, or data.FIELD columns. An empty list lets the
 	// TUI select its default columns.
 	Columns []string `json:"columns,omitempty"`
 }
@@ -97,8 +97,8 @@ func parseApp(value any) (AppConfig, error) {
 			}
 			for _, value := range columns {
 				column, ok := value.(string)
-				if !ok || !appSingleLine(column) || (column != "id" && column != "title" && (!strings.HasPrefix(column, "data.") || len(column) == 5)) {
-					return app, fmt.Errorf("app.views[%d]: columns must be id, title, or data.FIELD", i)
+				if !ok || !appSingleLine(column) || (column != "id" && column != "title" && !isTimestampField(column) && (!strings.HasPrefix(column, "data.") || len(column) == 5)) {
+					return app, fmt.Errorf("app.views[%d]: columns must be id, title, created_at, updated_at, or data.FIELD", i)
 				}
 				view.Columns = append(view.Columns, column)
 			}

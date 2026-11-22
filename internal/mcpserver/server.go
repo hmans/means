@@ -17,8 +17,10 @@ import (
 
 const instructions = `This server works with one Markdown collection. Call info
 to learn the schema for frontmatter.data before creating documents. Means owns
-frontmatter.id (generated and immutable) and frontmatter.title (required nonempty
-string). Creation takes title and optional data (default {}); do not supply id.
+frontmatter.id (generated and immutable), frontmatter.title (required nonempty
+string), and frontmatter.created_at/updated_at (RFC 3339 UTC, maintained by means;
+legacy documents may lack them). Creation takes title and optional data (default
+{}); do not supply id or timestamps.
 List or search documents to find IDs, then read by ID for full bodies. Search
 matches all query tokens in any order across title/body, ranks with a title boost,
 and filters frontmatter.data by value. Set literal:true for substring matching.

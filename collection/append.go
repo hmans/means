@@ -13,8 +13,8 @@ import (
 // otherwise use the current hash from Read. Empty text leaves the body unchanged.
 // The result must satisfy the loaded schema. Append and Set serialize on a
 // collection-local edit lock with a context-aware wait of up to five seconds.
-// Like a body-only Update, Append preserves frontmatter bytes, filename, and
-// permissions, maintains enabled embeddings before saving, and rejects observed
+// Like a body-only Update, Append bumps updated_at (re-encoding frontmatter),
+// preserves the filename and permissions, maintains enabled embeddings before saving, and rejects observed
 // changes with ErrConflict. External writes can still race the final replacement.
 // The returned Document contains the new content hash.
 func (c *Collection) Append(ctx context.Context, id, hash, text string) (*Document, error) {

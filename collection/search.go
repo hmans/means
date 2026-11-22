@@ -37,7 +37,8 @@ type SearchOptions struct {
 	Filter map[string]any
 	// Limit caps valid matches. Zero returns every match; negative values fail.
 	Limit int
-	// Where is an Expr boolean expression over id, title, body, data, and now();
+	// Where is an Expr boolean expression over id, title, created_at, updated_at,
+	// body, data, and now();
 	// see Expression. Blank means no condition. Compile errors, runtime errors,
 	// and non-boolean results fail the operation.
 	Where string
@@ -52,7 +53,8 @@ type SearchOptions struct {
 	// ordered by filename. It cannot be combined with Semantic.
 	Literal bool
 	// Sort orders matches by metadata keys before Limit, replacing relevance
-	// and filename order. Each key is id, title, or data.FIELD (dots address
+	// and filename order. Each key is id, title, created_at, updated_at (compared
+	// as instants), or data.FIELD (dots address
 	// nested objects), prefixed with - for descending. Later keys break ties.
 	// Missing and null values sort last in either direction. Mixed types order
 	// booleans (false first), numbers (exact), strings (Unicode code points),

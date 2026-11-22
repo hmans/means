@@ -89,12 +89,9 @@ func TestUpdateExactHashBodyAndNoop(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		prefix := original[:len(original)-len(read.Body)]
-		if !strings.HasSuffix(prefix, "\n") {
-			prefix += "\n"
-		}
-		if updated.Markdown != prefix+body {
-			t.Fatalf("body-only update changed header: %q", updated.Markdown)
+		// Body-only updates bump updated_at, so frontmatter is re-encoded.
+		if updated.Body != body || !strings.HasSuffix(updated.Markdown, "\n---\n"+body) || updated.Frontmatter[UpdatedAtField] == nil || updated.Frontmatter[CreatedAtField] != nil {
+			t.Fatalf("body-only update: %q", updated.Markdown)
 		}
 		stat, err := os.Stat(filename)
 		if err != nil || stat.Mode().Perm() != 0o640 {

@@ -12,7 +12,7 @@ import (
 
 // Increment when parsing rules or the record format change. This cache is
 // derived data, never a source of schema validation results.
-const documentCacheVersion = 1
+const documentCacheVersion = 2
 
 type documentCacheHeader struct {
 	Version int    `json:"version"`

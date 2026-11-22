@@ -41,7 +41,7 @@ Search for existing knowledge before creating a document.
 ```
 
 The schema validates only document `frontmatter.data`; means owns each document's
-`id` and `title`. It remains JSON Schema, expressed as YAML. Draft 2020-12 is the
+`id`, `title`, `created_at`, and `updated_at` (see [Timestamps](#timestamps)). It remains JSON Schema, expressed as YAML. Draft 2020-12 is the
 default. Internal references work; external files and remote schemas do not.
 
 The required `schema` field accepts an object or boolean. Optional `title` and
@@ -286,6 +286,40 @@ lists check the means envelope but allow schema-invalid application data to be
 retrieved after schema changes.
 
 Creation is not idempotent: retrying a successful call creates another document.
+
+### Timestamps
+
+Means records when documents are created and changed:
+
+```yaml
+---
+created_at: "2026-11-22T10:00:00Z"
+data: {}
+id: re2j2
+title: Add a set command
+updated_at: "2026-11-22T12:30:00Z"
+---
+```
+
+- `created_at` is set once on creation and never changes.
+- `updated_at` is set on creation and bumped by every write that changes the
+  document: `update`, `set`, `append`, `edit`, and MCP equivalents. A write that
+  changes nothing leaves the file untouched. Because the frontmatter changes,
+  body-only writes re-encode it as YAML (comments and formatting are not kept);
+  the body is stored exactly.
+- Values are RFC 3339 timestamps in UTC with second precision. Hand-edited
+  values with other offsets are accepted; sorting compares instants.
+- Clients cannot set them: create and update input containing either field
+  fails, and `edit` ignores edited values.
+- Documents written before means maintained timestamps may lack them. Means
+  never invents a creation time; such documents gain `updated_at` on their next
+  write. Direct edits outside means do not bump `updated_at`.
+- Use them in `--where` and views (`created_at != nil and date(created_at) >
+  now() - duration("168h")`), as `--sort` keys (`--sort -updated_at`), and as
+  view columns. The `--before`/`--after` datetime flags address `data` fields
+  only.
+
+Older means versions reject these fields as unknown frontmatter.
 
 ## Interactive browser
 
@@ -923,8 +957,8 @@ hash still matches. Enabled embeddings use the same maintenance as `update`.
 Editor output goes to stderr so JSON results stay on stdout.
 
 Keep the ID unchanged. Edited metadata replaces the old metadata, including
-removing omitted keys and retaining literal null values. Body-only edits preserve
-original frontmatter formatting; metadata changes may reformat YAML. Editor or
+removing omitted keys and retaining literal null values. Edited `created_at` and
+`updated_at` values are ignored. Saving re-encodes the frontmatter as YAML. Editor or
 save failures retain the temporary copy and report its path for recovery. Successful
 saves remove it. Hash checks have the same external-write race limitation as update.
 
@@ -983,8 +1017,8 @@ means append <id> --body-file ./addition.md --path ./memory
 Use `--body-file -` to read text from stdin. For structured input, use
 `--input FILE|-` with `{"body":"\n\nMore text.\n"}`.
 Do not combine these input modes. Text is appended exactly, with no added spaces
-or newlines. Empty text leaves the body unchanged. Append preserves frontmatter
-formatting, filenames, and permissions. Means serializes appends and sets using
+or newlines. Empty text leaves the body unchanged. Append bumps `updated_at`, so
+the frontmatter is re-encoded; filenames and permissions are preserved. Means serializes appends and sets using
 `.means/edit.lock`, with a context-aware wait of up to five seconds. It reads
 the latest document under this lock and uses the same hash checks, validation,
 and embedding maintenance as `update`. Other commands and external editors do

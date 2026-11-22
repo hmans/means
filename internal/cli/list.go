@@ -20,7 +20,7 @@ expression (same language as MEANS.md views). --view TITLE applies a MEANS.md
 app.views filter by exact title (columns stay TUI-only; info --json lists views).
 Filters combine with AND
 before --offset (default 0) and --limit (default 20; 0 means all remaining).
---sort KEY[,KEY...] orders by id, title, or data.FIELD (dots for nested fields)
+--sort KEY[,KEY...] orders by id, title, created_at, updated_at, or data.FIELD (dots nest)
 before paging; prefix - to descend. Missing/null values sort last either way;
 mixed types order booleans, numbers, strings, arrays, objects; ID breaks ties.
 Fields with a schema enum sort in enum order (other values follow).
